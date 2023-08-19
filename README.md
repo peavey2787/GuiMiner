@@ -1,6 +1,9 @@
 # GuiMiner
  Manage CLI miners with a GUI and manage all .bat files in one place along with gpu settings
 
+# How To Use
+Make sure to click Generate .bat file after making any changes to update
+
 # FAQ
 ## Why is the miner not starting?
 
@@ -9,6 +12,14 @@
 3. Ensure your anti-virus isn't blocking the miner.
 4. Check your firewall settings to allow the miner to communicate.
 5. Read the documentation for your miner to double check the syntax as it could have been updated.
+
+## Why does it keep failing to set the overclock and asking me to run as admin?
+
+In order for the miner to set the GPU settings it must be run as admin and in order for this app to run the miner as admin this app must also be run as admin. Otherwise the app will continue to run without admin privliges therefore so will the miner and that is commonly why it is failing.
+
+## Why are the GPUs not getting added when I click "Add GPU Settings"?
+
+Ensure the "Enabled" check-box is checked and that there are no typos or unwanted characters/numbers.
    
 ## What are CommandPrefix/CommandSeparator used for?
 
