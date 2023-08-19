@@ -28,78 +28,72 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.settingsButton = new System.Windows.Forms.Button();
-            this.startButton = new System.Windows.Forms.Button();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
+            this.settingsButtonPictureBox = new System.Windows.Forms.PictureBox();
+            this.startButtonPictureBox = new System.Windows.Forms.PictureBox();
             this.outputPanel = new System.Windows.Forms.Panel();
-            this.stopButton = new System.Windows.Forms.Button();
+            ((System.ComponentModel.ISupportInitialize)(this.settingsButtonPictureBox)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.startButtonPictureBox)).BeginInit();
             this.SuspendLayout();
             // 
-            // settingsButton
+            // settingsButtonPictureBox
             // 
-            this.settingsButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.settingsButton.Location = new System.Drawing.Point(530, 6);
-            this.settingsButton.Name = "settingsButton";
-            this.settingsButton.Size = new System.Drawing.Size(88, 28);
-            this.settingsButton.TabIndex = 0;
-            this.settingsButton.Text = "Settings";
-            this.settingsButton.UseVisualStyleBackColor = true;
-            this.settingsButton.Click += new System.EventHandler(this.settingsButton_Click);
+            this.settingsButtonPictureBox.BackgroundImage = global::Gui_Miner.Properties.Resources.settings;
+            this.settingsButtonPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.settingsButtonPictureBox.Location = new System.Drawing.Point(351, 3);
+            this.settingsButtonPictureBox.Name = "settingsButtonPictureBox";
+            this.settingsButtonPictureBox.Size = new System.Drawing.Size(64, 53);
+            this.settingsButtonPictureBox.TabIndex = 7;
+            this.settingsButtonPictureBox.TabStop = false;
+            this.settingsButtonPictureBox.Click += new System.EventHandler(this.settingsButtonPictureBox_Click);
             // 
-            // startButton
+            // startButtonPictureBox
             // 
-            this.startButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.startButton.Location = new System.Drawing.Point(2, 6);
-            this.startButton.Name = "startButton";
-            this.startButton.Size = new System.Drawing.Size(79, 27);
-            this.startButton.TabIndex = 2;
-            this.startButton.Text = "Start";
-            this.startButton.UseVisualStyleBackColor = true;
-            this.startButton.Click += new System.EventHandler(this.startButton_Click);
+            this.startButtonPictureBox.BackgroundImage = global::Gui_Miner.Properties.Resources.play_button;
+            this.startButtonPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.startButtonPictureBox.Location = new System.Drawing.Point(2, 2);
+            this.startButtonPictureBox.Name = "startButtonPictureBox";
+            this.startButtonPictureBox.Size = new System.Drawing.Size(64, 53);
+            this.startButtonPictureBox.TabIndex = 6;
+            this.startButtonPictureBox.TabStop = false;
+            this.startButtonPictureBox.Click += new System.EventHandler(this.startButtonPictureBox_Click);
             // 
             // outputPanel
             // 
             this.outputPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.outputPanel.Location = new System.Drawing.Point(2, 34);
+            this.outputPanel.BackgroundImage = global::Gui_Miner.Properties.Resources.kas_world;
+            this.outputPanel.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.outputPanel.Location = new System.Drawing.Point(2, 58);
             this.outputPanel.Name = "outputPanel";
-            this.outputPanel.Size = new System.Drawing.Size(616, 412);
+            this.outputPanel.Size = new System.Drawing.Size(413, 413);
             this.outputPanel.TabIndex = 4;
-            // 
-            // stopButton
-            // 
-            this.stopButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.stopButton.Location = new System.Drawing.Point(282, 6);
-            this.stopButton.Name = "stopButton";
-            this.stopButton.Size = new System.Drawing.Size(79, 27);
-            this.stopButton.TabIndex = 5;
-            this.stopButton.Text = "Stop";
-            this.stopButton.UseVisualStyleBackColor = true;
-            this.stopButton.Click += new System.EventHandler(this.stopButton_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(618, 446);
-            this.Controls.Add(this.stopButton);
+            this.ClientSize = new System.Drawing.Size(415, 471);
+            this.Controls.Add(this.settingsButtonPictureBox);
+            this.Controls.Add(this.startButtonPictureBox);
             this.Controls.Add(this.outputPanel);
-            this.Controls.Add(this.startButton);
-            this.Controls.Add(this.settingsButton);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MinimumSize = new System.Drawing.Size(431, 510);
             this.Name = "Form1";
             this.Text = "Gui Miner";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
+            ((System.ComponentModel.ISupportInitialize)(this.settingsButtonPictureBox)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.startButtonPictureBox)).EndInit();
             this.ResumeLayout(false);
 
         }
 
         #endregion
-
-        private System.Windows.Forms.Button settingsButton;
-        private System.Windows.Forms.Button startButton;
         private System.Windows.Forms.Panel outputPanel;
-        private System.Windows.Forms.Button stopButton;
+        private System.Windows.Forms.PictureBox startButtonPictureBox;
+        private System.Windows.Forms.PictureBox settingsButtonPictureBox;
     }
 }
 

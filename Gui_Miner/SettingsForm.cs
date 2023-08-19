@@ -1,18 +1,28 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Win32.TaskScheduler;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Gui_Miner.Form1;
 using static Gui_Miner.SettingsForm;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using Action = System.Action;
+using ComboBox = System.Windows.Forms.ComboBox;
+using Label = System.Windows.Forms.Label;
+using Task = System.Threading.Tasks.Task;
+using TextBox = System.Windows.Forms.TextBox;
 
 namespace Gui_Miner
 {
@@ -23,6 +33,8 @@ namespace Gui_Miner
         const string SETTINGSNAME = "Settings";
         const string MINERSETTINGSPANELNAME = "tableLayoutPanel";
         const string GPUSETTINGSPANELNAME = "gpuTableLayoutPanel";
+        public const string AUTOSTARTMINING = "AutoStartMining";
+        const string AUTOSTARTWITHWIN = "AutoStartWithWin";
         public Settings Settings { get { return _settings; } }
         public Form1 Form1 { get; set; }
         public void SetSettings(Settings settings) { _settings = settings; }
@@ -34,6 +46,7 @@ namespace Gui_Miner
         }
         #endregion
 
+
         // Start/Stop Load/Save
         private void SettingsForm_Load(object sender, EventArgs e)
         {
@@ -44,6 +57,14 @@ namespace Gui_Miner
 
             DisplayMinerSettings();
             DisplayGpuSettings();
+
+            generalPanel.Hide();
+            manageConfigPanel.Show();
+
+            // Load General settings
+            autoStartMiningCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(SettingsForm.AUTOSTARTMINING), out bool result) ? result : false;
+            autoStartWithWinCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(SettingsForm.AUTOSTARTWITHWIN), out bool winResult) ? winResult : false;
+
         }
         private void SettingsForm_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -99,13 +120,23 @@ namespace Gui_Miner
 
             foreach (MinerConfig minerSetting in _settings.MinerSettings)
             {
-                minerSettingsListBox.Items.Add(minerSetting.Name + " / " + minerSetting.Id);
+                (Type configType, Object configObject) = minerSetting.GetSelectedMinerConfig();
+                PropertyInfo property = configType.GetProperty("Name");
+                string name = (string)property.GetValue(configObject);
+
+                minerSettingsListBox.Items.Add(name + " / " + minerSetting.Id);
             }
             minerSettingsListBox.SelectedIndex = selectedIndex;
         }
         private void UpdateGpusListBox(int selectedIndex = 1)
         {
             if (_settings.Gpus == null) return;
+
+            if (InvokeRequired)
+            {
+                Invoke(new Action(() => UpdateGpusListBox(selectedIndex)));
+                return;
+            }
 
             gpuListBox.Items.Clear();
             gpuListBox.Items.Add("Add GPU");
@@ -121,6 +152,11 @@ namespace Gui_Miner
         // Miner Settings
         private MinerConfig GetSelectedMinerSettings()
         {
+            if (InvokeRequired)
+            {
+                return (MinerConfig)Invoke(new Func<MinerConfig>(GetSelectedMinerSettings));
+            }
+
             MinerConfig minerSetting = null;
 
             if (minerSettingsListBox.SelectedIndex <= 0) return minerSetting;
@@ -137,7 +173,7 @@ namespace Gui_Miner
         }
         private MinerConfig GetMinerSettingsFromUI()
         {
-            MinerConfig newMinerSetting = new MinerConfig();
+            MinerConfig newMinerSetting = GetSelectedMinerSettings();
             TableLayoutPanel tableLayoutPanel = this.Controls.Find(MINERSETTINGSPANELNAME, true).FirstOrDefault() as TableLayoutPanel;
             int id = 0;
 
@@ -146,35 +182,43 @@ namespace Gui_Miner
             // CUSTOM SETTINGS
             newMinerSetting.batFileArguments = batLineTextBox.Text;
 
+            // Set selected miner config
+            var comboBox = tableLayoutPanel.Controls.Find("ChooseMinerComboBox", true).FirstOrDefault();
+            MinerConfig.MinerConfigType matchedEnumValue = (MinerConfig.MinerConfigType)Enum.Parse(typeof(MinerConfig.MinerConfigType), comboBox.Text);
+            newMinerSetting.CurrentMinerConfig = matchedEnumValue;
+
+            (Type configType, Object configObject) = newMinerSetting.GetSelectedMinerConfig();
+
+            string propertyName = "";
             foreach (Control control in tableLayoutPanel.Controls)
             {
                 if (control is Label label)
                 {
-                    string propertyName = label.Text;                    
-                    PropertyInfo property = typeof(MinerConfig).GetProperty(propertyName); // Use MinerSetting type
+                    propertyName = label.Text;
+                }
 
-                    if (property != null)
+                PropertyInfo property = configType.GetProperty(propertyName);
+
+                if (property != null)
+                {
+                    if (control is TextBox textbox)
                     {
-                        if (control is TextBox textbox)
-                        {
-                            string propertyValue = textbox.Text;
+                        string propertyValue = textbox.Text;
 
-                            if (propertyName.ToLower() == "id" && propertyValue != null)
-                                id = int.Parse(propertyValue);
+                        if (propertyName.ToLower() == "id" && propertyValue != null)
+                            id = int.Parse(propertyValue);
 
-                            if (!string.IsNullOrEmpty(propertyValue))
-                            {
-                                object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
-                                property.SetValue(newMinerSetting, convertedValue);
-                            }
-                        }
-                        else if (control is CheckBox checkBox)
-                        {
-                            bool propertyValue = checkBox.Checked;
-                            property.SetValue(newMinerSetting, propertyValue);
-                        }
+                        object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
+                        property.SetValue(configObject, convertedValue);
+
+                    }
+                    else if (control is CheckBox checkBox)
+                    {
+                        bool propertyValue = checkBox.Checked;
+                        property.SetValue(configObject, propertyValue);
                     }
                 }
+
             }
 
             return newMinerSetting;
@@ -190,11 +234,39 @@ namespace Gui_Miner
             if (_settings.MinerSettings != null)
             {
                 MinerConfig minerSetting = GetSelectedMinerSettings();
-                PropertyInfo[] properties = typeof(MinerConfig).GetProperties();
+
+                // Get miner config
+                (Type configType, Object configObject) = minerSetting.GetSelectedMinerConfig();
+                PropertyInfo[] properties = configType.GetProperties();
 
                 // CUSTOM SETTINGS
                 // Set .bat file textbox
                 batLineTextBox.Text = minerSetting.batFileArguments;
+
+                // Choose Miner Label
+                Label minerLabel = new Label();
+                minerLabel.Text = "Choose Miner:";
+                minerLabel.Anchor = AnchorStyles.None;
+                minerLabel.TextAlign = ContentAlignment.MiddleCenter;
+                tableLayoutPanel.Controls.Add(minerLabel, 0, tableLayoutPanel.RowCount);
+                tableLayoutPanel.RowCount++; // Increment the row count
+
+                // Create a dropdown menu
+                ComboBox comboBox = new ComboBox();
+                comboBox.Name = "ChooseMinerComboBox";
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+
+                foreach (MinerConfig.MinerConfigType value in Enum.GetValues(typeof(MinerConfig.MinerConfigType)))
+                    comboBox.Items.Add(value);
+
+                comboBox.Text = minerSetting.CurrentMinerConfig.ToString();
+                
+                // Add event handler for when an item is selected
+                comboBox.SelectedIndexChanged += ComboBox_SelectedIndexChanged;
+                comboBox.Anchor = AnchorStyles.None;              
+                tableLayoutPanel.Controls.Add(comboBox, 0, tableLayoutPanel.RowCount);
+                tableLayoutPanel.RowCount++; 
+
 
                 foreach (PropertyInfo property in properties)
                 {
@@ -205,8 +277,8 @@ namespace Gui_Miner
                     Label label = new Label();
                     label.Text = property.Name;
                     label.AutoSize = true;
-                    label.Anchor = AnchorStyles.None; // Center the text horizontally
-                    label.TextAlign = ContentAlignment.MiddleCenter; // Center the text vertically
+                    label.Anchor = AnchorStyles.None;
+                    label.TextAlign = ContentAlignment.MiddleCenter; 
 
                     Control inputControl; // This will be either a TextBox or CheckBox
 
@@ -214,10 +286,10 @@ namespace Gui_Miner
                     {
                         // Create a CheckBox for boolean properties
                         CheckBox checkBox = new CheckBox();
-                        checkBox.Checked = (bool)property.GetValue(minerSetting);
+                        checkBox.Checked = (bool)property.GetValue(configObject);
                         checkBox.CheckedChanged += (sender, e) =>
                         {
-                            property.SetValue(minerSetting, checkBox.Checked);
+                            property.SetValue(configObject, checkBox.Checked);
                         };
 
                         inputControl = checkBox;
@@ -226,7 +298,7 @@ namespace Gui_Miner
                     {
                         // Create a TextBox for non-boolean properties
                         TextBox textbox = new TextBox();
-                        textbox.Text = property.GetValue(minerSetting)?.ToString();
+                        textbox.Text = property.GetValue(configObject)?.ToString();
                         textbox.KeyUp += (sender, e) =>
                         {
                             if (e.KeyCode == Keys.Enter)
@@ -261,6 +333,15 @@ namespace Gui_Miner
             // Add panel
             minerSettingsPanel.Controls.Add(tableLayoutPanel);
         }
+
+        private void ComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ComboBox comboBox = (ComboBox)sender;
+            var selectedMinerSettings = GetSelectedMinerSettings();
+            MinerConfig.MinerConfigType matchedEnumValue = (MinerConfig.MinerConfigType)Enum.Parse(typeof(MinerConfig.MinerConfigType), comboBox.Text);
+            selectedMinerSettings.CurrentMinerConfig = matchedEnumValue;
+            DisplayMinerSettings();
+        }
         private void minerSettingsListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (minerSettingsListBox.SelectedIndex == -1) return;
@@ -272,12 +353,34 @@ namespace Gui_Miner
                 if (_settings.MinerSettings == null)
                     _settings.MinerSettings = new List<MinerConfig>();
                 else
-                    _settings.MinerSettings.Add(Form1.GetWhichMinerConfigToUse());
+                    _settings.MinerSettings.Add(new MinerConfig());
 
                 UpdateMinerSettingsListBox(_settings.MinerSettings.Count);
             }
 
             DisplayMinerSettings();
+        }
+        private void minerSettingsListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete)
+            {
+                minerSettingsPanel.Controls.Clear();
+
+                if (minerSettingsListBox.SelectedIndex >= 1)
+                {
+                    MinerConfig minerSettings = GetSelectedMinerSettings();
+
+                    // Remove from settings
+                    for (int i = 0; i < _settings.MinerSettings.Count; i++)
+                    {
+                        if (_settings.MinerSettings[i].Id == minerSettings.Id)
+                            _settings.MinerSettings.RemoveAt(i);
+                    }
+
+                    // Remove the selected item from the ListBox
+                    minerSettingsListBox.Items.RemoveAt(minerSettingsListBox.SelectedIndex);
+                }
+            }
         }
 
 
@@ -306,33 +409,35 @@ namespace Gui_Miner
 
             if (tableLayoutPanel == null) return newGpu;
 
+            string propertyName = "";
             foreach (Control control in tableLayoutPanel.Controls)
             {
                 if (control is Label label)
                 {
-                    string propertyName = label.Text;
-                    PropertyInfo property = typeof(Gpu).GetProperty(propertyName); // Use Gpu type
+                    propertyName = label.Text;
+                }
 
-                    if (property != null)
+                PropertyInfo property = typeof(Gpu).GetProperty(propertyName); // Use Gpu type
+
+                if (property != null)
+                {
+                    if (control is TextBox textBox)
                     {
-                        if (control is TextBox textBox)
-                        {
-                            string propertyValue = textBox.Text;
+                        string propertyValue = textBox.Text;
 
-                            if (propertyName.ToLower() == "id" && propertyValue != null)
-                                id = int.Parse(propertyValue);
+                        if (propertyName.ToLower() == "id" && propertyValue != null)
+                            id = int.Parse(propertyValue);
 
-                            if (!string.IsNullOrEmpty(propertyValue))
-                            {
-                                object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
-                                property.SetValue(newGpu, convertedValue);
-                            }
-                        }
-                        else if (control is CheckBox checkBox)
+                        if (!string.IsNullOrEmpty(propertyValue))
                         {
-                            bool propertyValue = checkBox.Checked;
-                            property.SetValue(newGpu, propertyValue);
+                            object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
+                            property.SetValue(newGpu, convertedValue);
                         }
+                    }
+                    else if (control is CheckBox checkBox)
+                    {
+                        bool propertyValue = checkBox.Checked;
+                        property.SetValue(newGpu, propertyValue);
                     }
                 }
             }
@@ -433,31 +538,9 @@ namespace Gui_Miner
             }
 
             DisplayGpuSettings();
+
+            UpdateStatusLabel("Edit Gpu Then Click Add GPUs");
         }
-
-        private void minerSettingsListBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Delete)
-            {
-                minerSettingsPanel.Controls.Clear();
-                
-                if (minerSettingsListBox.SelectedIndex >= 1)
-                {
-                    MinerConfig minerSettings = GetSelectedMinerSettings();
-
-                    // Remove from settings
-                    for(int i = 0; i < _settings.MinerSettings.Count; i++)
-                    {
-                        if(_settings.MinerSettings[i].Id == minerSettings.Id) 
-                            _settings.MinerSettings.RemoveAt(i);
-                    }
-
-                    // Remove the selected item from the ListBox
-                    minerSettingsListBox.Items.RemoveAt(minerSettingsListBox.SelectedIndex);
-                }
-            }
-        }
-
         private void gpuListBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Delete)
@@ -480,6 +563,243 @@ namespace Gui_Miner
                 }
             }
         }
+
+
+        // Generate bat file arguments
+        private void generateButton_Click(object sender, EventArgs e)
+        {
+            var minerSetting = GetSelectedMinerSettings();
+            batLineTextBox.Text = minerSetting.GeneratebatFileArguments();
+
+            UpdateStatusLabel("");
+        }
+
+        // Get list of devices
+        private void getAllGpusButton_Click(object sender, EventArgs e)
+        {
+            Task.Run(() =>
+            { 
+                var devices = GetDevicesFromMiner();
+
+                foreach (var device in devices)
+                {
+                    // Create new gpu
+                    Gpu newGpu = new Gpu();
+                    var parts = device.Split(' ');
+                    string vram = parts[parts.Length - 3];
+                    string name = parts[parts.Length - 4];
+                    newGpu.Name = $"{name} {vram}";
+                    var deviceId = parts[0].Substring(3);
+                    deviceId = deviceId.Replace(':', ' ').Trim();
+                    newGpu.Device_Id = int.Parse(deviceId);
+
+                    // Add new gpu
+                    if (_settings.Gpus == null)
+                        _settings.Gpus = new List<Gpu> { newGpu};
+                    else
+                        _settings.Gpus.Add(newGpu);
+
+                    UpdateGpusListBox(_settings.Gpus.Count);
+
+                    UpdateStatusLabel("Edit Gpus Then Click Add GPUs");
+                }
+            });
+
+        }
+        private List<string> GetDevicesFromMiner()
+        {
+            var minerSettings = GetSelectedMinerSettings();
+            (Type configType, Object configObject) = minerSettings.GetSelectedMinerConfig();
+            PropertyInfo minerFilePathProperty = configType.GetProperty("MinerFilePath");
+            string minerFilePath = (string)minerFilePathProperty.GetValue(configObject);
+
+            FieldInfo listDevicesCommandField = configType.GetField("ListDevicesCommand", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            string listDevicesCommand = (string)listDevicesCommandField.GetValue(configObject);
+
+            // Create a new process
+            Process process = new Process();
+
+            string path = minerFilePath;
+            if (!File.Exists(minerFilePath))
+                path = Directory.GetCurrentDirectory() + "\\" + minerFilePath;
+
+            // Set the process start information
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = path,
+                Arguments = listDevicesCommand,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            process.StartInfo = startInfo;
+
+            // Subscribe to the OutputDataReceived event
+            List<string> devices = new List<string>();
+            process.OutputDataReceived += (senderr, ee) =>
+            {
+                if (!string.IsNullOrEmpty(ee.Data))
+                {
+                    // This event is called whenever there is data available in the standard output
+                    this.Invoke((MethodInvoker)delegate
+                    {
+                        devices.Add(ee.Data);
+                    });
+                }
+            };
+
+            // Start the process
+            process.Start();
+
+            // Begin asynchronously reading the output
+            process.BeginOutputReadLine();
+
+            // Wait for the process to exit
+            process.WaitForExit();
+
+            // Close the standard output stream
+            process.Close();
+
+            return devices;
+        }
+
+        private void addGpuSettingsButton_Click(object sender, EventArgs e)
+        {
+            var minerSettings = GetSelectedMinerSettings();
+            (Type configType, Object configObject) = minerSettings.GetSelectedMinerConfig();
+            MethodInfo methodInfo = configType.GetMethod("AddGpuSettings");
+            methodInfo.Invoke(configObject, new object[] { _settings.Gpus });
+            DisplayMinerSettings();
+
+            UpdateStatusLabel();
+        }
+
+        private void clearGpuSettingsButton_Click(object sender, EventArgs e)
+        {
+            var minerSettings = GetSelectedMinerSettings();
+            (Type configType, Object configObject) = minerSettings.GetSelectedMinerConfig();
+            MethodInfo methodInfo = configType.GetMethod("ClearGpuSettings");
+            methodInfo.Invoke(configObject, null);
+            DisplayMinerSettings();
+
+            UpdateStatusLabel();
+        }
+
+        private void UpdateStatusLabel(string message = "Click Generate to Update")
+        {
+            statusLabel.Text = message;
+        }
+
+        
+        // Navigation buttons
+        private void generalButton_Click(object sender, EventArgs e)
+        {
+            manageConfigPanel.Hide();
+            generalPanel.Show();
+            generalPanel.BringToFront();
+        }
+        private void manageMinerConfigsButton_Click(object sender, EventArgs e)
+        {
+            generalPanel.Hide();
+            manageConfigPanel.Show();
+            manageConfigPanel.BringToFront();
+        }
+
+
+        // General Settings
+        private void autoStartMiningCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            AppSettings.Save<string>(AUTOSTARTMINING, autoStartMiningCheckBox.Checked.ToString());
+        }
+        private void autoStartWithWinCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            AppSettings.Save<string>(AUTOSTARTWITHWIN, autoStartWithWinCheckBox.Checked.ToString());
+
+            if (autoStartWithWinCheckBox.Checked)
+            {
+                if (IsRunningAsAdmin())
+                {
+                    string assemblyPath = Assembly.GetEntryAssembly().Location;
+                    if (CreateSchedulerTask("GuiMiner", assemblyPath))
+                        successLabel.Text = "Successfully added auto start task";
+                    else
+                        successLabel.Text = "Unable to add auto start task";
+                }
+                else
+                    successLabel.Text = "Please restart the app as admin in order to start with Windows";
+            }
+            else
+            {
+                DeleteSchedulerTask("GuiMiner");
+            }
+        }
+
+
+        // Create/Delete Scheduler Task
+        public static bool CreateSchedulerTask(string taskName, string applicationPath)
+        {
+            try
+            {
+                using (TaskService taskService = new TaskService())
+                {
+                    TaskDefinition taskDefinition = taskService.NewTask();
+
+                    // Set the task properties
+                    taskDefinition.RegistrationInfo.Description = "Auto Start Gui Miner on Windows Startup";
+                    taskDefinition.Principal.RunLevel = TaskRunLevel.Highest;  // Run with highest privileges
+
+                    // Set the task settings
+                    taskDefinition.Settings.ExecutionTimeLimit = TimeSpan.Zero; // Do not stop the task if it runs longer than 3 days
+                    taskDefinition.Settings.StartWhenAvailable = true; // Run the task as soon as possible after a scheduled start is missed
+
+                    // Create a trigger to run the task on system startup
+                    LogonTrigger trigger = new LogonTrigger();
+                    taskDefinition.Triggers.Add(trigger);
+
+                    // Create an action to start the application
+                    string actionPath = applicationPath;
+                    string actionArguments = "";  // You can specify additional arguments here if needed
+                    taskDefinition.Actions.Add(new ExecAction(actionPath, actionArguments, Path.GetDirectoryName(applicationPath)));
+
+                    // Register the new task
+                    taskService.RootFolder.RegisterTaskDefinition(taskName, taskDefinition, TaskCreation.CreateOrUpdate, null, null, TaskLogonType.None, null);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if(IsRunningAsAdmin())
+                    MessageBox.Show($"Failed to add auto start task to windows task scheduler: {ex.Message}");
+                
+                return false;
+            }
+        }
+        public static bool DeleteSchedulerTask(string taskName)
+        {
+            try
+            {
+                using (TaskService taskService = new TaskService())
+                {
+                    // Delete the task if it exists
+                    if (taskService.GetTask(taskName) != null)
+                    {
+                        taskService.RootFolder.DeleteTask(taskName, false);
+                        return true;
+                    }
+                    else
+                    {
+                        // The task with the specified name does not exist
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to delete task from Windows Task Scheduler: {ex.Message}");
+                return false;
+            }
+        }
     }
 
     public class Settings
@@ -488,6 +808,103 @@ namespace Gui_Miner
         public List<Gpu> Gpus { get; set; }
         public Settings()
         {
+        }
+    }
+    public class MinerConfig
+    {
+        public enum MinerConfigType
+        {
+            Unknown,
+            Gminer,
+            Trm
+        }
+
+        Random random = new Random();
+        public int Id { get; set; }
+        public MinerConfigType CurrentMinerConfig { get; set; }
+        public UnknownConfig UnknownConfig { get; set; }
+        public GminerConfig GminerConfig { get; set; }
+        public TrmConfig TrmConfig { get; set; }
+        public string batFileArguments { get; set; }
+
+        public MinerConfig()
+        {
+            Id = random.Next(2303, 40598);
+            CurrentMinerConfig = MinerConfigType.Unknown;
+            UnknownConfig = new UnknownConfig();
+            GminerConfig = new GminerConfig();
+            TrmConfig = new TrmConfig();
+            batFileArguments = "";
+        }
+
+        internal (Type, object) GetSelectedMinerConfig()
+        {
+            Type configType;
+            object configObject;
+
+            if (CurrentMinerConfig == MinerConfigType.Gminer)
+            {
+                configType = typeof(GminerConfig);
+                configObject = GminerConfig;
+            }
+            else if (CurrentMinerConfig == MinerConfigType.Trm)
+            {
+                configType = typeof(TrmConfig);
+                configObject = TrmConfig;
+            }
+            else
+            {
+                configType = typeof(UnknownConfig);
+                configObject = UnknownConfig;
+            }
+
+            return (configType, configObject);
+        }
+
+        internal string GeneratebatFileArguments()
+        {
+            (Type configType, object configObject) = GetSelectedMinerConfig();
+            PropertyInfo[] properties = configType.GetProperties();
+
+            StringBuilder configString = new StringBuilder();
+
+            string commandPrefix = (string)configType.GetProperty("CommandPrefix")?.GetValue(configObject);
+            string commandSeparator = (string)configType.GetProperty("CommandSeparator")?.GetValue(configObject);
+
+            foreach (PropertyInfo property in properties)
+            {
+                string propertyName = property.Name;
+                object propertyValue = property.GetValue(configObject);
+                
+                if (propertyValue == null || String.IsNullOrWhiteSpace(propertyValue.ToString())) continue; // skip empty properties
+                if (propertyName.StartsWith("Command")) continue; // skip 
+                if (propertyName.Equals("Name")) continue; // skip 
+                if (propertyName.Equals("Active")) continue; // skip 
+                if (propertyName.Equals("runAsAdmin")) continue; // skip 
+                if (propertyName.Equals("pl") && propertyValue.ToString().Trim().Equals("-1")) continue; // skip 
+                
+
+                if (propertyName.Equals("MinerFilePath"))
+                {
+                    configString.Append($"\"{propertyValue}\" ");
+                }
+                // Special gminer
+                else if(propertyName.Equals("nvml"))
+                {
+                    propertyValue.ToString().Replace(" ", commandSeparator);
+                    if (propertyValue.ToString().ToLower() == "true")
+                        propertyValue = "1";
+
+                    configString.Append($"{commandPrefix}{propertyName} {propertyValue} ");
+                }
+                else
+                {
+                    propertyValue.ToString().Replace(" ", commandSeparator);
+                    configString.Append($"{commandPrefix}{propertyName} {propertyValue} ");
+                }
+            }
+
+            return configString.ToString().Trim();
         }
     }
     public class Gpu
@@ -501,6 +918,7 @@ namespace Gui_Miner
         public int Mem_Clock_Offset { get; set; }
         public int Power_Limit { get; set; }
         public double Core_Mv { get; set; }
+        public double Mem_Mv { get; set; } 
         public double Intensity { get; set; }
         public double Dual_Intensity { get; set; }
         public int Max_Core_Temp { get; set; }
