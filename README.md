@@ -2,7 +2,18 @@
  Manage CLI miners with a GUI and manage all .bat files in one place along with gpu settings
 
 # How To Use
-Make sure to click Generate .bat file after making any changes to update
+
+1. Add your favorite miner.exe file to this app's folder
+2. Click Settings in the top right then Get All GPUs in the bottom right
+3. Edit each GPU settings
+4. Click Add Miner Settings in the top left
+5. Choose a miner and edit the settings
+6. Click Add Gpu Settings
+7. Click Generate in the bottom left
+8. Close Settings
+9. Click Start and all Active miners will start
+
+Make sure to click Generate .bat file after making any changes and stop then start the miner to use the latest settings. If you want to set GPU clock settings then the app must be run as admin by right clicking Gui_Miner.exe and clicking "Run as administrator".
 
 # FAQ
 ## Why is the miner not starting?
