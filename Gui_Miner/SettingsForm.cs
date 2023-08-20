@@ -189,8 +189,30 @@ namespace Gui_Miner
                     walletsListBox.SelectedIndex = selectedIndex;
             }
         }
+        private void UpdatePoolsListBox(int selectedIndex = 1)
+        {
+            if (_settings.Pools == null) return;
+
+            poolsListBox.Items.Clear();
+            poolsListBox.Items.Add("Add Pool");
+
+            foreach (Pool pool in _settings.Pools)
+            {
+                poolsListBox.Items.Add(pool.Name + " / " + pool.Id);
+            }
+
+            if (_settings.Pools.Count >= 1)
+            {
+                // Select last item if out of bounds
+                if (selectedIndex >= poolsListBox.Items.Count)
+                    poolsListBox.SelectedIndex = poolsListBox.Items.Count - 1;
+                else
+                    poolsListBox.SelectedIndex = selectedIndex;
+            }
+        }
 
 
+        #region MinerConfigs
         // Miner Settings
         private MinerConfig GetSelectedMinerSettings()
         {
@@ -262,10 +284,18 @@ namespace Gui_Miner
                     else if (control is ComboBox walletComboBox)
                     {
                         int propertyValue = int.Parse(walletComboBox.Text.Split('/')[1].Trim());
+                        
                         // Get wallet
                         var wallet = _settings.Wallets.Find(w => w.Id.Equals(propertyValue));
-
-                        property.SetValue(configObject, wallet.Address);
+                        
+                        if(wallet == null)
+                        {
+                            // Get Pool
+                            var pool = _settings.Pools.Find(p => p.Id.Equals(propertyValue));
+                            property.SetValue(configObject, pool.Address);
+                        }
+                        else
+                            property.SetValue(configObject, wallet.Address);
                     }
                 }
 
@@ -297,14 +327,14 @@ namespace Gui_Miner
                 Label minerLabel = new Label();
                 minerLabel.Text = "Choose Miner:";
                 minerLabel.Anchor = AnchorStyles.None;
-                minerLabel.TextAlign = ContentAlignment.MiddleCenter;
-                
-                //tableLayoutPanel.RowCount++;
+                minerLabel.TextAlign = ContentAlignment.MiddleCenter;                
 
                 // Create a dropdown menu
                 ComboBox comboBox = new ComboBox();
                 comboBox.Name = "ChooseMinerComboBox";
                 comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                comboBox.ForeColor = Color.White;
+                comboBox.BackColor = Color.FromArgb(12, 20, 52);
 
                 foreach (MinerConfig.MinerConfigType value in Enum.GetValues(typeof(MinerConfig.MinerConfigType)))
                     comboBox.Items.Add(value);
@@ -316,9 +346,9 @@ namespace Gui_Miner
                 comboBox.Anchor = AnchorStyles.None;              
                 tableLayoutPanel.Controls.Add(comboBox, 0, tableLayoutPanel.RowCount);
                 tableLayoutPanel.Controls.Add(minerLabel, 0, tableLayoutPanel.RowCount);
-                tableLayoutPanel.RowCount++; 
+                tableLayoutPanel.RowCount++;
 
-
+                int port = 0;
                 foreach (PropertyInfo property in properties)
                 {
                     // Skip default properties
@@ -337,6 +367,7 @@ namespace Gui_Miner
                     {
                         // Create a CheckBox for boolean properties
                         CheckBox checkBox = new CheckBox();
+                        checkBox.BackColor = Color.FromArgb(12, 20, 52);
                         checkBox.Checked = (bool)property.GetValue(configObject);
                         checkBox.CheckedChanged += (sender, e) =>
                         {
@@ -348,7 +379,9 @@ namespace Gui_Miner
                     else if(property.Name.Contains("user") || property.Name.Contains("wallet"))
                     {
                         ComboBox walletComboBox = new ComboBox();
-                        walletComboBox.Name = property.Name;
+                        walletComboBox.BackColor = Color.FromArgb(12, 20, 52);
+                        walletComboBox.ForeColor = Color.White;
+                        walletComboBox.Name = property.Name;                        
                         var propertyValue = (string)property.GetValue(configObject);
 
                         int i = 0;
@@ -370,10 +403,60 @@ namespace Gui_Miner
 
                         inputControl = walletComboBox;
                     }
+                    else if(property.Name.Contains("server") || property.Name.Contains("pool"))
+                    {
+                        ComboBox poolComboBox = new ComboBox();
+                        poolComboBox.BackColor = Color.FromArgb(12, 20, 52);
+                        poolComboBox.ForeColor = Color.White;
+                        poolComboBox.Name = property.Name;
+                        var propertyValue = (string)property.GetValue(configObject);
+
+                        int i = 0;
+                        int selectedIndex = 0;
+                        foreach (Pool pool in _settings.Pools)
+                        {
+                            poolComboBox.Items.Add(pool.Name + " - SSL: " + pool.Ssl + " / " + pool.Id);
+                            if (pool.Address == propertyValue)
+                            {
+                                selectedIndex = i;
+                                port = pool.Port;
+                            }
+                            i++;
+                        }
+
+                        poolComboBox.SelectedIndex = selectedIndex;
+
+                        poolComboBox.SelectedIndexChanged += (sender, e) =>
+                        {
+                            SaveSettings();
+                            var currentComboBox = (ComboBox)sender;                            
+
+                            // Get the selected pool
+                            var parts = currentComboBox.Text.Split('/');
+                            int id = int.Parse(parts[1].Trim());
+                            Pool selectedPool = _settings.Pools.Find(p => p.Id.Equals(id));                            
+
+                            // Find the next TextBox control
+                            Control nextControl = this.GetNextControl(currentComboBox, true);
+
+                            // Loop until we find a TextBox control
+                            while (nextControl != null && !(nextControl is TextBox))
+                            {
+                                nextControl = this.GetNextControl(nextControl, true);
+                            }
+
+                            // Set the next textbox to the port number
+                            nextControl.Text = selectedPool.Port.ToString();
+                        };
+
+                        inputControl = poolComboBox;
+                    }
                     else
                     {
                         // Create a TextBox for non-boolean properties
                         TextBox textbox = new TextBox();
+                        textbox.BackColor = Color.FromArgb(12, 20, 52);
+                        textbox.ForeColor = Color.White;
                         textbox.Text = property.GetValue(configObject)?.ToString();
                         textbox.KeyUp += (sender, e) =>
                         {
@@ -458,8 +541,10 @@ namespace Gui_Miner
                 }
             }
         }
+        #endregion
 
 
+        #region GPUs
         // Gpus
         private Gpu GetSelectedGpu()
         {
@@ -537,6 +622,7 @@ namespace Gui_Miner
                 {
                     // Skip default properties
                     if (property.Name.StartsWith("Default")) continue;
+                    if (property.Name.Equals("Id")) continue;
 
                     Label label = new Label();
                     label.Text = property.Name;
@@ -562,6 +648,8 @@ namespace Gui_Miner
                     {
                         // Create a TextBox for non-boolean properties
                         TextBox textbox = new TextBox();
+                        textbox.BackColor = Color.FromArgb(12, 20, 52);
+                        textbox.ForeColor = Color.White;
                         textbox.Text = property.GetValue(gpu)?.ToString();
                         textbox.KeyUp += (sender, e) =>
                         {
@@ -640,21 +728,11 @@ namespace Gui_Miner
             }
         }
 
-
-        // Generate bat file arguments
-        private void generateButton_Click(object sender, EventArgs e)
-        {
-            var minerSetting = GetSelectedMinerSettings();
-            batLineTextBox.Text = minerSetting.GeneratebatFileArguments();
-
-            UpdateStatusLabel("");
-        }
-
         // Get list of devices
         private void getAllGpusButton_Click(object sender, EventArgs e)
         {
             Task.Run(() =>
-            { 
+            {
                 var devices = GetDevicesFromMiner();
 
                 foreach (var device in devices)
@@ -669,15 +747,22 @@ namespace Gui_Miner
                     deviceId = deviceId.Replace(':', ' ').Trim();
                     newGpu.Device_Id = int.Parse(deviceId);
 
-                    // Add new gpu
-                    if (_settings.Gpus == null)
-                        _settings.Gpus = new List<Gpu> { newGpu};
-                    else
-                        _settings.Gpus.Add(newGpu);
+                    // Check if a GPU with the same Device_ID and Name already exists
+                    Gpu existingGpu = _settings.Gpus.FirstOrDefault(gpu =>
+                        gpu.Device_Id == newGpu.Device_Id && gpu.Name == newGpu.Name);
+
+                    if (existingGpu == null)
+                    {
+                        // If no matching GPU was found, add the new GPU
+                        if (_settings.Gpus == null)
+                            _settings.Gpus = new List<Gpu> { newGpu };
+                        else
+                            _settings.Gpus.Add(newGpu);
+                    }
 
                     UpdateGpusListBox(_settings.Gpus.Count);
 
-                    UpdateStatusLabel("Edit Gpus Then Click Add GPUs");
+                    UpdateStatusLabel("Edit Gpus Then Click Add GPU Settings");
                 }
             });
 
@@ -739,7 +824,6 @@ namespace Gui_Miner
             return devices;
         }
 
-        
         // Add/Clear Gpu Settings Buttons
         private void addGpuSettingsButton_Click(object sender, EventArgs e)
         {
@@ -761,6 +845,20 @@ namespace Gui_Miner
 
             UpdateStatusLabel();
         }
+        #endregion
+
+
+        // Generate bat file arguments
+        private void generateButton_Click(object sender, EventArgs e)
+        {
+            var minerSetting = GetSelectedMinerSettings();
+            batLineTextBox.Text = minerSetting.GeneratebatFileArguments();
+
+            UpdateStatusLabel("");
+
+            SaveSettings();
+        }       
+
 
         private void UpdateStatusLabel(string message = "Click Generate to Update")
         {
@@ -795,6 +893,8 @@ namespace Gui_Miner
             HideAllPanels();
             poolsPanel.Show();
             poolsPanel.BringToFront();
+
+            UpdatePoolsListBox();
         }
         private void HideAllPanels()
         {
@@ -901,6 +1001,7 @@ namespace Gui_Miner
         }
 
 
+        #region Wallets
         // Manage Wallets
         private void walletsListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -951,58 +1052,38 @@ namespace Gui_Miner
             
             return existingWallet;            
         }
+        private void SaveWallets()
+        {
+            var updatedWallet = GetWalletFromUI();
+            var savedWallet = GetSelectedWallet();
+            savedWallet.Name = updatedWallet.Name;
+            savedWallet.Address = updatedWallet.Address;
+            savedWallet.Coin = updatedWallet.Coin;
+
+            AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+
+            UpdateWalletsListBox(walletsListBox.SelectedIndex);
+            DisplayMinerSettings();
+        }
         private void walletNameTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                var updatedWallet = GetWalletFromUI();
-                var savedWallet = GetSelectedWallet();
-                savedWallet.Name = updatedWallet.Name;
-                savedWallet.Address = updatedWallet.Address;
-                savedWallet.Coin = updatedWallet.Coin;
-
-                AppSettings.Save<Settings>(SETTINGSNAME, _settings);
-
-                UpdateWalletsListBox(walletsListBox.SelectedIndex);
-                DisplayMinerSettings();
+                SaveWallets();
             }
         }
         private void walletAddressTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                var updatedWallet = GetWalletFromUI();
-                var savedWallet = GetSelectedWallet();
-                if (savedWallet != null)
-                {
-                    savedWallet.Name = updatedWallet.Name;
-                    savedWallet.Address = updatedWallet.Address;
-                    savedWallet.Coin = updatedWallet.Coin;
-                }
-                
-                AppSettings.Save<Settings>(SETTINGSNAME, _settings);
-
-                UpdateWalletsListBox(walletsListBox.SelectedIndex);
-                DisplayMinerSettings();
+                SaveWallets();
             }
         }
         private void walletCoinTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                var updatedWallet = GetWalletFromUI();
-                var savedWallet = GetSelectedWallet();
-                if (savedWallet != null)
-                {
-                    savedWallet.Name = updatedWallet.Name;
-                    savedWallet.Address = updatedWallet.Address;
-                    savedWallet.Coin = updatedWallet.Coin;
-                }
-
-                AppSettings.Save<Settings>(SETTINGSNAME, _settings);
-
-                UpdateWalletsListBox(walletsListBox.SelectedIndex);
-                DisplayMinerSettings();
+                SaveWallets();
             }
         }
         private void walletsListBox_KeyDown(object sender, KeyEventArgs e)
@@ -1025,9 +1106,136 @@ namespace Gui_Miner
                 }
             }
         }
+        #endregion
+
+        #region Pools
+        // Manage Pools
+        private void poolsListBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (poolsListBox.SelectedIndex == -1) return;
+
+            // Adding new item
+            if (poolsListBox.SelectedIndex == 0)
+            {
+                // Create and add new miner setting
+                Pool pool = new Pool();
+                pool.Name = "New Pool";
+
+                if (_settings.Pools == null)
+                    _settings.Pools = new List<Pool> { pool };
+                else
+                    _settings.Pools.Add(pool);
+
+                UpdatePoolsListBox(_settings.Pools.Count);
+            }
+
+            DisplayPoolSettings();
+        }
+        private void DisplayPoolSettings()
+        {
+            Pool selectedPool = GetSelectedPool();
+            if (selectedPool == null) return;
+
+            poolNameTextBox.Text = selectedPool.Name;
+            poolAddressTextBox.Text = selectedPool.Address;
+            poolPortTextBox.Text = selectedPool.Port.ToString();
+            poolLinkTextBox.Text = selectedPool.Link;
+            poolSsslCheckBox.Checked = selectedPool.Ssl;
+        }
+        private Pool GetPoolFromUI()
+        {
+            Pool pool = new Pool();
+
+            pool.Name = poolNameTextBox.Text;
+            pool.Address = poolAddressTextBox.Text;
+            pool.Port = int.TryParse(poolPortTextBox.Text, out int port) ? port : -1;
+            pool.Link = poolLinkTextBox.Text;
+            pool.Ssl = poolSsslCheckBox.Checked;
+
+            return pool;
+        }
+        private Pool GetSelectedPool()
+        {
+            if (poolsListBox.SelectedIndex <= 0) return null;
+
+            int id = int.Parse(poolsListBox.Text.Split('/')[1]);
+
+            Pool pool = _settings.Pools.Find(w => w.Id.Equals(id));
+
+            return pool;
+        }
+        private void SavePools()
+        {
+            var updatedPool = GetPoolFromUI();
+            var savedPool = GetSelectedPool();
+            savedPool.Name = updatedPool.Name;
+            savedPool.Address = updatedPool.Address;
+            savedPool.Port = updatedPool.Port;
+            savedPool.Ssl = updatedPool.Ssl;
+            savedPool.Link = updatedPool.Link;
+
+            AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+
+            UpdatePoolsListBox(poolsListBox.SelectedIndex);
+            DisplayMinerSettings();
+        }
+        private void poolNameTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                SavePools();
+            }
+        }
+        private void poolAddressTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                SavePools();
+            }
+        }
+        private void textBox1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                SavePools();
+            }
+        }
+        private void poolLinkTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                SavePools();
+            }
+        }
+        private void poolSsslCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            SavePools();
+        }
+        private void poolsListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete)
+            {
+                var selectedPool = GetSelectedPool();
+
+                // Display a confirmation dialog
+                DialogResult result = MessageBox.Show($"Are you sure you want to delete the pool named {selectedPool.Name}?", "Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    // User clicked "Yes"
+                    _settings.Pools.Remove(selectedPool);
+                    AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+
+                    UpdatePoolsListBox(poolsListBox.Items.Count);
+                    DisplayMinerSettings();
+                }
+            }
+        }
+        #endregion
 
     }
 
+    #region Class Structure
     public class Settings
     {
         public List<MinerConfig> MinerSettings { get; set; }
@@ -1196,7 +1404,6 @@ namespace Gui_Miner
             return false;
         }
     }
-
     public class Wallet
     {
         Random random = new Random();
@@ -1214,14 +1421,17 @@ namespace Gui_Miner
         Random random = new Random();
         public int Id { get; set; }
         public string Name { get; set; }
-        public string Url { get; set; }
+        public string Address { get; set; }
         public int Port { get; set; }
+        public string Link { get; set; }
         public bool Ssl { get; set; }
         public Pool()
         {
             Id = random.Next(2303, 40598);
         }
     }
+    #endregion
+
     public static class AppSettings
     {
         public static void Save<T>(string key, T value)

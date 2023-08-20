@@ -41,6 +41,7 @@
             this.settingsButtonPictureBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.settingsButtonPictureBox.BackgroundImage = global::Gui_Miner.Properties.Resources.settings;
             this.settingsButtonPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.settingsButtonPictureBox.Cursor = System.Windows.Forms.Cursors.Hand;
             this.settingsButtonPictureBox.Location = new System.Drawing.Point(351, 3);
             this.settingsButtonPictureBox.Name = "settingsButtonPictureBox";
             this.settingsButtonPictureBox.Size = new System.Drawing.Size(64, 53);
@@ -52,6 +53,7 @@
             // 
             this.startButtonPictureBox.BackgroundImage = global::Gui_Miner.Properties.Resources.play_button;
             this.startButtonPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.startButtonPictureBox.Cursor = System.Windows.Forms.Cursors.Hand;
             this.startButtonPictureBox.Location = new System.Drawing.Point(2, 2);
             this.startButtonPictureBox.Name = "startButtonPictureBox";
             this.startButtonPictureBox.Size = new System.Drawing.Size(64, 53);
@@ -64,7 +66,7 @@
             this.outputPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.outputPanel.BackgroundImage = global::Gui_Miner.Properties.Resources.kas_world;
+            this.outputPanel.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("outputPanel.BackgroundImage")));
             this.outputPanel.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this.outputPanel.Location = new System.Drawing.Point(-6, 56);
             this.outputPanel.Name = "outputPanel";

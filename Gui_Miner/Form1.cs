@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -24,9 +25,11 @@ namespace Gui_Miner
     {
         NotifyIcon notify_icon;
         SettingsForm settingsForm = new SettingsForm();
-        Timer timer;
+        CancellationTokenSource ctsRotatingPanel = new CancellationTokenSource();
         private RotatingPanel rotatingPanel;
         private double rotationAngle; // Current rotation angle
+        List<Task> runningTasks = new List<Task>();
+        CancellationTokenSource ctsRunningMiners = new CancellationTokenSource();
         public Form1()
         {
             InitializeComponent();
@@ -39,37 +42,76 @@ namespace Gui_Miner
             settingsForm.Visible = false;
             settingsForm.Form1 = this;
 
-            // Timers
-            timer = new Timer();
-            timer.Interval = 50; // Adjust the interval for rotation speed (milliseconds)
-            timer.Tick += RotatePanel;
-            timer.Start();
-
             outputPanel.BackgroundImage = null;
 
             // Rotating panel
+            CreateRotatingPanel();
+            
+        }
+
+        // Rotate image
+        private async void CreateRotatingPanel()
+        {
+            ctsRotatingPanel = new CancellationTokenSource(); // Initialize the CancellationTokenSource
+
             rotatingPanel = new RotatingPanel();
-            rotatingPanel.Size = outputPanel.Size; 
+            rotatingPanel.Size = outputPanel.Size;
             rotatingPanel.Location = new Point(0, 55);
             rotatingPanel.BackColor = Color.Transparent;
             rotatingPanel.Dock = DockStyle.Fill;
             rotatingPanel.Visible = true;
+
             outputPanel.Controls.Add(rotatingPanel);
 
-        }
+            rotatingPanel.BringToFront();
 
-        // Rotate image
-        private void RotatePanel(object sender, EventArgs e)
+            // Start a background task to rotate the panel asynchronously
+            await RotatePanelAsync(ctsRotatingPanel.Token);
+        }
+        private void RemoveRotatingPanel()
         {
-            // Increment the rotation angle (adjust the speed by changing the increment)
-            rotationAngle += 0.5; // Adjust the angle increment for desired speed
-
-            // Apply the rotation
-            rotatingPanel.RotationAngle = rotationAngle;
-
-            // Redraw the Panel
-            rotatingPanel.Invalidate();
+            if (rotatingPanel != null)
+            {
+                ctsRotatingPanel.Cancel();
+                rotatingPanel.Dispose(); // Dispose of the rotating panel
+                outputPanel.Controls.Remove(rotatingPanel); // Remove it from the outputPanel
+                rotatingPanel = null; // Set the reference to null
+            }
         }
+        private async Task RotatePanelAsync(CancellationToken cancellationToken)
+        {
+            await Task.Run(() =>
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    if (rotatingPanel != null)
+                    {
+                        // Increment the rotation angle (adjust the speed by changing the increment)
+                        rotationAngle += 0.5; // Adjust the angle increment for desired speed
+
+                        // Apply the rotation
+                        rotatingPanel.RotationAngle = rotationAngle;
+
+                        // Redraw the Panel
+                        rotatingPanel.Invalidate();
+
+                        // Check for cancellation after each step
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            break; // Exit the loop if cancellation is requested
+                        }
+
+                        // Sleep to control the rotation speed
+                        Task.Delay(50).Wait(); // Adjust the interval for rotation speed (milliseconds)
+                    }
+                    else
+                    {
+                        Task.Delay(250).Wait();
+                    }
+                }
+            });
+        }
+
 
 
 
@@ -134,9 +176,8 @@ namespace Gui_Miner
             startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
             startButtonPictureBox.Tag = "stop";
 
-            // Remove background image
-            //outputPanel.BackgroundImage = null;
-            rotatingPanel.Visible = false;
+            // Remove background
+            RemoveRotatingPanel();
 
             CreateTabControlAndStartMiners();
         }
@@ -146,11 +187,10 @@ namespace Gui_Miner
             startButtonPictureBox.BackgroundImage = Properties.Resources.play_button;
             startButtonPictureBox.Tag = "play";
 
-            // Replace background image
-            //outputPanel.BackgroundImage = Properties.Resources.kas_world;
-            rotatingPanel.Visible = true;
+            // Replace background
+            CreateRotatingPanel();
 
-            KillAllActiveMiners();
+            Task.Run(()=> { KillAllActiveMiners(); });
         }
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
@@ -161,6 +201,8 @@ namespace Gui_Miner
         // Start Active Miners
         private void CreateTabControlAndStartMiners()
         {
+            CancelAllTasks();
+
             TabControl tabControl = new TabControl();
             tabControl.Name = "outputTabControl";
             tabControl.Dock = DockStyle.Fill;
@@ -215,24 +257,66 @@ namespace Gui_Miner
                         string arguments = minerConfig.batFileArguments.Replace($"\"{filePath}\"", string.Empty).Trim();
 
                         // Start the miner in a separate thread with the miner-specific RichTextBox
-                        Task.Run(() => StartMiner(filePath, arguments, runAsAdmin, tabPageRichTextBox));
+                        Task minerTask = Task.Run(() => StartMiner(filePath, arguments, runAsAdmin, tabPageRichTextBox, ctsRunningMiners.Token));
+
+                        runningTasks.Add(minerTask);
                     }
                 }
             }
 
             // Check if the outputPanel already has the tabControl
-            if (outputPanel.Controls.Contains(tabControl))
+            TabControl tabControlToRemove = null;
+            foreach (Control control in outputPanel.Controls)
             {
-                outputPanel.Controls.Remove(tabControl);
+                if (control is TabControl)
+                {
+                    tabControlToRemove = (TabControl)control;
+                    break; // Exit the loop once the first TabControl is found
+                }
             }
 
-            // Add the TabControl to your form or container
+            if (tabControlToRemove != null)
+            {
+                outputPanel.Controls.Remove(tabControlToRemove);
+                tabControlToRemove.Dispose();
+            }
+
+            // Add the TabControl
             outputPanel.Controls.Add(tabControl);
         }
-        private void StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox)
+
+        public void CancelAllTasks()
+        {
+            var tasks = runningTasks;
+
+            if (tasks == null || tasks.Count == 0) return;
+
+            // Create a CancellationTokenSource to cancel tasks
+            ctsRunningMiners = new CancellationTokenSource();
+
+            // Cancel each task in the list
+            foreach (var task in tasks)
+            {
+                if (task.Status == TaskStatus.Running || task.Status == TaskStatus.WaitingForActivation)
+                {
+                    // Try to cancel the task
+                    try
+                    {
+                        ctsRunningMiners.Cancel();
+                    }
+                    catch (AggregateException)
+                    {
+                        // Handle any exceptions if needed
+                    }
+                }
+            }
+        }
+        private void StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox, CancellationToken token)
         {
             if (File.Exists(filePath))
             {
+                richTextBox.Clear();
+
                 // Create a new process
                 Process process = new Process();
 
@@ -264,7 +348,7 @@ namespace Gui_Miner
                 // Subscribe to the OutputDataReceived event
                 process.OutputDataReceived += (sender, e) =>
                 {
-                    if (!string.IsNullOrEmpty(e.Data))
+                    if (!string.IsNullOrEmpty(e.Data) && !token.IsCancellationRequested)
                     {
                         try
                         {
@@ -381,20 +465,19 @@ namespace Gui_Miner
         private void OnSettings(object sender, EventArgs e)
         {
             settingsForm.Show();
+            settingsForm.Focus();
         }
         private void OnShowGui(object sender, EventArgs e)
         {
             this.WindowState = FormWindowState.Normal;
             this.Show();
+            this.Focus();
         }
 
 
         // Kill Active Miners
         private void KillAllActiveMiners()
         {
-            // Clear Gui
-            outputPanel.Controls.Clear();
-
             foreach (MinerConfig minerConfig in settingsForm.Settings.MinerSettings)
             {
                 (Type configType, Object configObject) = minerConfig.GetSelectedMinerConfig();
