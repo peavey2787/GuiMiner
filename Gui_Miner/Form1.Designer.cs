@@ -38,6 +38,7 @@
             // 
             // settingsButtonPictureBox
             // 
+            this.settingsButtonPictureBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.settingsButtonPictureBox.BackgroundImage = global::Gui_Miner.Properties.Resources.settings;
             this.settingsButtonPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this.settingsButtonPictureBox.Location = new System.Drawing.Point(351, 3);
@@ -65,15 +66,16 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.outputPanel.BackgroundImage = global::Gui_Miner.Properties.Resources.kas_world;
             this.outputPanel.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.outputPanel.Location = new System.Drawing.Point(2, 58);
+            this.outputPanel.Location = new System.Drawing.Point(-6, 56);
             this.outputPanel.Name = "outputPanel";
-            this.outputPanel.Size = new System.Drawing.Size(413, 413);
+            this.outputPanel.Size = new System.Drawing.Size(429, 420);
             this.outputPanel.TabIndex = 4;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
             this.ClientSize = new System.Drawing.Size(415, 471);
             this.Controls.Add(this.settingsButtonPictureBox);
             this.Controls.Add(this.startButtonPictureBox);

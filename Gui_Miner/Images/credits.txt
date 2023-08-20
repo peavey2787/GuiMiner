@@ -1,0 +1,11 @@
+exit-button = <a href="https://www.flaticon.com/free-icons/exit" title="exit icons">Exit icons created by Moqaccino Resources - Flaticon</a>
+stop-button = <a href="https://www.flaticon.com/free-icons/stop-button" title="stop button icons">Stop button icons created by Karacis - Flaticon</a>
+start-button = <a href="https://www.flaticon.com/free-icons/play-button" title="play button icons">Play button icons created by Graphix's Art - Flaticon</a>
+settings = <a href="https://www.flaticon.com/free-icons/settings" title="settings icons">Settings icons created by Freepik - Flaticon</a>
+wallets = <a href="https://www.flaticon.com/free-icons/wallet" title="wallet icons">Wallet icons created by Freepik - Flaticon</a>
+miner-settings = <a href="https://www.flaticon.com/free-icons/settings" title="settings icons">Settings icons created by Freepik - Flaticon</a> + <a href="https://www.flaticon.com/free-icons/miner" title="miner icons">Miner icons created by Smashicons - Flaticon</a>
+icon = <a href="https://www.flaticon.com/free-icons/miner" title="miner icons">Miner icons created by Smashicons - Flaticon</a> + <a href="https://www.flaticon.com/free-icons/mineral" title="mineral icons">Mineral icons created by Freepik - Flaticon</a>
+windows-settings = <a href="https://www.flaticon.com/free-icons/tools" title="tools icons">Tools icons created by Prosymbols - Flaticon</a> + <a href="https://www.flaticon.com/free-icons/windows" title="windows icons">Windows icons created by Pixel perfect - Flaticon</a>
+pools = <a href="https://www.flaticon.com/free-icons/swimming-pool" title="swimming pool icons">Swimming pool icons created by berkahicon - Flaticon</a>
+generate = <a href="https://www.flaticon.com/free-icons/create" title="create icons">Create icons created by Freepik - Flaticon</a>
+find-gpus = <a href="https://www.flaticon.com/free-icons/vision" title="vision icons">Vision icons created by Iconpro86 - Flaticon</a> + <a href="https://www.flaticon.com/free-icons/gpu" title="gpu icons">Gpu icons created by Chattapat - Flaticon</a> + <a href="https://www.flaticon.com/free-icons/gpu" title="gpu icons">Gpu icons created by Smashicons - Flaticon</a>

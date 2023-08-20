@@ -18,6 +18,7 @@ using System.Windows.Forms;
 using static Gui_Miner.Form1;
 using static Gui_Miner.SettingsForm;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolBar;
 using Action = System.Action;
 using ComboBox = System.Windows.Forms.ComboBox;
 using Label = System.Windows.Forms.Label;
@@ -61,20 +62,30 @@ namespace Gui_Miner
             HideAllPanels();
             manageConfigPanel.Show();
 
+            // Set form size
+            Size = new Size(735, 700);
+
             // Position settings panels and resize
             int y = 55;
+            Size panelSizes = new Size(720, 600);
             manageConfigPanel.Location = new Point(0, y);
             generalPanel.Location = new Point(0, y);
             walletsPanel.Location = new Point(0, y);
             poolsPanel.Location = new Point(0, y);
-            generalPanel.Size = manageConfigPanel.Size;
-            walletPanel.Size = manageConfigPanel.Size;
-            poolsPanel.Size = manageConfigPanel.Size;
+            manageConfigPanel.Size = panelSizes;
+            generalPanel.Size = panelSizes;
+            walletPanel.Size = panelSizes;
+            poolsPanel.Size = panelSizes;
 
             // Load General settings
             autoStartMiningCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(SettingsForm.AUTOSTARTMINING), out bool result) ? result : false;
             autoStartWithWinCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(SettingsForm.AUTOSTARTWITHWIN), out bool winResult) ? winResult : false;
 
+            // Tooltip text
+            toolTip.SetToolTip(getAllGpusButton, "Add all available GPUs");
+            toolTip.SetToolTip(addGpuSettingsButton, "Add all active GPU settings. Be sure to click generate .bat file after.");
+            toolTip.SetToolTip(clearGpuSettingsButton, "Remove all GPU specific settings from the miner settings.");
+            toolTip.SetToolTip(generateButton, "Use all miner settings above to generate the .bat file. Be sure to restart the miner to use the latest settings."); 
         }
         private void SettingsForm_FormClosing(object sender, FormClosingEventArgs e)
         {
