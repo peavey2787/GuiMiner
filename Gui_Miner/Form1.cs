@@ -316,6 +316,7 @@ namespace Gui_Miner
             if (File.Exists(filePath))
             {
                 richTextBox.Clear();
+                richTextBox.ForeColor = Color.FromArgb((int)(0.53 * 255), 58, 221, 190);
 
                 // Create a new process
                 Process process = new Process();
@@ -384,6 +385,19 @@ namespace Gui_Miner
                                 }
                                 else
                                 {
+                                    richTextBox.SelectionStart = richTextBox.TextLength;
+                                    richTextBox.SelectionLength = 0;
+
+                                    // Check if e.Data starts with a number
+                                    if (e.Data.Length > 0 && char.IsDigit(e.Data[0]))
+                                    {
+                                        richTextBox.SelectionColor = Color.Yellow;
+                                    }
+                                    else
+                                    {
+                                        richTextBox.SelectionColor = richTextBox.ForeColor; // Reset to the default color
+                                    }
+
                                     richTextBox.AppendText(Environment.NewLine + e.Data);
                                 }
                                 richTextBox.ScrollToCaret();
