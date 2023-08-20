@@ -58,8 +58,18 @@ namespace Gui_Miner
             DisplayMinerSettings();
             DisplayGpuSettings();
 
-            generalPanel.Hide();
+            HideAllPanels();
             manageConfigPanel.Show();
+
+            // Position settings panels and resize
+            int y = 55;
+            manageConfigPanel.Location = new Point(0, y);
+            generalPanel.Location = new Point(0, y);
+            walletsPanel.Location = new Point(0, y);
+            poolsPanel.Location = new Point(0, y);
+            generalPanel.Size = manageConfigPanel.Size;
+            walletPanel.Size = manageConfigPanel.Size;
+            poolsPanel.Size = manageConfigPanel.Size;
 
             // Load General settings
             autoStartMiningCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(SettingsForm.AUTOSTARTMINING), out bool result) ? result : false;
@@ -147,6 +157,27 @@ namespace Gui_Miner
             }
             gpuListBox.SelectedIndex = selectedIndex;
         }
+        private void UpdateWalletsListBox(int selectedIndex = 1)
+        {
+            if (_settings.Wallets == null) return;
+
+            walletsListBox.Items.Clear();
+            walletsListBox.Items.Add("Add Wallet");
+
+            foreach (Wallet wallet in _settings.Wallets)
+            {
+                walletsListBox.Items.Add(wallet.Name + " / " + wallet.Id);
+            }
+
+            if (_settings.Wallets.Count >= 1)
+            {
+                // Select last item if out of bounds
+                if (selectedIndex >= walletsListBox.Items.Count)
+                    walletsListBox.SelectedIndex = walletsListBox.Items.Count - 1;
+                else
+                    walletsListBox.SelectedIndex = selectedIndex;
+            }
+        }
 
 
         // Miner Settings
@@ -217,6 +248,14 @@ namespace Gui_Miner
                         bool propertyValue = checkBox.Checked;
                         property.SetValue(configObject, propertyValue);
                     }
+                    else if (control is ComboBox walletComboBox)
+                    {
+                        int propertyValue = int.Parse(walletComboBox.Text.Split('/')[1].Trim());
+                        // Get wallet
+                        var wallet = _settings.Wallets.Find(w => w.Id.Equals(propertyValue));
+
+                        property.SetValue(configObject, wallet.Address);
+                    }
                 }
 
             }
@@ -248,8 +287,8 @@ namespace Gui_Miner
                 minerLabel.Text = "Choose Miner:";
                 minerLabel.Anchor = AnchorStyles.None;
                 minerLabel.TextAlign = ContentAlignment.MiddleCenter;
-                tableLayoutPanel.Controls.Add(minerLabel, 0, tableLayoutPanel.RowCount);
-                tableLayoutPanel.RowCount++; // Increment the row count
+                
+                //tableLayoutPanel.RowCount++;
 
                 // Create a dropdown menu
                 ComboBox comboBox = new ComboBox();
@@ -265,6 +304,7 @@ namespace Gui_Miner
                 comboBox.SelectedIndexChanged += ComboBox_SelectedIndexChanged;
                 comboBox.Anchor = AnchorStyles.None;              
                 tableLayoutPanel.Controls.Add(comboBox, 0, tableLayoutPanel.RowCount);
+                tableLayoutPanel.Controls.Add(minerLabel, 0, tableLayoutPanel.RowCount);
                 tableLayoutPanel.RowCount++; 
 
 
@@ -293,6 +333,31 @@ namespace Gui_Miner
                         };
 
                         inputControl = checkBox;
+                    }
+                    else if(property.Name.Contains("user") || property.Name.Contains("wallet"))
+                    {
+                        ComboBox walletComboBox = new ComboBox();
+                        walletComboBox.Name = property.Name;
+                        var propertyValue = (string)property.GetValue(configObject);
+
+                        int i = 0;
+                        int selectedIndex = 0;
+                        foreach (Wallet wallet in _settings.Wallets)
+                        {
+                            walletComboBox.Items.Add(wallet.Name + " - " + wallet.Coin + " / " + wallet.Id);
+                            if (wallet.Address == propertyValue)
+                                selectedIndex = i;
+                            i++;
+                        }
+
+                        walletComboBox.SelectedIndex = selectedIndex;
+
+                        walletComboBox.SelectedIndexChanged += (sender, e) =>
+                        {
+                            SaveSettings();
+                        };
+
+                        inputControl = walletComboBox;
                     }
                     else
                     {
@@ -663,6 +728,8 @@ namespace Gui_Miner
             return devices;
         }
 
+        
+        // Add/Clear Gpu Settings Buttons
         private void addGpuSettingsButton_Click(object sender, EventArgs e)
         {
             var minerSettings = GetSelectedMinerSettings();
@@ -673,7 +740,6 @@ namespace Gui_Miner
 
             UpdateStatusLabel();
         }
-
         private void clearGpuSettingsButton_Click(object sender, EventArgs e)
         {
             var minerSettings = GetSelectedMinerSettings();
@@ -694,15 +760,37 @@ namespace Gui_Miner
         // Navigation buttons
         private void generalButton_Click(object sender, EventArgs e)
         {
-            manageConfigPanel.Hide();
+            HideAllPanels();
             generalPanel.Show();
             generalPanel.BringToFront();
         }
         private void manageMinerConfigsButton_Click(object sender, EventArgs e)
         {
-            generalPanel.Hide();
+            HideAllPanels();
             manageConfigPanel.Show();
             manageConfigPanel.BringToFront();
+        }
+        private void manageWalletsButton_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            walletsPanel.Show();
+            walletsPanel.BringToFront();
+
+            // Load saved wallets
+            UpdateWalletsListBox();
+        }
+        private void managePoolsButton_Click(object sender, EventArgs e)
+        {
+            HideAllPanels();
+            poolsPanel.Show();
+            poolsPanel.BringToFront();
+        }
+        private void HideAllPanels()
+        {
+            manageConfigPanel.Hide();
+            generalPanel.Hide();
+            walletsPanel.Hide();
+            poolsPanel.Hide();
         }
 
 
@@ -800,12 +888,141 @@ namespace Gui_Miner
                 return false;
             }
         }
+
+
+        // Manage Wallets
+        private void walletsListBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (walletsListBox.SelectedIndex == -1) return;
+
+            // Adding new item
+            if (walletsListBox.SelectedIndex == 0)
+            {
+                // Create and add new miner setting
+                Wallet newWallet = new Wallet();
+                newWallet.Name = "New Wallet";
+
+                if (_settings.Wallets == null)
+                    _settings.Wallets = new List<Wallet> { newWallet };
+                else
+                    _settings.Wallets.Add(newWallet);
+
+                UpdateWalletsListBox(_settings.Wallets.Count);
+            }
+
+            DisplayWalletSettings();
+        }
+        private void DisplayWalletSettings()
+        {
+            Wallet selectedWallet = GetSelectedWallet();
+            if(selectedWallet == null) return;
+
+            walletNameTextBox.Text = selectedWallet.Name;
+            walletAddressTextBox.Text = selectedWallet.Address;
+            walletCoinTextBox.Text = selectedWallet.Coin;
+        }
+        private Wallet GetWalletFromUI()
+        {
+            Wallet wallet = new Wallet();
+            wallet.Name = walletNameTextBox.Text;
+            wallet.Address = walletAddressTextBox.Text;
+            wallet.Coin = walletCoinTextBox.Text;
+
+            return wallet;
+        }
+        private Wallet GetSelectedWallet()
+        {
+            if(walletsListBox.SelectedIndex <= 0) return null;
+
+            int id = int.Parse(walletsListBox.Text.Split('/')[1]);
+
+            Wallet existingWallet = _settings.Wallets.Find(w => w.Id.Equals(id));
+            
+            return existingWallet;            
+        }
+        private void walletNameTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                var updatedWallet = GetWalletFromUI();
+                var savedWallet = GetSelectedWallet();
+                savedWallet.Name = updatedWallet.Name;
+                savedWallet.Address = updatedWallet.Address;
+                savedWallet.Coin = updatedWallet.Coin;
+
+                AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+
+                UpdateWalletsListBox(walletsListBox.SelectedIndex);
+                DisplayMinerSettings();
+            }
+        }
+        private void walletAddressTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                var updatedWallet = GetWalletFromUI();
+                var savedWallet = GetSelectedWallet();
+                if (savedWallet != null)
+                {
+                    savedWallet.Name = updatedWallet.Name;
+                    savedWallet.Address = updatedWallet.Address;
+                    savedWallet.Coin = updatedWallet.Coin;
+                }
+                
+                AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+
+                UpdateWalletsListBox(walletsListBox.SelectedIndex);
+                DisplayMinerSettings();
+            }
+        }
+        private void walletCoinTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                var updatedWallet = GetWalletFromUI();
+                var savedWallet = GetSelectedWallet();
+                if (savedWallet != null)
+                {
+                    savedWallet.Name = updatedWallet.Name;
+                    savedWallet.Address = updatedWallet.Address;
+                    savedWallet.Coin = updatedWallet.Coin;
+                }
+
+                AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+
+                UpdateWalletsListBox(walletsListBox.SelectedIndex);
+                DisplayMinerSettings();
+            }
+        }
+        private void walletsListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete)
+            {
+                var selectedWallet = GetSelectedWallet();
+
+                // Display a confirmation dialog
+                DialogResult result = MessageBox.Show($"Are you sure you want to delete the wallet named {selectedWallet.Name}?", "Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    // User clicked "Yes"
+                    _settings.Wallets.Remove(selectedWallet);
+                    AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+
+                    UpdateWalletsListBox(walletsListBox.Items.Count);
+                    DisplayMinerSettings();
+                }
+            }
+        }
+
     }
 
     public class Settings
     {
         public List<MinerConfig> MinerSettings { get; set; }
         public List<Gpu> Gpus { get; set; }
+        public List<Wallet> Wallets { get; set; }
+        public List<Pool> Pools { get; set; }
         public Settings()
         {
         }
@@ -969,6 +1186,31 @@ namespace Gui_Miner
         }
     }
 
+    public class Wallet
+    {
+        Random random = new Random();
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Address { get; set; }
+        public string Coin { get; set; }
+        public Wallet() 
+        {
+            Id = random.Next(2303, 40598);
+        }
+    }
+    public class Pool
+    {
+        Random random = new Random();
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Url { get; set; }
+        public int Port { get; set; }
+        public bool Ssl { get; set; }
+        public Pool()
+        {
+            Id = random.Next(2303, 40598);
+        }
+    }
     public static class AppSettings
     {
         public static void Save<T>(string key, T value)

@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Security.Principal;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -187,13 +188,22 @@ namespace Gui_Miner
                         // This event is called whenever there is data available in the standard output
                         this.Invoke((MethodInvoker)delegate
                         {
-                            if (e.Data.ToLower().Contains("failed"))
+                            if (e.Data.ToLower().Contains("failed") || e.Data.ToLower().Contains("error"))
                             {
                                 richTextBox.SelectionStart = richTextBox.TextLength;
                                 richTextBox.SelectionLength = 0;
                                 richTextBox.SelectionColor = Color.Red;
                                 richTextBox.AppendText(Environment.NewLine + e.Data);
                                 richTextBox.SelectionColor = richTextBox.ForeColor; // Reset to the default color
+
+                                // Errors
+                                if (e.Data.ToLower().Contains("error on gpu"))
+                                {
+                                    // Restart miner
+                                    startButtonPictureBox_Click(sender, null);
+                                    Thread.Sleep(1500);
+                                    startButtonPictureBox_Click(sender, null);
+                                }
                             }
                             else if (e.Data.ToLower().Contains("accepted"))
                             {
@@ -205,7 +215,7 @@ namespace Gui_Miner
                             }
                             else
                             {
-                                richTextBox.AppendText(Environment.NewLine + e.Data);
+                                richTextBox.AppendText(Environment.NewLine + e.Data);                                
                             }
                             richTextBox.ScrollToCaret();
                         });
