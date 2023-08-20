@@ -1,5 +1,7 @@
 # GuiMiner
-Manage CLI miners with a GUI and manage all .bat files in one place along with gpu settings
+Manage CLI miners with a GUI and manage all .bat files in one place along with gpu settings, wallets, and pools.
+
+![main](https://github.com/peavey2787/GuiMiner/assets/11081113/9dce49d7-8cb1-4177-8d05-b431eed0191a)
 
 Tips: kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug
 
@@ -20,6 +22,19 @@ Tips: kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug
 13. Click Start and all Active miners will start
 
 Make sure to click Generate .bat file after making any changes and stop then start the miner to use the latest settings. If you want to set GPU clock settings then the app must be run as admin by right clicking Gui_Miner.exe and clicking "Run as administrator".
+
+# Settings
+![settings](https://github.com/peavey2787/GuiMiner/assets/11081113/7c26f3e6-d412-43d4-ae01-f8afb5f3d301)
+
+# Wallets
+![wallets](https://github.com/peavey2787/GuiMiner/assets/11081113/9fa29829-625f-4108-9ebc-7142f9c74330)
+
+# Pools
+![pools](https://github.com/peavey2787/GuiMiner/assets/11081113/e9a60136-65a2-47b3-8ea9-5505f37f59c8)
+
+# Windows Settings
+![windows-settings](https://github.com/peavey2787/GuiMiner/assets/11081113/665ea91f-7ee8-4c53-a91e-c3a5985f214b)
+
 
 # FAQ
 ## Why is the miner not starting?
