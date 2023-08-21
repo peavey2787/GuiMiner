@@ -113,10 +113,6 @@ namespace Gui_Miner
         }
 
 
-
-
-
-
         // Load/Close Form
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -623,9 +619,6 @@ namespace Gui_Miner
             }
             return rotatedImage;
         }
-
-
-
 
     }
 
