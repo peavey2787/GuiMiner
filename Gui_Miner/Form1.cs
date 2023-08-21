@@ -169,13 +169,15 @@ namespace Gui_Miner
                 ClickStopButton();
             }
         }
-        private void ClickStartButton()
+        private async void ClickStartButton()
         {
             if (this.InvokeRequired)
             {
                 this.Invoke(new Action(ClickStartButton));
                 return;
             }
+
+            await CancelAllTasksAsync();            
 
             // Play button pushed
             startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
@@ -221,8 +223,6 @@ namespace Gui_Miner
         // Start Active Miners
         private void CreateTabControlAndStartMiners()
         {
-            CancelAllTasks();
-
             TabControl tabControl = new TabControl();
             tabControl.Name = "outputTabControl";
             tabControl.Dock = DockStyle.Fill;
@@ -273,7 +273,7 @@ namespace Gui_Miner
                         Process.Start(url);
                     };
                     tabPage.Controls.Add(linkLabel);
-
+                    
                     // Try to get pool link
                     MethodInfo getPoolDomainNameMethod = configType.GetMethod("GetPoolDomainName1");
                     string poolDomainName1 = (string)getPoolDomainNameMethod.Invoke(configObject, null);
@@ -315,6 +315,8 @@ namespace Gui_Miner
 
                     tabControl.TabPages.Add(tabPage);
 
+                    //string minerFilePath = (string)configType.GetMethod("MinerFilePath").Invoke(configObject, null);
+
                     if (minerConfig.batFileArguments.IndexOf(".exe") >= -1)
                     {
                         string filePath = "";
@@ -332,7 +334,9 @@ namespace Gui_Miner
                             // No quotes around path
                             filePath = minerConfig.batFileArguments.Substring(0, minerConfig.batFileArguments.IndexOf(".exe") + 4);
                             arguments = minerConfig.batFileArguments.Replace($"{filePath}", string.Empty).Trim();
-                        }                        
+                        }
+
+                        if (!File.Exists(filePath)) filePath = "miner.exe";
 
                         // Start the miner in a separate thread with the miner-specific RichTextBox
                         Task minerTask = Task.Run(() => StartMiner(filePath, arguments, runAsAdmin, tabPageRichTextBox, ctsRunningMiners.Token));
@@ -493,7 +497,7 @@ namespace Gui_Miner
 
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
-        public void CancelAllTasks()
+        public async Task CancelAllTasksAsync()
         {
             var tasks = runningTasks;
 
@@ -511,6 +515,8 @@ namespace Gui_Miner
                     try
                     {
                         ctsRunningMiners.Cancel();
+                        // Await the task to allow it to complete (including cancellation)
+                        await task;
                     }
                     catch (AggregateException)
                     {

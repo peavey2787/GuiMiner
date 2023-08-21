@@ -1,0 +1,15 @@
+# Visual Studio
+.vscode/
+.vs/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Zip files
+*.zip
+
+# Config files
+*.config
