@@ -13,7 +13,7 @@ Tips: kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug
 4. Click Wallets and add each of your wallets
 5. Click Pools and add each of your pools
 6. Click Add Miner Settings
-7. Choose a miner and edit the settings (add miner path here)
+7. Choose a miner, check __active__, and edit the settings (add miner path here)
 8. Click Get All GPUs
 9. Edit each GPU settings and check __enabled__
 10. Click Add Gpu Settings
