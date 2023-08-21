@@ -229,6 +229,7 @@ namespace Gui_Miner
                     TabPage tabPage = new TabPage();
                     tabPage.Text = minerConfig.CurrentMinerConfig.ToString();
 
+                    // Set link to api stats
                     string url = "http://localhost:" + api;
 
                     LinkLabel linkLabel = new LinkLabel();
@@ -283,33 +284,6 @@ namespace Gui_Miner
 
             // Add the TabControl
             outputPanel.Controls.Add(tabControl);
-        }
-
-        public void CancelAllTasks()
-        {
-            var tasks = runningTasks;
-
-            if (tasks == null || tasks.Count == 0) return;
-
-            // Create a CancellationTokenSource to cancel tasks
-            ctsRunningMiners = new CancellationTokenSource();
-
-            // Cancel each task in the list
-            foreach (var task in tasks)
-            {
-                if (task.Status == TaskStatus.Running || task.Status == TaskStatus.WaitingForActivation)
-                {
-                    // Try to cancel the task
-                    try
-                    {
-                        ctsRunningMiners.Cancel();
-                    }
-                    catch (AggregateException)
-                    {
-                        // Handle any exceptions if needed
-                    }
-                }
-            }
         }
         private void StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox, CancellationToken token)
         {
@@ -429,6 +403,32 @@ namespace Gui_Miner
             WindowsPrincipal principal = new WindowsPrincipal(identity);
 
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        public void CancelAllTasks()
+        {
+            var tasks = runningTasks;
+
+            if (tasks == null || tasks.Count == 0) return;
+
+            // Create a CancellationTokenSource to cancel tasks
+            ctsRunningMiners = new CancellationTokenSource();
+
+            // Cancel each task in the list
+            foreach (var task in tasks)
+            {
+                if (task.Status == TaskStatus.Running || task.Status == TaskStatus.WaitingForActivation)
+                {
+                    // Try to cancel the task
+                    try
+                    {
+                        ctsRunningMiners.Cancel();
+                    }
+                    catch (AggregateException)
+                    {
+                        // Handle any exceptions if needed
+                    }
+                }
+            }
         }
 
 
