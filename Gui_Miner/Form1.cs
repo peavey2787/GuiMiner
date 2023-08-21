@@ -222,6 +222,18 @@ namespace Gui_Miner
                         api = (int)getApiPortMethod.Invoke(configObject, null);
                     }
 
+                    if(api <= 0)
+                    {
+                        // Try getting api port from .bat file
+                        if(minerConfig.batFileArguments.Contains("api "))
+                        {
+                            string args = minerConfig.batFileArguments + " ";
+                            int start = args.IndexOf("api ") + 4;
+                            int end = args.IndexOf(" ", start);
+                            api = int.TryParse(args.Substring(start, end - start), out int portResult) ? portResult : 0;
+                        }
+                    }
+
                     TabPage tabPage = new TabPage();
                     tabPage.Text = minerConfig.CurrentMinerConfig.ToString();
 
@@ -249,9 +261,22 @@ namespace Gui_Miner
 
                     if (minerConfig.batFileArguments.IndexOf(".exe") >= -1)
                     {
+                        string filePath = "";
+                        string arguments = "";
+
                         // Get miner path
-                        string filePath = minerConfig.batFileArguments.Substring(1, minerConfig.batFileArguments.IndexOf(".exe") + 3);
-                        string arguments = minerConfig.batFileArguments.Replace($"\"{filePath}\"", string.Empty).Trim();
+                        if (minerConfig.batFileArguments.StartsWith("\""))
+                        {
+                            // Quotes around path
+                            filePath = minerConfig.batFileArguments.Substring(1, minerConfig.batFileArguments.IndexOf(".exe") + 3);
+                            arguments = minerConfig.batFileArguments.Replace($"\"{filePath}\"", string.Empty).Trim();
+                        }
+                        else
+                        {
+                            // No quotes around path
+                            filePath = minerConfig.batFileArguments.Substring(0, minerConfig.batFileArguments.IndexOf(".exe") + 4);
+                            arguments = minerConfig.batFileArguments.Replace($"{filePath}", string.Empty).Trim();
+                        }                        
 
                         // Start the miner in a separate thread with the miner-specific RichTextBox
                         Task minerTask = Task.Run(() => StartMiner(filePath, arguments, runAsAdmin, tabPageRichTextBox, ctsRunningMiners.Token));
@@ -494,13 +519,30 @@ namespace Gui_Miner
                 PropertyInfo activeProperty = configType.GetProperty("Active");
                 bool isActive = (bool)activeProperty.GetValue(configObject);
                 if (isActive)
-                {
+                {                    
+                    PropertyInfo filePathProperty = configType.GetProperty("MinerFilePath");
+                    string filePath = (string)filePathProperty.GetValue(configObject);
+
                     if (minerConfig.batFileArguments.IndexOf(".exe") >= -1)
                     {
                         // Get miner path
-                        string filePath = minerConfig.batFileArguments.Substring(1, minerConfig.batFileArguments.IndexOf(".exe") + 3);
+                        if (minerConfig.batFileArguments.StartsWith("\""))
+                        {
+                            // Quotes around path
+                            filePath = minerConfig.batFileArguments.Substring(1, minerConfig.batFileArguments.IndexOf(".exe") + 3);
+                        }
+                        else
+                        {
+                            // No quotes around path
+                            filePath = minerConfig.batFileArguments.Substring(0, minerConfig.batFileArguments.IndexOf(".exe") + 4);
+                        }
                         KillProcesses(filePath);
                     }
+                    else if(!String.IsNullOrWhiteSpace(filePath))
+                        KillProcesses(filePath);
+                    else
+                        KillProcesses("miner.exe");
+                    
                 }
             }
         }
@@ -508,20 +550,25 @@ namespace Gui_Miner
         {
             Process[] processes = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processName));
 
-            foreach (Process process in processes)
+            while (processes.Count() > 0)
             {
-                try
-                {
-                    // First, kill the process
-                    process.Kill();
+                processes = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processName));
 
-                    // Then, use PowerShell to find and kill the associated cmd window
-                    string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {process.Id} }} | ForEach-Object {{ $_.Terminate() }}";
-                    RunPowerShellCommand(command);
-                }
-                catch (Exception ex)
+                foreach (Process process in processes)
                 {
-                    Console.WriteLine($"Error: {ex.Message}");
+                    try
+                    {
+                        // First, kill the process
+                        process.Kill();
+
+                        // Then, use PowerShell to find and kill the associated cmd window
+                        string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {process.Id} }} | ForEach-Object {{ $_.Terminate() }}";
+                        RunPowerShellCommand(command);
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
                 }
             }
         }

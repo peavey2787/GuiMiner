@@ -166,7 +166,8 @@ namespace Gui_Miner
             {
                 gpuListBox.Items.Add(gpu.Name + " / " + gpu.Id);
             }
-            gpuListBox.SelectedIndex = selectedIndex;
+            if(_settings.Gpus.Count > 0)
+                gpuListBox.SelectedIndex = selectedIndex;
         }
         private void UpdateWalletsListBox(int selectedIndex = 1)
         {
@@ -238,6 +239,12 @@ namespace Gui_Miner
         private MinerConfig GetMinerSettingsFromUI()
         {
             MinerConfig newMinerSetting = GetSelectedMinerSettings();
+            if (newMinerSetting == null)
+            {
+                UpdateStatusLabel("Please select/create a miner config");
+                return new MinerConfig();
+            }
+
             TableLayoutPanel tableLayoutPanel = this.Controls.Find(MINERSETTINGSPANELNAME, true).FirstOrDefault() as TableLayoutPanel;
             int id = 0;
 
@@ -413,6 +420,7 @@ namespace Gui_Miner
 
                         int i = 0;
                         int selectedIndex = 0;
+
                         foreach (Pool pool in _settings.Pools)
                         {
                             poolComboBox.Items.Add(pool.Name + " - SSL: " + pool.Ssl + " / " + pool.Id);
@@ -734,7 +742,7 @@ namespace Gui_Miner
             Task.Run(() =>
             {
                 var devices = GetDevicesFromMiner();
-
+                
                 foreach (var device in devices)
                 {
                     // Create new gpu
@@ -748,16 +756,20 @@ namespace Gui_Miner
                     newGpu.Device_Id = int.Parse(deviceId);
 
                     // Check if a GPU with the same Device_ID and Name already exists
-                    Gpu existingGpu = _settings.Gpus.FirstOrDefault(gpu =>
-                        gpu.Device_Id == newGpu.Device_Id && gpu.Name == newGpu.Name);
-
-                    if (existingGpu == null)
+                    if (_settings.Gpus == null)
+                        _settings.Gpus = new List<Gpu> { newGpu };
+                    else
                     {
-                        // If no matching GPU was found, add the new GPU
-                        if (_settings.Gpus == null)
-                            _settings.Gpus = new List<Gpu> { newGpu };
-                        else
-                            _settings.Gpus.Add(newGpu);
+                        Gpu existingGpu = _settings.Gpus.FirstOrDefault(gpu => gpu.Device_Id == newGpu.Device_Id && gpu.Name == newGpu.Name);
+
+                        if (existingGpu == null)
+                        {
+                            // If no matching GPU was found, add the new GPU
+                            if (_settings.Gpus == null)
+                                _settings.Gpus = new List<Gpu> { newGpu };
+                            else
+                                _settings.Gpus.Add(newGpu);
+                        }
                     }
 
                     UpdateGpusListBox(_settings.Gpus.Count);
@@ -770,6 +782,13 @@ namespace Gui_Miner
         private List<string> GetDevicesFromMiner()
         {
             var minerSettings = GetSelectedMinerSettings();
+
+            if(minerSettings == null)
+            {
+                UpdateStatusLabel("Please select/create a miner config.");
+                return new List<string>();
+            }
+
             (Type configType, Object configObject) = minerSettings.GetSelectedMinerConfig();
             PropertyInfo minerFilePathProperty = configType.GetProperty("MinerFilePath");
             string minerFilePath = (string)minerFilePathProperty.GetValue(configObject);
@@ -783,6 +802,9 @@ namespace Gui_Miner
             string path = minerFilePath;
             if (!File.Exists(minerFilePath))
                 path = Directory.GetCurrentDirectory() + "\\" + minerFilePath;
+
+            if (!File.Exists(path) && File.Exists("miner.exe"))
+                path = "miner.exe";
 
             // Set the process start information
             ProcessStartInfo startInfo = new ProcessStartInfo
@@ -810,16 +832,22 @@ namespace Gui_Miner
             };
 
             // Start the process
-            process.Start();
+            try 
+            { 
+                process.Start();
 
-            // Begin asynchronously reading the output
-            process.BeginOutputReadLine();
-
-            // Wait for the process to exit
-            process.WaitForExit();
-
-            // Close the standard output stream
-            process.Close();
+                // Begin asynchronously reading the output
+                process.BeginOutputReadLine();
+                process.WaitForExit();
+                process.Close();
+            }
+            catch (Exception e)
+            {
+                if (e.Message.Contains("Access is denied") && File.Exists(path))
+                    UpdateStatusLabel("Please restart the app as administrator");
+                else if (!File.Exists(path))
+                    UpdateStatusLabel("Please add miner.exe to folder or set path");
+            }
 
             return devices;
         }
@@ -862,6 +890,13 @@ namespace Gui_Miner
 
         private void UpdateStatusLabel(string message = "Click Generate to Update")
         {
+            if (statusLabel.InvokeRequired)
+            {
+                // Use a delegate to update the UI thread
+                this.Invoke(new Action(() => UpdateStatusLabel(message)));
+                return;
+            }
+
             statusLabel.Text = message;
         }
 
@@ -1244,6 +1279,7 @@ namespace Gui_Miner
         public List<Pool> Pools { get; set; }
         public Settings()
         {
+
         }
     }
     public class MinerConfig
