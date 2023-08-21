@@ -12,14 +12,14 @@ Tips: kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug
 3. Click Settings
 4. Click Wallets and add each of your wallets
 5. Click Pools and add each of your pools
-6. Click Get All GPUs
-7. Edit each GPU settings
-8. Click Add Miner Settings
-9. Choose a miner and edit the settings
+6. Click Add Miner Settings
+7. Choose a miner and edit the settings (add miner path here)
+8. Click Get All GPUs
+9. Edit each GPU settings
 10. Click Add Gpu Settings
 11. Click Generate in the bottom left
 12. Close Settings
-13. Click Start and all Active miners will start
+13. Click Start and all __active__ miner settings will start
 
 Make sure to click Generate .bat file after making any changes and stop then start the miner to use the latest settings. If you want to set GPU clock settings then the app must be run as admin by right clicking Gui_Miner.exe and clicking "Run as administrator".
 
