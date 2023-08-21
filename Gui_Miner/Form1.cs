@@ -226,6 +226,18 @@ namespace Gui_Miner
                         api = (int)getApiPortMethod.Invoke(configObject, null);
                     }
 
+                    if(api <= 0)
+                    {
+                        // Try getting api port from .bat file
+                        if(minerConfig.batFileArguments.Contains("api "))
+                        {
+                            string args = minerConfig.batFileArguments + " ";
+                            int start = args.IndexOf("api ") + 4;
+                            int end = args.IndexOf(" ", start);
+                            api = int.TryParse(args.Substring(start, end - start), out int portResult) ? portResult : 0;
+                        }
+                    }
+
                     TabPage tabPage = new TabPage();
                     tabPage.Text = minerConfig.CurrentMinerConfig.ToString();
 
@@ -252,9 +264,24 @@ namespace Gui_Miner
 
                     if (minerConfig.batFileArguments.IndexOf(".exe") >= -1)
                     {
+                        string filePath = "";
+                        string arguments = "";
+
                         // Get miner path
-                        string filePath = minerConfig.batFileArguments.Substring(1, minerConfig.batFileArguments.IndexOf(".exe") + 3);
-                        string arguments = minerConfig.batFileArguments.Replace($"\"{filePath}\"", string.Empty).Trim();
+                        if (minerConfig.batFileArguments.StartsWith("\""))
+                        {
+                            // Quotes around path
+                            filePath = minerConfig.batFileArguments.Substring(1, minerConfig.batFileArguments.IndexOf(".exe") + 3);
+                            arguments = minerConfig.batFileArguments.Replace($"\"{filePath}\"", string.Empty).Trim();
+                        }
+                        else
+                        {
+                            // No quotes around path
+                            filePath = minerConfig.batFileArguments.Substring(0, minerConfig.batFileArguments.IndexOf(".exe") + 4);
+                            arguments = minerConfig.batFileArguments.Replace($"{filePath}", string.Empty).Trim();
+                        }
+
+                        
 
                         // Start the miner in a separate thread with the miner-specific RichTextBox
                         Task minerTask = Task.Run(() => StartMiner(filePath, arguments, runAsAdmin, tabPageRichTextBox, ctsRunningMiners.Token));
