@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Security.Principal;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -52,6 +53,8 @@ namespace Gui_Miner
         // Rotate image
         private async void CreateRotatingPanel()
         {
+            outputPanel.Controls.Clear();
+
             ctsRotatingPanel = new CancellationTokenSource(); // Initialize the CancellationTokenSource
 
             rotatingPanel = new RotatingPanel();
@@ -168,17 +171,34 @@ namespace Gui_Miner
         }
         private void ClickStartButton()
         {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(ClickStartButton));
+                return;
+            }
+
             // Play button pushed
             startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
             startButtonPictureBox.Tag = "stop";
 
             // Remove background
             RemoveRotatingPanel();
+            outputPanel.Controls.Clear();
+
+            // Reset restart counter
+            restartsLabel.Text = $"Restarts 0";
+            restartsLabel.Show();
 
             CreateTabControlAndStartMiners();
         }
         private void ClickStopButton()
         {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(ClickStopButton));
+                return;
+            }
+
             // Stop button pushed
             startButtonPictureBox.BackgroundImage = Properties.Resources.play_button;
             startButtonPictureBox.Tag = "play";
@@ -186,7 +206,11 @@ namespace Gui_Miner
             // Replace background
             CreateRotatingPanel();
 
-            Task.Run(()=> { KillAllActiveMiners(); });
+            // Reset restart counter
+            restartsLabel.Text = $"Restarts 0";
+            restartsLabel.Hide();
+
+            Task.Run(() => { KillAllActiveMiners(); });
         }
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
@@ -210,6 +234,9 @@ namespace Gui_Miner
                 bool isActive = (bool)activeProperty.GetValue(configObject);
                 if (isActive)
                 {
+                    TabPage tabPage = new TabPage();
+                    tabPage.Text = minerConfig.CurrentMinerConfig.ToString();
+
                     PropertyInfo runAsAdminProperty = configType.GetProperty("runAsAdmin");
                     bool runAsAdmin = (bool)runAsAdminProperty.GetValue(configObject);
 
@@ -234,9 +261,6 @@ namespace Gui_Miner
                         }
                     }
 
-                    TabPage tabPage = new TabPage();
-                    tabPage.Text = minerConfig.CurrentMinerConfig.ToString();
-
                     // Set link to api stats
                     string url = "http://localhost:" + api;
 
@@ -249,6 +273,38 @@ namespace Gui_Miner
                         Process.Start(url);
                     };
                     tabPage.Controls.Add(linkLabel);
+
+                    // Try to get pool link
+                    MethodInfo getPoolDomainNameMethod = configType.GetMethod("GetPoolDomainName1");
+                    string poolDomainName1 = (string)getPoolDomainNameMethod.Invoke(configObject, null);
+                    string poolLink1 = "";
+                    if (poolDomainName1 != null)
+                    {
+                        // Get matching pool and return its link
+                        foreach (Pool pool in settingsForm.Settings.Pools)
+                        {
+                            if (pool.Address.Contains(poolDomainName1) || pool.Link.Contains(poolDomainName1))
+                            {
+                                poolLink1 = pool.Link;
+                            }
+                        }
+
+                    }                   
+
+                    // Set link to pool
+                    LinkLabel poolLinkLabel = new LinkLabel();
+                    poolLinkLabel.Text = "Pool Link: " + poolLink1;
+                    poolLinkLabel.Dock = DockStyle.Top;
+                    poolLinkLabel.LinkClicked += (sender, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(poolLink1) && Uri.IsWellFormedUriString(poolLink1, UriKind.Absolute))
+                        {
+                            // Open the default web browser with the specified URL
+                            Process.Start(poolLink1); 
+                        }
+                    };
+                    tabPage.Controls.Add(poolLinkLabel);
+
 
                     RichTextBox tabPageRichTextBox = new RichTextBox();
                     tabPageRichTextBox.Dock = DockStyle.Fill;
@@ -342,7 +398,7 @@ namespace Gui_Miner
                 process.StartInfo = startInfo;
 
                 // Subscribe to the OutputDataReceived event
-                process.OutputDataReceived += (sender, e) =>
+                process.OutputDataReceived += async (sender, e) =>
                 {
                     if (!string.IsNullOrEmpty(e.Data) && !token.IsCancellationRequested)
                     {
@@ -350,7 +406,7 @@ namespace Gui_Miner
                         {
 
                             // This event is called whenever there is data available in the standard output
-                            this.Invoke((MethodInvoker)delegate
+                            this.BeginInvoke((MethodInvoker)async delegate
                             {
                                 if (e.Data.ToLower().Contains("failed") || e.Data.ToLower().Contains("error"))
                                 {
@@ -363,11 +419,23 @@ namespace Gui_Miner
                                     // Errors
                                     if (e.Data.ToLower().Contains("error on gpu"))
                                     {
-                                        // Restart miner                                        
-                                        ClickStopButton();
-                                        Thread.Sleep(5500);
+                                        // Restart miner
                                         richTextBox.AppendText("Gpu failed, Restarting...");
-                                        ClickStartButton();                                        
+                                        ClickStopButton();
+                                        await Task.Delay(2500);// Thread.Sleep(2500);                                        
+                                        ClickStartButton();
+
+                                        // Extract the number from the restarts label text
+                                        int restarts;
+                                        if (int.TryParse(Regex.Match(restartsLabel.Text, @"\d+").Value, out restarts))
+                                        {
+                                            restarts++;
+
+                                            // Update the label text with the new number
+                                            restartsLabel.Text = $"Restarts {restarts}";
+                                            restartsLabel.ForeColor = Color.Red;
+                                            restartsLabel.Show();
+                                        }
                                     }
                                 }
                                 else if (e.Data.ToLower().Contains("accepted"))

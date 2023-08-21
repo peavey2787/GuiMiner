@@ -32,6 +32,7 @@
             this.settingsButtonPictureBox = new System.Windows.Forms.PictureBox();
             this.startButtonPictureBox = new System.Windows.Forms.PictureBox();
             this.outputPanel = new System.Windows.Forms.Panel();
+            this.restartsLabel = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.settingsButtonPictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.startButtonPictureBox)).BeginInit();
             this.SuspendLayout();
@@ -73,12 +74,25 @@
             this.outputPanel.Size = new System.Drawing.Size(429, 420);
             this.outputPanel.TabIndex = 4;
             // 
+            // restartsLabel
+            // 
+            this.restartsLabel.AutoSize = true;
+            this.restartsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.25F);
+            this.restartsLabel.ForeColor = System.Drawing.SystemColors.Control;
+            this.restartsLabel.Location = new System.Drawing.Point(159, 21);
+            this.restartsLabel.Name = "restartsLabel";
+            this.restartsLabel.Size = new System.Drawing.Size(73, 17);
+            this.restartsLabel.TabIndex = 8;
+            this.restartsLabel.Text = "Restarts 0";
+            this.restartsLabel.Visible = false;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
             this.ClientSize = new System.Drawing.Size(415, 471);
+            this.Controls.Add(this.restartsLabel);
             this.Controls.Add(this.settingsButtonPictureBox);
             this.Controls.Add(this.startButtonPictureBox);
             this.Controls.Add(this.outputPanel);
@@ -91,6 +105,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.settingsButtonPictureBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.startButtonPictureBox)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -98,6 +113,7 @@
         private System.Windows.Forms.Panel outputPanel;
         private System.Windows.Forms.PictureBox startButtonPictureBox;
         private System.Windows.Forms.PictureBox settingsButtonPictureBox;
+        private System.Windows.Forms.Label restartsLabel;
     }
 }
 

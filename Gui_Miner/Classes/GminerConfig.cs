@@ -151,5 +151,21 @@ namespace Gui_Miner
         {
             return api;
         }
+        public string GetPoolDomainName1()
+        {
+            var parts = server.Trim().Split('.');
+
+            // mining url
+            if (parts.Length == 3)
+            {
+                return parts[1] + "." + parts[2];
+            }
+            // pool url
+            else if (parts.Length == 2)
+            {
+                return parts[0] + "." + parts[1];
+            }
+            return server.Trim();
+        }
     }
 }
