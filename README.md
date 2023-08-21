@@ -15,11 +15,11 @@ Tips: kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug
 6. Click Add Miner Settings
 7. Choose a miner and edit the settings (add miner path here)
 8. Click Get All GPUs
-9. Edit each GPU settings
+9. Edit each GPU settings and check __enabled__
 10. Click Add Gpu Settings
 11. Click Generate in the bottom left
 12. Close Settings
-13. Click Start and all __active__ miner settings will start
+13. Click Start and all __active__ miner settings will start on all __enabled__ GPUs
 
 Make sure to click Generate .bat file after making any changes and stop then start the miner to use the latest settings. If you want to set GPU clock settings then the app must be run as admin by right clicking Gui_Miner.exe and clicking "Run as administrator".
 
