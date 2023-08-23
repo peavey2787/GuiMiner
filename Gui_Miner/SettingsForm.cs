@@ -69,7 +69,7 @@ namespace Gui_Miner
             manageConfigPanel.Show();
 
             // Set form size
-            Size = new Size(735, 700);
+            Size = new Size(735, 725);
 
             // Position settings panels and resize
             int y = 55;
@@ -1123,7 +1123,11 @@ namespace Gui_Miner
                     rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
             }
         }
-
+        private void tipLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Clipboard.SetText("kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug");
+            copiedLabel.ShowTextForDuration("", 3000);
+        }
 
         // Rotate image
         private void CreateRotatingPanel()
@@ -1215,6 +1219,7 @@ namespace Gui_Miner
                 return false;
             }
         }
+
         #endregion
 
 
@@ -1449,6 +1454,7 @@ namespace Gui_Miner
                 }
             }
         }
+
 
 
 

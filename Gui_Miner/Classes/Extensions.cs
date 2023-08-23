@@ -109,5 +109,31 @@ namespace Gui_Miner.Classes
                 label.ForeColor = color;
             }
         }
+
+        public static void ShowTextForDuration(this Label label, string text, int durationMillisecs)
+        {
+            if (label.InvokeRequired)
+            {
+                label.Invoke(new Action(() => ShowTextForDuration(label, text, durationMillisecs)));
+                return;
+            }
+            
+            if(!string.IsNullOrEmpty(text))
+                label.Text = text;
+
+            label.Visible = true;
+
+            Task.Delay(durationMillisecs).ContinueWith(_ =>
+            {
+                if (label.InvokeRequired)
+                {
+                    label.Invoke(new Action(() => label.Visible = false));
+                }
+                else
+                {
+                    label.Visible = false;
+                }
+            });
+        }
     }
 }
