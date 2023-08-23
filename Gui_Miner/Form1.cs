@@ -7,7 +7,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Management;
+using System.Management.Instrumentation;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -31,6 +33,7 @@ namespace Gui_Miner
         private double rotationAngle; // Current rotation angle
         List<Task> runningTasks = new List<Task>();
         CancellationTokenSource ctsRunningMiners = new CancellationTokenSource();
+        private GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook(); 
         public Form1()
         {
             InitializeComponent();
@@ -40,6 +43,7 @@ namespace Gui_Miner
 
             // Create Settings Form
             settingsForm.Show();
+            settingsForm.MainForm = this;
             settingsForm.Visible = false;
             settingsForm.Form1 = this;
 
@@ -47,8 +51,34 @@ namespace Gui_Miner
 
             // Rotating panel
             CreateRotatingPanel();
-            
+
+            globalKeyboardHook.SetMainForm(this);
+
+            // Listen for short-cut keys
+            UpdateShortcutKeys();
+ 
         }
+        public void UpdateShortcutKeys()
+        {
+            var stopShortKeys = AppSettings.Load<List<Keys>>(SettingsForm.STOPSHORTKEYS);
+            var startShortKeys = AppSettings.Load<List<Keys>>(SettingsForm.STARTSHORTKEYS);
+
+            if (stopShortKeys != null && startShortKeys != null)
+            {
+                globalKeyboardHook.SetStartKeys(startShortKeys.ToArray());
+                globalKeyboardHook.SetStopKeys(stopShortKeys.ToArray());
+            }
+            else if(startShortKeys != null)
+            {
+                globalKeyboardHook.SetStartKeys(startShortKeys.ToArray());
+            }
+            else if(stopShortKeys != null)
+            {
+                globalKeyboardHook.SetStopKeys(stopShortKeys.ToArray());
+            }
+
+        }
+
 
         // Rotate image
         private async void CreateRotatingPanel()
@@ -169,7 +199,7 @@ namespace Gui_Miner
                 ClickStopButton();
             }
         }
-        private async void ClickStartButton()
+        internal async void ClickStartButton()
         {
             if (this.InvokeRequired)
             {
@@ -193,7 +223,7 @@ namespace Gui_Miner
 
             CreateTabControlAndStartMiners();
         }
-        private void ClickStopButton()
+        internal void ClickStopButton()
         {
             if (this.InvokeRequired)
             {
@@ -218,6 +248,8 @@ namespace Gui_Miner
         {
             settingsForm.Visible = true;
         }
+
+
 
 
         // Start Active Miners
@@ -281,11 +313,14 @@ namespace Gui_Miner
                     if (poolDomainName1 != null)
                     {
                         // Get matching pool and return its link
-                        foreach (Pool pool in settingsForm.Settings.Pools)
+                        if (settingsForm.Settings.Pools != null && settingsForm.Settings.Pools.Count > 0)
                         {
-                            if (pool.Address.Contains(poolDomainName1) || pool.Link.Contains(poolDomainName1))
+                            foreach (Pool pool in settingsForm.Settings.Pools)
                             {
-                                poolLink1 = pool.Link;
+                                if (pool.Address.Contains(poolDomainName1) || pool.Link.Contains(poolDomainName1))
+                                {
+                                    poolLink1 = pool.Link;
+                                }
                             }
                         }
 

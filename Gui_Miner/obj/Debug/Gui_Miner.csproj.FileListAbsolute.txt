@@ -63,3 +63,5 @@ C:\Users\10900kf\Source\Repos\GuiMiner\Gui_Miner\obj\Debug\Gui_Miner.csproj.Core
 C:\Users\10900kf\Source\Repos\GuiMiner\Gui_Miner\obj\Debug\Gui_Miner.csproj.CopyComplete
 C:\Users\10900kf\Source\Repos\GuiMiner\Gui_Miner\obj\Debug\Gui_Miner.exe
 C:\Users\10900kf\Source\Repos\GuiMiner\Gui_Miner\obj\Debug\Gui_Miner.pdb
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\Gui_Miner\bin\Debug\WindowsInput.dll
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\Gui_Miner\bin\Debug\WindowsInput.xml

@@ -31,11 +31,14 @@ namespace Gui_Miner
     {
         #region Variables
         Settings _settings = new Settings();
+        public Form1 MainForm { get; set; }
         const string SETTINGSNAME = "Settings";
         const string MINERSETTINGSPANELNAME = "tableLayoutPanel";
         const string GPUSETTINGSPANELNAME = "gpuTableLayoutPanel";
         public const string AUTOSTARTMINING = "AutoStartMining";
         const string AUTOSTARTWITHWIN = "AutoStartWithWin";
+        public const string STOPSHORTKEYS = "StopShortKeys";
+        public const string STARTSHORTKEYS = "StartShortKeys";
         public Settings Settings { get { return _settings; } }
         public Form1 Form1 { get; set; }
         public void SetSettings(Settings settings) { _settings = settings; }
@@ -78,8 +81,29 @@ namespace Gui_Miner
             poolsPanel.Size = panelSizes;
 
             // Load General settings
-            autoStartMiningCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(SettingsForm.AUTOSTARTMINING), out bool result) ? result : false;
-            autoStartWithWinCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(SettingsForm.AUTOSTARTWITHWIN), out bool winResult) ? winResult : false;
+            autoStartMiningCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(AUTOSTARTMINING), out bool result) ? result : false;
+            autoStartWithWinCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(AUTOSTARTWITHWIN), out bool winResult) ? winResult : false;
+            var keys = AppSettings.Load<List<Keys>>(STOPSHORTKEYS);
+            if (keys != null)
+            {
+                foreach (Keys key in keys)
+                    stopShortKeysTextBox.Text += key.ToString() + " + ";
+
+                // Remove the trailing " + "
+                if (stopShortKeysTextBox.Text.EndsWith(" + "))
+                    stopShortKeysTextBox.Text = stopShortKeysTextBox.Text.Substring(0, stopShortKeysTextBox.Text.Length - 3);
+            }
+            keys = AppSettings.Load<List<Keys>>(STARTSHORTKEYS);
+            if (keys != null)
+            {
+                foreach (Keys key in keys)
+                    startShortKeysTextBox.Text += key.ToString() + " + ";
+
+                // Remove the trailing " + "
+                if (startShortKeysTextBox.Text.EndsWith(" + "))
+                    startShortKeysTextBox.Text = startShortKeysTextBox.Text.Substring(0, startShortKeysTextBox.Text.Length - 3);
+            }
+
 
             // Tooltip text
             toolTip.SetToolTip(getAllGpusButton, "Add all available GPUs");
@@ -92,6 +116,8 @@ namespace Gui_Miner
             e.Cancel = true;
             SaveSettings();
             this.Visible = false;
+
+            MainForm.UpdateShortcutKeys();
         }
         private void LoadSettings()
         {
@@ -967,6 +993,70 @@ namespace Gui_Miner
                 DeleteSchedulerTask("GuiMiner");
             }
         }
+        List<Keys> keysPressed = new List<Keys>();
+        private void startShortKeysTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Check if it has focus
+            if (startShortKeysTextBox.Focused)
+            {
+                if (startShortKeysTextBox.Tag != null &&
+                    startShortKeysTextBox.Tag.ToString() == "false")
+                { startShortKeysTextBox.Text += " + "; }
+
+
+                if (e.KeyCode == Keys.Delete)
+                {
+                    // Clear short-cut keys
+                    startShortKeysTextBox.Text = "";
+                    startShortKeysTextBox.Tag = "true";
+                    keysPressed = new List<Keys>();
+                }
+                else
+                {
+                    // Add key
+                    startShortKeysTextBox.Text += e.KeyCode.ToString();
+                    startShortKeysTextBox.Tag = "false";
+                    keysPressed.Add(e.KeyCode);
+                }
+
+                AppSettings.Save<List<Keys>>(STARTSHORTKEYS, keysPressed);
+
+
+                e.SuppressKeyPress = true; // Prevent the key press from being entered into textBox
+            }
+        }
+        private void stopShortKeysTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Check if it has focus
+            if (stopShortKeysTextBox.Focused)
+            {
+                if (stopShortKeysTextBox.Tag != null &&
+                    stopShortKeysTextBox.Tag.ToString() == "false")
+                { stopShortKeysTextBox.Text += " + "; }
+
+               
+                if (e.KeyCode == Keys.Delete)
+                {
+                    // Clear short-cut keys
+                    stopShortKeysTextBox.Text = "";
+                    stopShortKeysTextBox.Tag = "true";
+                    keysPressed = new List<Keys>();
+                }               
+                else
+                {
+                    // Add key
+                    stopShortKeysTextBox.Text += e.KeyCode.ToString();
+                    stopShortKeysTextBox.Tag = "false";
+                    keysPressed.Add(e.KeyCode);
+                }
+
+                AppSettings.Save<List<Keys>>(STOPSHORTKEYS, keysPressed);
+
+                
+                e.SuppressKeyPress = true; // Prevent the key press from being entered into textBox
+            }
+        }
+
 
 
         // Create/Delete Scheduler Task
@@ -1143,6 +1233,7 @@ namespace Gui_Miner
         }
         #endregion
 
+
         #region Pools
         // Manage Pools
         private void poolsListBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -1266,7 +1357,9 @@ namespace Gui_Miner
                 }
             }
         }
+
         #endregion
+
 
     }
 
