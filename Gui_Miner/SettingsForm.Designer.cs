@@ -42,16 +42,14 @@
             this.clearGpuSettingsButton = new System.Windows.Forms.Button();
             this.statusLabel = new System.Windows.Forms.Label();
             this.manageConfigPanel = new System.Windows.Forms.Panel();
-            this.getAllGpusButton = new System.Windows.Forms.Button();
-            this.generateButton = new System.Windows.Forms.Button();
             this.topPanel = new System.Windows.Forms.Panel();
-            this.managePoolsButton = new System.Windows.Forms.Button();
-            this.manageWalletsButton = new System.Windows.Forms.Button();
-            this.manageMinerConfigsButton = new System.Windows.Forms.Button();
-            this.generalButton = new System.Windows.Forms.Button();
             this.generalPanel = new System.Windows.Forms.Panel();
+            this.label15 = new System.Windows.Forms.Label();
+            this.bgComboBox = new System.Windows.Forms.ComboBox();
             this.label13 = new System.Windows.Forms.Label();
             this.stopShortKeysTextBox = new System.Windows.Forms.TextBox();
+            this.label14 = new System.Windows.Forms.Label();
+            this.startShortKeysTextBox = new System.Windows.Forms.TextBox();
             this.successLabel = new System.Windows.Forms.Label();
             this.autoStartWithWinCheckBox = new System.Windows.Forms.CheckBox();
             this.autoStartMiningCheckBox = new System.Windows.Forms.CheckBox();
@@ -79,8 +77,14 @@
             this.poolsListBox = new System.Windows.Forms.ListBox();
             this.label7 = new System.Windows.Forms.Label();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.label14 = new System.Windows.Forms.Label();
-            this.startShortKeysTextBox = new System.Windows.Forms.TextBox();
+            this.getAllGpusButton = new System.Windows.Forms.Button();
+            this.generateButton = new System.Windows.Forms.Button();
+            this.managePoolsButton = new System.Windows.Forms.Button();
+            this.manageWalletsButton = new System.Windows.Forms.Button();
+            this.manageMinerConfigsButton = new System.Windows.Forms.Button();
+            this.generalButton = new System.Windows.Forms.Button();
+            this.bgImagePanel = new System.Windows.Forms.Panel();
+            this.importBatButton = new System.Windows.Forms.Button();
             this.manageConfigPanel.SuspendLayout();
             this.topPanel.SuspendLayout();
             this.generalPanel.SuspendLayout();
@@ -148,11 +152,11 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 18.25F);
-            this.label1.Location = new System.Drawing.Point(108, 459);
+            this.label1.Location = new System.Drawing.Point(94, 465);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(110, 29);
+            this.label1.Size = new System.Drawing.Size(103, 29);
             this.label1.TabIndex = 6;
-            this.label1.Text = ".bat File:";
+            this.label1.Text = ".bat File";
             // 
             // label2
             // 
@@ -210,6 +214,7 @@
             this.manageConfigPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.manageConfigPanel.Controls.Add(this.importBatButton);
             this.manageConfigPanel.Controls.Add(this.statusLabel);
             this.manageConfigPanel.Controls.Add(this.clearGpuSettingsButton);
             this.manageConfigPanel.Controls.Add(this.addGpuSettingsButton);
@@ -228,33 +233,6 @@
             this.manageConfigPanel.Size = new System.Drawing.Size(720, 600);
             this.manageConfigPanel.TabIndex = 14;
             // 
-            // getAllGpusButton
-            // 
-            this.getAllGpusButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
-            this.getAllGpusButton.BackgroundImage = global::Gui_Miner.Properties.Resources.find_gpus;
-            this.getAllGpusButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.getAllGpusButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.getAllGpusButton.Location = new System.Drawing.Point(600, 393);
-            this.getAllGpusButton.Name = "getAllGpusButton";
-            this.getAllGpusButton.Size = new System.Drawing.Size(94, 66);
-            this.getAllGpusButton.TabIndex = 10;
-            this.getAllGpusButton.UseVisualStyleBackColor = false;
-            this.getAllGpusButton.Click += new System.EventHandler(this.getAllGpusButton_Click);
-            // 
-            // generateButton
-            // 
-            this.generateButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
-            this.generateButton.BackgroundImage = global::Gui_Miner.Properties.Resources.generate;
-            this.generateButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.generateButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.generateButton.Location = new System.Drawing.Point(10, 446);
-            this.generateButton.Name = "generateButton";
-            this.generateButton.Size = new System.Drawing.Size(62, 52);
-            this.generateButton.TabIndex = 9;
-            this.generateButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
-            this.generateButton.UseVisualStyleBackColor = false;
-            this.generateButton.Click += new System.EventHandler(this.generateButton_Click);
-            // 
             // topPanel
             // 
             this.topPanel.Controls.Add(this.managePoolsButton);
@@ -267,56 +245,11 @@
             this.topPanel.Size = new System.Drawing.Size(1712, 54);
             this.topPanel.TabIndex = 15;
             // 
-            // managePoolsButton
-            // 
-            this.managePoolsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.pools;
-            this.managePoolsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.managePoolsButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.managePoolsButton.Location = new System.Drawing.Point(631, 2);
-            this.managePoolsButton.Name = "managePoolsButton";
-            this.managePoolsButton.Size = new System.Drawing.Size(65, 49);
-            this.managePoolsButton.TabIndex = 3;
-            this.managePoolsButton.UseVisualStyleBackColor = true;
-            this.managePoolsButton.Click += new System.EventHandler(this.managePoolsButton_Click);
-            // 
-            // manageWalletsButton
-            // 
-            this.manageWalletsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.wallets;
-            this.manageWalletsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.manageWalletsButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.manageWalletsButton.Location = new System.Drawing.Point(433, 2);
-            this.manageWalletsButton.Name = "manageWalletsButton";
-            this.manageWalletsButton.Size = new System.Drawing.Size(65, 51);
-            this.manageWalletsButton.TabIndex = 2;
-            this.manageWalletsButton.UseVisualStyleBackColor = true;
-            this.manageWalletsButton.Click += new System.EventHandler(this.manageWalletsButton_Click);
-            // 
-            // manageMinerConfigsButton
-            // 
-            this.manageMinerConfigsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.miner_settings;
-            this.manageMinerConfigsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.manageMinerConfigsButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.manageMinerConfigsButton.Location = new System.Drawing.Point(214, 2);
-            this.manageMinerConfigsButton.Name = "manageMinerConfigsButton";
-            this.manageMinerConfigsButton.Size = new System.Drawing.Size(60, 51);
-            this.manageMinerConfigsButton.TabIndex = 1;
-            this.manageMinerConfigsButton.UseVisualStyleBackColor = true;
-            this.manageMinerConfigsButton.Click += new System.EventHandler(this.manageMinerConfigsButton_Click);
-            // 
-            // generalButton
-            // 
-            this.generalButton.BackgroundImage = global::Gui_Miner.Properties.Resources.windows_settings;
-            this.generalButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.generalButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.generalButton.Location = new System.Drawing.Point(30, 2);
-            this.generalButton.Name = "generalButton";
-            this.generalButton.Size = new System.Drawing.Size(56, 51);
-            this.generalButton.TabIndex = 0;
-            this.generalButton.UseVisualStyleBackColor = true;
-            this.generalButton.Click += new System.EventHandler(this.generalButton_Click);
-            // 
             // generalPanel
             // 
+            this.generalPanel.Controls.Add(this.bgImagePanel);
+            this.generalPanel.Controls.Add(this.label15);
+            this.generalPanel.Controls.Add(this.bgComboBox);
             this.generalPanel.Controls.Add(this.label13);
             this.generalPanel.Controls.Add(this.stopShortKeysTextBox);
             this.generalPanel.Controls.Add(this.label14);
@@ -328,6 +261,32 @@
             this.generalPanel.Name = "generalPanel";
             this.generalPanel.Size = new System.Drawing.Size(720, 202);
             this.generalPanel.TabIndex = 16;
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Location = new System.Drawing.Point(429, 21);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(97, 13);
+            this.label15.TabIndex = 8;
+            this.label15.Text = "Background Image";
+            // 
+            // bgComboBox
+            // 
+            this.bgComboBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.bgComboBox.ForeColor = System.Drawing.Color.White;
+            this.bgComboBox.FormattingEnabled = true;
+            this.bgComboBox.Items.AddRange(new object[] {
+            "Kaspa",
+            "Kas - Globe",
+            "Ergo",
+            "Bitcoin",
+            "Zilliqa"});
+            this.bgComboBox.Location = new System.Drawing.Point(403, 39);
+            this.bgComboBox.Name = "bgComboBox";
+            this.bgComboBox.Size = new System.Drawing.Size(169, 21);
+            this.bgComboBox.TabIndex = 7;
+            this.bgComboBox.SelectedIndexChanged += new System.EventHandler(this.bgComboBox_SelectedIndexChanged);
             // 
             // label13
             // 
@@ -348,6 +307,26 @@
             this.stopShortKeysTextBox.TabIndex = 3;
             this.stopShortKeysTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.stopShortKeysTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.stopShortKeysTextBox_KeyDown);
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(23, 92);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(148, 13);
+            this.label14.TabIndex = 6;
+            this.label14.Text = "Short-Cut Keys to Start Mining";
+            // 
+            // startShortKeysTextBox
+            // 
+            this.startShortKeysTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.startShortKeysTextBox.ForeColor = System.Drawing.SystemColors.Control;
+            this.startShortKeysTextBox.Location = new System.Drawing.Point(11, 108);
+            this.startShortKeysTextBox.Name = "startShortKeysTextBox";
+            this.startShortKeysTextBox.Size = new System.Drawing.Size(169, 20);
+            this.startShortKeysTextBox.TabIndex = 5;
+            this.startShortKeysTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.startShortKeysTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.startShortKeysTextBox_KeyDown);
             // 
             // successLabel
             // 
@@ -632,25 +611,98 @@
             this.label7.TabIndex = 3;
             this.label7.Text = "Manage Pools";
             // 
-            // label14
+            // getAllGpusButton
             // 
-            this.label14.AutoSize = true;
-            this.label14.Location = new System.Drawing.Point(23, 92);
-            this.label14.Name = "label14";
-            this.label14.Size = new System.Drawing.Size(148, 13);
-            this.label14.TabIndex = 6;
-            this.label14.Text = "Short-Cut Keys to Start Mining";
+            this.getAllGpusButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.getAllGpusButton.BackgroundImage = global::Gui_Miner.Properties.Resources.find_gpus;
+            this.getAllGpusButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.getAllGpusButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.getAllGpusButton.Location = new System.Drawing.Point(600, 393);
+            this.getAllGpusButton.Name = "getAllGpusButton";
+            this.getAllGpusButton.Size = new System.Drawing.Size(94, 66);
+            this.getAllGpusButton.TabIndex = 10;
+            this.getAllGpusButton.UseVisualStyleBackColor = false;
+            this.getAllGpusButton.Click += new System.EventHandler(this.getAllGpusButton_Click);
             // 
-            // startShortKeysTextBox
+            // generateButton
             // 
-            this.startShortKeysTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
-            this.startShortKeysTextBox.ForeColor = System.Drawing.SystemColors.Control;
-            this.startShortKeysTextBox.Location = new System.Drawing.Point(11, 108);
-            this.startShortKeysTextBox.Name = "startShortKeysTextBox";
-            this.startShortKeysTextBox.Size = new System.Drawing.Size(169, 20);
-            this.startShortKeysTextBox.TabIndex = 5;
-            this.startShortKeysTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.startShortKeysTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.startShortKeysTextBox_KeyDown);
+            this.generateButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.generateButton.BackgroundImage = global::Gui_Miner.Properties.Resources.generate;
+            this.generateButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.generateButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.generateButton.Location = new System.Drawing.Point(10, 446);
+            this.generateButton.Name = "generateButton";
+            this.generateButton.Size = new System.Drawing.Size(62, 52);
+            this.generateButton.TabIndex = 9;
+            this.generateButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
+            this.generateButton.UseVisualStyleBackColor = false;
+            this.generateButton.Click += new System.EventHandler(this.generateButton_Click);
+            // 
+            // managePoolsButton
+            // 
+            this.managePoolsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.pools;
+            this.managePoolsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.managePoolsButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.managePoolsButton.Location = new System.Drawing.Point(631, 2);
+            this.managePoolsButton.Name = "managePoolsButton";
+            this.managePoolsButton.Size = new System.Drawing.Size(65, 49);
+            this.managePoolsButton.TabIndex = 3;
+            this.managePoolsButton.UseVisualStyleBackColor = true;
+            this.managePoolsButton.Click += new System.EventHandler(this.managePoolsButton_Click);
+            // 
+            // manageWalletsButton
+            // 
+            this.manageWalletsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.wallets;
+            this.manageWalletsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.manageWalletsButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.manageWalletsButton.Location = new System.Drawing.Point(433, 2);
+            this.manageWalletsButton.Name = "manageWalletsButton";
+            this.manageWalletsButton.Size = new System.Drawing.Size(65, 51);
+            this.manageWalletsButton.TabIndex = 2;
+            this.manageWalletsButton.UseVisualStyleBackColor = true;
+            this.manageWalletsButton.Click += new System.EventHandler(this.manageWalletsButton_Click);
+            // 
+            // manageMinerConfigsButton
+            // 
+            this.manageMinerConfigsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.miner_settings;
+            this.manageMinerConfigsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.manageMinerConfigsButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.manageMinerConfigsButton.Location = new System.Drawing.Point(214, 2);
+            this.manageMinerConfigsButton.Name = "manageMinerConfigsButton";
+            this.manageMinerConfigsButton.Size = new System.Drawing.Size(60, 51);
+            this.manageMinerConfigsButton.TabIndex = 1;
+            this.manageMinerConfigsButton.UseVisualStyleBackColor = true;
+            this.manageMinerConfigsButton.Click += new System.EventHandler(this.manageMinerConfigsButton_Click);
+            // 
+            // generalButton
+            // 
+            this.generalButton.BackgroundImage = global::Gui_Miner.Properties.Resources.windows_settings;
+            this.generalButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.generalButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.generalButton.Location = new System.Drawing.Point(30, 2);
+            this.generalButton.Name = "generalButton";
+            this.generalButton.Size = new System.Drawing.Size(56, 51);
+            this.generalButton.TabIndex = 0;
+            this.generalButton.UseVisualStyleBackColor = true;
+            this.generalButton.Click += new System.EventHandler(this.generalButton_Click);
+            // 
+            // bgImagePanel
+            // 
+            this.bgImagePanel.Location = new System.Drawing.Point(266, 92);
+            this.bgImagePanel.Name = "bgImagePanel";
+            this.bgImagePanel.Size = new System.Drawing.Size(429, 420);
+            this.bgImagePanel.TabIndex = 9;
+            // 
+            // importBatButton
+            // 
+            this.importBatButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.importBatButton.Location = new System.Drawing.Point(224, 473);
+            this.importBatButton.Name = "importBatButton";
+            this.importBatButton.Size = new System.Drawing.Size(54, 21);
+            this.importBatButton.TabIndex = 14;
+            this.importBatButton.Text = "Import";
+            this.importBatButton.UseVisualStyleBackColor = false;
+            this.importBatButton.Click += new System.EventHandler(this.importBatButton_Click);
             // 
             // SettingsForm
             // 
@@ -741,5 +793,9 @@
         private System.Windows.Forms.TextBox stopShortKeysTextBox;
         private System.Windows.Forms.Label label14;
         private System.Windows.Forms.TextBox startShortKeysTextBox;
+        private System.Windows.Forms.Label label15;
+        private System.Windows.Forms.ComboBox bgComboBox;
+        private System.Windows.Forms.Panel bgImagePanel;
+        private System.Windows.Forms.Button importBatButton;
     }
 }

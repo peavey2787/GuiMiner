@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -147,9 +148,20 @@ namespace Gui_Miner
             }
         }
 
-        public int GetApiPort()
+        public int GetApiPort(string batFileArgs)
         {
-            return api;
+            int apiPort = api;
+
+            // Try getting api port from .bat file
+            if (apiPort <= 0 && batFileArgs.Contains("api "))
+            {
+                string args = batFileArgs + " ";
+                int start = args.IndexOf("api ") + 4;
+                int end = args.IndexOf(" ", start);
+                apiPort = int.TryParse(args.Substring(start, end - start), out int portResult) ? portResult : 0;
+            }
+
+            return apiPort;
         }
         public string GetPoolDomainName1()
         {
@@ -166,6 +178,37 @@ namespace Gui_Miner
                 return parts[0] + "." + parts[1];
             }
             return server.Trim();
+        }
+        public (string filePath, string args) GetMinerFilePathAndArgs(string batFileArgs)
+        {
+            string filePath = "";
+            string arguments = "";
+            string defaultPath = Directory.GetCurrentDirectory() + "\\miner.exe";
+
+            if (batFileArgs.IndexOf(".exe") >= -1)
+            {
+                // Get miner path
+                if (batFileArgs.StartsWith("\""))
+                {
+                    // Quotes around path
+                    filePath = batFileArgs.Substring(1, batFileArgs.IndexOf(".exe") + 3);
+                    arguments = batFileArgs.Replace($"\"{filePath}\"", string.Empty).Trim();
+                }
+                else
+                {
+                    // No quotes around path
+                    filePath = batFileArgs.Substring(0, batFileArgs.IndexOf(".exe") + 4);
+                    arguments = batFileArgs.Replace($"{filePath}", string.Empty).Trim();
+                }
+
+                if (!File.Exists(filePath)) filePath = defaultPath;
+            }
+            else if (!string.IsNullOrWhiteSpace(MinerFilePath))
+                filePath = MinerFilePath;
+            else
+                filePath = defaultPath;
+
+            return (filePath, arguments);
         }
     }
 }

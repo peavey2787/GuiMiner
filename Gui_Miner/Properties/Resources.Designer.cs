@@ -63,6 +63,26 @@ namespace Gui_Miner.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap bitcoin {
+            get {
+                object obj = ResourceManager.GetObject("bitcoin", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap ergo {
+            get {
+                object obj = ResourceManager.GetObject("ergo", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap exit_button {
             get {
                 object obj = ResourceManager.GetObject("exit-button", resourceCulture);
@@ -106,6 +126,16 @@ namespace Gui_Miner.Properties {
         internal static System.Drawing.Bitmap kas_world {
             get {
                 object obj = ResourceManager.GetObject("kas_world", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap kaspa {
+            get {
+                object obj = ResourceManager.GetObject("kaspa", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -176,6 +206,16 @@ namespace Gui_Miner.Properties {
         internal static System.Drawing.Bitmap windows_settings {
             get {
                 object obj = ResourceManager.GetObject("windows-settings", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap zilliqa {
+            get {
+                object obj = ResourceManager.GetObject("zilliqa", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

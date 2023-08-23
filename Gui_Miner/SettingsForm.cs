@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32.TaskScheduler;
+﻿using Gui_Miner.Classes;
+using Microsoft.Win32.TaskScheduler;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -32,6 +33,7 @@ namespace Gui_Miner
         #region Variables
         Settings _settings = new Settings();
         public Form1 MainForm { get; set; }
+        internal RotatingPanel rotatingPanel;
         const string SETTINGSNAME = "Settings";
         const string MINERSETTINGSPANELNAME = "tableLayoutPanel";
         const string GPUSETTINGSPANELNAME = "gpuTableLayoutPanel";
@@ -39,6 +41,7 @@ namespace Gui_Miner
         const string AUTOSTARTWITHWIN = "AutoStartWithWin";
         public const string STOPSHORTKEYS = "StopShortKeys";
         public const string STARTSHORTKEYS = "StartShortKeys";
+        public const string BGIMAGE = "BackgroundImage";
         public Settings Settings { get { return _settings; } }
         public Form1 Form1 { get; set; }
         public void SetSettings(Settings settings) { _settings = settings; }
@@ -81,28 +84,7 @@ namespace Gui_Miner
             poolsPanel.Size = panelSizes;
 
             // Load General settings
-            autoStartMiningCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(AUTOSTARTMINING), out bool result) ? result : false;
-            autoStartWithWinCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(AUTOSTARTWITHWIN), out bool winResult) ? winResult : false;
-            var keys = AppSettings.Load<List<Keys>>(STOPSHORTKEYS);
-            if (keys != null)
-            {
-                foreach (Keys key in keys)
-                    stopShortKeysTextBox.Text += key.ToString() + " + ";
-
-                // Remove the trailing " + "
-                if (stopShortKeysTextBox.Text.EndsWith(" + "))
-                    stopShortKeysTextBox.Text = stopShortKeysTextBox.Text.Substring(0, stopShortKeysTextBox.Text.Length - 3);
-            }
-            keys = AppSettings.Load<List<Keys>>(STARTSHORTKEYS);
-            if (keys != null)
-            {
-                foreach (Keys key in keys)
-                    startShortKeysTextBox.Text += key.ToString() + " + ";
-
-                // Remove the trailing " + "
-                if (startShortKeysTextBox.Text.EndsWith(" + "))
-                    startShortKeysTextBox.Text = startShortKeysTextBox.Text.Substring(0, startShortKeysTextBox.Text.Length - 3);
-            }
+            LoadGeneralSettings();
 
 
             // Tooltip text
@@ -154,6 +136,34 @@ namespace Gui_Miner
                 _settings.Gpus = new List<Gpu> { uiGpuSetting };
 
             AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+        }
+        private void LoadGeneralSettings()
+        {
+            autoStartMiningCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(AUTOSTARTMINING), out bool result) ? result : false;
+            autoStartWithWinCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(AUTOSTARTWITHWIN), out bool winResult) ? winResult : false;
+            bgComboBox.Text = AppSettings.Load<string>(BGIMAGE);
+
+            var keys = AppSettings.Load<List<Keys>>(STOPSHORTKEYS);
+            if (keys != null)
+            {
+                foreach (Keys key in keys)
+                    stopShortKeysTextBox.Text += key.ToString() + " + ";
+
+                // Remove the trailing " + "
+                if (stopShortKeysTextBox.Text.EndsWith(" + "))
+                    stopShortKeysTextBox.Text = stopShortKeysTextBox.Text.Substring(0, stopShortKeysTextBox.Text.Length - 3);
+            }
+            
+            keys = AppSettings.Load<List<Keys>>(STARTSHORTKEYS);
+            if (keys != null)
+            {
+                foreach (Keys key in keys)
+                    startShortKeysTextBox.Text += key.ToString() + " + ";
+
+                // Remove the trailing " + "
+                if (startShortKeysTextBox.Text.EndsWith(" + "))
+                    startShortKeysTextBox.Text = startShortKeysTextBox.Text.Substring(0, startShortKeysTextBox.Text.Length - 3);
+            }
         }
 
 
@@ -487,7 +497,7 @@ namespace Gui_Miner
                     }
                     else
                     {
-                        // Create a TextBox for non-boolean properties
+                        // Create a TextBox 
                         TextBox textbox = new TextBox();
                         textbox.BackColor = Color.FromArgb(12, 20, 52);
                         textbox.ForeColor = Color.White;
@@ -573,6 +583,56 @@ namespace Gui_Miner
                     // Remove the selected item from the ListBox
                     minerSettingsListBox.Items.RemoveAt(minerSettingsListBox.SelectedIndex);
                 }
+            }
+        }
+        private void generateButton_Click(object sender, EventArgs e)
+        {
+            var minerSetting = GetSelectedMinerSettings();
+            batLineTextBox.Text = minerSetting.GeneratebatFileArguments();
+
+            UpdateStatusLabel("");
+
+            SaveSettings();
+        }
+        private void importBatButton_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = "Batch Files (*.bat)|*.bat";
+                openFileDialog.FilterIndex = 1;
+
+                DialogResult result = openFileDialog.ShowDialog();
+
+                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(openFileDialog.FileName))
+                {
+                    string selectedBatFile = openFileDialog.FileName;
+                    string batContents = ReadBatFile(selectedBatFile);
+                    batLineTextBox.Text = batContents;
+                    SaveSettings();
+                }
+            }
+        }
+        public static string ReadBatFile(string filePath)
+        {
+            try
+            {
+                // Check if the file exists
+                if (File.Exists(filePath))
+                {
+                    // Read the contents of the .bat file and return as a string
+                    string fileContents = File.ReadAllText(filePath);
+                    return fileContents;
+                }
+                else
+                {
+                    // Handle the case where the file does not exist
+                    return "File does not exist.";
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle any exceptions that may occur during file reading
+                return "Error reading file: " + ex.Message;
             }
         }
         #endregion
@@ -902,16 +962,7 @@ namespace Gui_Miner
         #endregion
 
 
-        // Generate bat file arguments
-        private void generateButton_Click(object sender, EventArgs e)
-        {
-            var minerSetting = GetSelectedMinerSettings();
-            batLineTextBox.Text = minerSetting.GeneratebatFileArguments();
 
-            UpdateStatusLabel("");
-
-            SaveSettings();
-        }       
 
 
         private void UpdateStatusLabel(string message = "Click Generate to Update")
@@ -926,11 +977,13 @@ namespace Gui_Miner
             statusLabel.Text = message;
         }
 
-        
+
+        #region Navigation Buttons
         // Navigation buttons
         private void generalButton_Click(object sender, EventArgs e)
-        {
+        {            
             HideAllPanels();
+            CreateRotatingPanel();
             generalPanel.Show();
             generalPanel.BringToFront();
         }
@@ -959,13 +1012,16 @@ namespace Gui_Miner
         }
         private void HideAllPanels()
         {
+            RemoveRotatingPanel();
             manageConfigPanel.Hide();
             generalPanel.Hide();
             walletsPanel.Hide();
             poolsPanel.Hide();
         }
+        #endregion
 
 
+        #region General Settings
         // General Settings
         private void autoStartMiningCheckBox_CheckedChanged(object sender, EventArgs e)
         {
@@ -1056,8 +1112,43 @@ namespace Gui_Miner
                 e.SuppressKeyPress = true; // Prevent the key press from being entered into textBox
             }
         }
+        private void bgComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            AppSettings.Save<string>(BGIMAGE, bgComboBox.Text);
+            if (MainForm != null)
+            {
+                if(MainForm.rotatingPanel != null)
+                    MainForm.rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
+                if(rotatingPanel != null)
+                    rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
+            }
+        }
 
 
+        // Rotate image
+        private void CreateRotatingPanel()
+        {
+            bgImagePanel.Controls.Clear();
+
+            rotatingPanel = RotatingPanel.Create();
+
+            // Add image
+            string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
+            rotatingPanel.Image = MainForm.GetBgImage(bgImage);
+
+            bgImagePanel.Controls.Add(rotatingPanel);
+
+            rotatingPanel.Start();
+        }
+        private void RemoveRotatingPanel()
+        {
+            if (rotatingPanel != null)
+            {
+                rotatingPanel.Dispose();
+                bgImagePanel.Controls.Remove(rotatingPanel); 
+                rotatingPanel = null; 
+            }
+        }
 
         // Create/Delete Scheduler Task
         public static bool CreateSchedulerTask(string taskName, string applicationPath)
@@ -1124,6 +1215,7 @@ namespace Gui_Miner
                 return false;
             }
         }
+        #endregion
 
 
         #region Wallets
@@ -1357,6 +1449,8 @@ namespace Gui_Miner
                 }
             }
         }
+
+
 
         #endregion
 

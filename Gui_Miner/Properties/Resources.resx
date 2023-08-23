@@ -154,4 +154,16 @@
   <data name="kas_world" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\kas-world.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="bitcoin" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\bitcoin.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ergo" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\ergo.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="kaspa" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\kaspa.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="zilliqa" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\zilliqa.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
 </root>

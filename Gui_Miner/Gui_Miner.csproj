@@ -79,7 +79,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\Extensions.cs" />
     <Compile Include="Classes\KeySimulator.cs" />
+    <Compile Include="Classes\RotatingPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -129,6 +133,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <None Include="Resources\zilliqa.png" />
+    <None Include="Resources\kaspa.png" />
+    <None Include="Resources\ergo.png" />
+    <None Include="Resources\bitcoin.png" />
     <None Include="Images\kas-world.png" />
     <None Include="Images\find-gpus.png" />
     <None Include="Images\generate.png" />

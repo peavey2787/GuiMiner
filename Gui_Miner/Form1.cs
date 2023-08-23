@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Gui_Miner.Classes;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,6 +21,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
+using static System.Net.Mime.MediaTypeNames;
+using Application = System.Windows.Forms.Application;
+using Image = System.Drawing.Image;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Gui_Miner
@@ -28,9 +32,7 @@ namespace Gui_Miner
     {
         NotifyIcon notify_icon;
         SettingsForm settingsForm = new SettingsForm();
-        CancellationTokenSource ctsRotatingPanel = new CancellationTokenSource();
-        private RotatingPanel rotatingPanel;
-        private double rotationAngle; // Current rotation angle
+        internal RotatingPanel rotatingPanel;
         List<Task> runningTasks = new List<Task>();
         CancellationTokenSource ctsRunningMiners = new CancellationTokenSource();
         private GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook(); 
@@ -79,70 +81,47 @@ namespace Gui_Miner
 
         }
 
+        internal Image GetBgImage(string  bgImage)
+        {
+            Image image = null;
+
+            if (bgImage == "Kas - Globe")
+                image = Properties.Resources.kas_world;
+            else if (bgImage == "Kaspa")
+                image = Properties.Resources.kaspa;
+            else if (bgImage == "Ergo")
+                image = Properties.Resources.ergo;
+            else if (bgImage == "Bitcoin")
+                image = Properties.Resources.bitcoin;
+            else if (bgImage == "Zilliqa")
+                image = Properties.Resources.zilliqa;
+
+            return image;
+        }
 
         // Rotate image
-        private async void CreateRotatingPanel()
+        private void CreateRotatingPanel()
         {
             outputPanel.Controls.Clear();
 
-            ctsRotatingPanel = new CancellationTokenSource(); // Initialize the CancellationTokenSource
+            rotatingPanel = RotatingPanel.Create();
 
-            rotatingPanel = new RotatingPanel();
-            rotatingPanel.Size = outputPanel.Size;
-            rotatingPanel.Location = new Point(0, 55);
-            rotatingPanel.BackColor = Color.Transparent;
-            rotatingPanel.Dock = DockStyle.Fill;
-            rotatingPanel.Visible = true;
+            // Add image
+            string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
+            rotatingPanel.Image = GetBgImage(bgImage);
 
             outputPanel.Controls.Add(rotatingPanel);
 
-            rotatingPanel.BringToFront();
-
-            // Start a background task to rotate the panel asynchronously
-            await RotatePanelAsync(ctsRotatingPanel.Token);
+            rotatingPanel.Start();
         }
         private void RemoveRotatingPanel()
         {
             if (rotatingPanel != null)
             {
-                ctsRotatingPanel.Cancel();
                 rotatingPanel.Dispose(); // Dispose of the rotating panel
                 outputPanel.Controls.Remove(rotatingPanel); // Remove it from the outputPanel
                 rotatingPanel = null; // Set the reference to null
             }
-        }
-        private async Task RotatePanelAsync(CancellationToken cancellationToken)
-        {
-            await Task.Run(() =>
-            {
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    if (rotatingPanel != null)
-                    {
-                        // Increment the rotation angle (adjust the speed by changing the increment)
-                        rotationAngle += 0.5; // Adjust the angle increment for desired speed
-
-                        // Apply the rotation
-                        rotatingPanel.RotationAngle = rotationAngle;
-
-                        // Redraw the Panel
-                        rotatingPanel.Invalidate();
-
-                        // Check for cancellation after each step
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            break; // Exit the loop if cancellation is requested
-                        }
-
-                        // Sleep to control the rotation speed
-                        Task.Delay(50).Wait(); // Adjust the interval for rotation speed (milliseconds)
-                    }
-                    else
-                    {
-                        Task.Delay(250).Wait();
-                    }
-                }
-            });
         }
 
 
@@ -207,7 +186,8 @@ namespace Gui_Miner
                 return;
             }
 
-            await CancelAllTasksAsync();            
+            await CancelAllTasksAsync();
+            Task.Run(() => { KillAllActiveMiners(); });
 
             // Play button pushed
             startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
@@ -223,7 +203,7 @@ namespace Gui_Miner
 
             CreateTabControlAndStartMiners();
         }
-        internal void ClickStopButton()
+        internal async void ClickStopButton()
         {
             if (this.InvokeRequired)
             {
@@ -242,7 +222,7 @@ namespace Gui_Miner
             restartsLabel.Text = $"Restarts 0";
             restartsLabel.Hide();
 
-            Task.Run(() => { KillAllActiveMiners(); });
+            await Task.Run(() => { KillAllActiveMiners(); });
         }
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
@@ -275,23 +255,8 @@ namespace Gui_Miner
                     // Try to get api
                     MethodInfo getApiPortMethod = configType.GetMethod("GetApiPort");
 
-                    int api = -1;
-                    if (getApiPortMethod != null)
-                    {
-                        api = (int)getApiPortMethod.Invoke(configObject, null);
-                    }
-
-                    if(api <= 0)
-                    {
-                        // Try getting api port from .bat file
-                        if(minerConfig.batFileArguments.Contains("api "))
-                        {
-                            string args = minerConfig.batFileArguments + " ";
-                            int start = args.IndexOf("api ") + 4;
-                            int end = args.IndexOf(" ", start);
-                            api = int.TryParse(args.Substring(start, end - start), out int portResult) ? portResult : 0;
-                        }
-                    }
+                    // Invoke the method with the specified arguments
+                    int api = (int)getApiPortMethod.Invoke(configObject, new object[] { minerConfig.batFileArguments });
 
                     // Set link to api stats
                     string url = "http://localhost:" + api;
@@ -303,9 +268,12 @@ namespace Gui_Miner
                     {
                         // Open the default web browser with the specified URL
                         Process.Start(url);
-                    };
-                    tabPage.Controls.Add(linkLabel);
+                    };        
                     
+                    // Add link
+                    if(api > 0)
+                        tabPage.Controls.Add(linkLabel);
+
                     // Try to get pool link
                     MethodInfo getPoolDomainNameMethod = configType.GetMethod("GetPoolDomainName1");
                     string poolDomainName1 = (string)getPoolDomainNameMethod.Invoke(configObject, null);
@@ -324,7 +292,7 @@ namespace Gui_Miner
                             }
                         }
 
-                    }                   
+                    }
 
                     // Set link to pool
                     LinkLabel poolLinkLabel = new LinkLabel();
@@ -335,10 +303,12 @@ namespace Gui_Miner
                         if (!string.IsNullOrEmpty(poolLink1) && Uri.IsWellFormedUriString(poolLink1, UriKind.Absolute))
                         {
                             // Open the default web browser with the specified URL
-                            Process.Start(poolLink1); 
+                            Process.Start(poolLink1);
                         }
                     };
-                    tabPage.Controls.Add(poolLinkLabel);
+                    
+                    if(!string.IsNullOrWhiteSpace(poolLink1))
+                        tabPage.Controls.Add(poolLinkLabel);
 
 
                     RichTextBox tabPageRichTextBox = new RichTextBox();
@@ -350,54 +320,19 @@ namespace Gui_Miner
 
                     tabControl.TabPages.Add(tabPage);
 
-                    //string minerFilePath = (string)configType.GetMethod("MinerFilePath").Invoke(configObject, null);
+                    MethodInfo methodInfo = configType.GetMethod("GetMinerFilePathAndArgs");
+                    (string minerFilePath, string batFileArgs) = (ValueTuple<string, string>)methodInfo.Invoke(configObject, new object[] { minerConfig.batFileArguments });
 
-                    if (minerConfig.batFileArguments.IndexOf(".exe") >= -1)
-                    {
-                        string filePath = "";
-                        string arguments = "";
+                    // Start the miner in a separate thread with the miner-specific RichTextBox
+                    Task minerTask = Task.Run(() => StartMiner(minerFilePath, batFileArgs, runAsAdmin, tabPageRichTextBox, ctsRunningMiners.Token));
 
-                        // Get miner path
-                        if (minerConfig.batFileArguments.StartsWith("\""))
-                        {
-                            // Quotes around path
-                            filePath = minerConfig.batFileArguments.Substring(1, minerConfig.batFileArguments.IndexOf(".exe") + 3);
-                            arguments = minerConfig.batFileArguments.Replace($"\"{filePath}\"", string.Empty).Trim();
-                        }
-                        else
-                        {
-                            // No quotes around path
-                            filePath = minerConfig.batFileArguments.Substring(0, minerConfig.batFileArguments.IndexOf(".exe") + 4);
-                            arguments = minerConfig.batFileArguments.Replace($"{filePath}", string.Empty).Trim();
-                        }
-
-                        if (!File.Exists(filePath)) filePath = "miner.exe";
-
-                        // Start the miner in a separate thread with the miner-specific RichTextBox
-                        Task minerTask = Task.Run(() => StartMiner(filePath, arguments, runAsAdmin, tabPageRichTextBox, ctsRunningMiners.Token));
-
-                        runningTasks.Add(minerTask);
-                    }
+                    runningTasks.Add(minerTask);
                 }
             }
 
-            // Check if the outputPanel already has the tabControl
-            TabControl tabControlToRemove = null;
-            foreach (Control control in outputPanel.Controls)
-            {
-                if (control is TabControl)
-                {
-                    tabControlToRemove = (TabControl)control;
-                    break; // Exit the loop once the first TabControl is found
-                }
-            }
-
-            if (tabControlToRemove != null)
-            {
-                outputPanel.Controls.Remove(tabControlToRemove);
-                tabControlToRemove.Dispose();
-            }
-
+            // Clear previous tab control
+            outputPanel.Controls.Clear();
+            
             // Add the TabControl
             outputPanel.Controls.Add(tabControl);
         }
@@ -405,13 +340,11 @@ namespace Gui_Miner
         {
             if (File.Exists(filePath))
             {
-                richTextBox.Clear();
-                richTextBox.ForeColor = Color.FromArgb((int)(0.53 * 255), 58, 221, 190);
+                richTextBox.AppendTextThreadSafe("STARTING MINER...");
+                richTextBox.ForeColorThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
 
                 // Create a new process
                 Process process = new Process();
-
-                string path = Directory.GetCurrentDirectory() + "\\" + filePath;
 
                 string verb = "";
                 if (runAsAdmin)
@@ -443,25 +376,24 @@ namespace Gui_Miner
                     {
                         try
                         {
-
                             // This event is called whenever there is data available in the standard output
                             this.BeginInvoke((MethodInvoker)async delegate
                             {
-                                if (e.Data.ToLower().Contains("failed") || e.Data.ToLower().Contains("error"))
+                                if (e.Data.ToLower().Contains("failed") || e.Data.ToLower().Contains("error") || e.Data.ToLower().Contains("miner terminated"))
                                 {
-                                    richTextBox.SelectionStart = richTextBox.TextLength;
-                                    richTextBox.SelectionLength = 0;
-                                    richTextBox.SelectionColor = Color.Red;
-                                    richTextBox.AppendText(Environment.NewLine + e.Data);
-                                    richTextBox.SelectionColor = richTextBox.ForeColor; // Reset to the default color
+                                        richTextBox.SelectionStartThreadSafe(richTextBox.TextLength);
+                                        richTextBox.SelectionLengthThreadSafe(0);
+                                        richTextBox.SelectionColorThreadSafe(Color.Red);
+                                        richTextBox.AppendText(Environment.NewLine + e.Data);
+                                        richTextBox.SelectionColorThreadSafe(richTextBox.ForeColor); // Reset to the default color                                    
 
                                     // Errors
                                     if (e.Data.ToLower().Contains("error on gpu"))
                                     {
                                         // Restart miner
-                                        richTextBox.AppendText("Gpu failed, Restarting...");
+                                        richTextBox.AppendTextThreadSafe("Gpu failed/Miner terminated. Restarting...");
                                         ClickStopButton();
-                                        await Task.Delay(2500);// Thread.Sleep(2500);                                        
+                                        Thread.Sleep(2500);
                                         ClickStartButton();
 
                                         // Extract the number from the restarts label text
@@ -471,55 +403,65 @@ namespace Gui_Miner
                                             restarts++;
 
                                             // Update the label text with the new number
-                                            restartsLabel.Text = $"Restarts {restarts}";
-                                            restartsLabel.ForeColor = Color.Red;
+                                            restartsLabel.TextThreadSafe($"Restarts {restarts}");
+                                            restartsLabel.ForeColorThreadSafe(Color.Red);
                                             restartsLabel.Show();
                                         }
                                     }
                                 }
                                 else if (e.Data.ToLower().Contains("accepted"))
                                 {
-                                    richTextBox.SelectionStart = richTextBox.TextLength;
-                                    richTextBox.SelectionLength = 0;
-                                    richTextBox.SelectionColor = Color.ForestGreen;
+                                    richTextBox.SelectionStartThreadSafe(richTextBox.TextLength);
+                                    richTextBox.SelectionLengthThreadSafe(0);
+                                    richTextBox.SelectionColorThreadSafe(Color.ForestGreen);
                                     richTextBox.AppendText(Environment.NewLine + e.Data);
-                                    richTextBox.SelectionColor = richTextBox.ForeColor; // Reset to the default color
+                                    richTextBox.SelectionColorThreadSafe(richTextBox.ForeColor); // Reset to the default color  
                                 }
                                 else
                                 {
-                                    richTextBox.SelectionStart = richTextBox.TextLength;
-                                    richTextBox.SelectionLength = 0;
-
-                                    // Check if e.Data starts with a number
-                                    if (e.Data.Length > 0 && char.IsDigit(e.Data[0]))
+                                    richTextBox.BeginInvoke((MethodInvoker)delegate
                                     {
-                                        richTextBox.SelectionColor = Color.Yellow;
-                                    }
-                                    else
-                                    {
-                                        richTextBox.SelectionColor = richTextBox.ForeColor; // Reset to the default color
-                                    }
+                                        richTextBox.SelectionStartThreadSafe(richTextBox.TextLength);
+                                        richTextBox.SelectionLengthThreadSafe(0);
 
-                                    richTextBox.AppendText(Environment.NewLine + e.Data);
+                                        // Check if e.Data starts with a number
+                                        if (e.Data.Length > 0 && char.IsDigit(e.Data[0]))
+                                        {
+                                            richTextBox.SelectionColorThreadSafe(Color.Yellow);
+                                        }
+                                        else
+                                        {
+                                            richTextBox.SelectionColorThreadSafe(richTextBox.ForeColor); // Reset to the default color
+                                        }
+
+                                        richTextBox.AppendText(Environment.NewLine + e.Data);
+                                    });
                                 }
-                                richTextBox.ScrollToCaret();
+                                richTextBox.ScrollToCaretThreadSafe();
                             });
                         }
                         catch (Exception ex) { }
                     }
                 };
 
-                // Start the process
-                process.Start();
+                try
+                {
+                    // Start the process
+                    process.Start();
 
-                // Begin asynchronously reading the output
-                process.BeginOutputReadLine();
+                    // Begin asynchronously reading the output
+                    process.BeginOutputReadLine();
 
-                // Wait for the process to exit
-                process.WaitForExit();
+                    // Wait for the process to exit
+                    process.WaitForExit();
 
-                // Close the standard output stream
-                process.Close();
+                    // Close the standard output stream
+                    process.Close();
+                }
+                catch (Exception ex)
+                {
+                    richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
+                }
             }
         }
 
@@ -627,60 +569,61 @@ namespace Gui_Miner
                 (Type configType, Object configObject) = minerConfig.GetSelectedMinerConfig();
                 PropertyInfo activeProperty = configType.GetProperty("Active");
                 bool isActive = (bool)activeProperty.GetValue(configObject);
+
                 if (isActive)
-                {                    
+                {
                     PropertyInfo filePathProperty = configType.GetProperty("MinerFilePath");
                     string filePath = (string)filePathProperty.GetValue(configObject);
 
-                    if (minerConfig.batFileArguments.IndexOf(".exe") >= -1)
+                    // Check if .bat file arguments contain ".exe"
+                    if (!String.IsNullOrWhiteSpace(filePath))
                     {
-                        // Get miner path
-                        if (minerConfig.batFileArguments.StartsWith("\""))
-                        {
-                            // Quotes around path
-                            filePath = minerConfig.batFileArguments.Substring(1, minerConfig.batFileArguments.IndexOf(".exe") + 3);
-                        }
-                        else
-                        {
-                            // No quotes around path
-                            filePath = minerConfig.batFileArguments.Substring(0, minerConfig.batFileArguments.IndexOf(".exe") + 4);
-                        }
-                        KillProcesses(filePath);
+                        KillProcesses(Path.GetFileNameWithoutExtension(filePath));
                     }
-                    else if(!String.IsNullOrWhiteSpace(filePath))
-                        KillProcesses(filePath);
+                    else if (minerConfig.batFileArguments.Contains(".exe"))
+                    {
+                        KillProcesses("miner.exe"); 
+                    }
                     else
-                        KillProcesses("miner.exe");
-                    
+                    {
+                        KillProcesses("miner.exe"); 
+                    }
                 }
             }
         }
+
         static void KillProcesses(string processName)
         {
-            Process[] processes = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processName));
+            Process[] processes = Process.GetProcesses();
+            bool procExists = false;
 
-            while (processes.Count() > 0)
+            foreach (Process process in processes)
             {
-                processes = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(processName));
-
-                foreach (Process process in processes)
+                try
                 {
-                    try
+                    if (process.ProcessName == Path.GetFileNameWithoutExtension(processName))
                     {
-                        // First, kill the process
+                        procExists = true;
+
+                        // Kill the process
                         process.Kill();
 
-                        // Then, use PowerShell to find and kill the associated cmd window
+                        // Use PowerShell to find and kill the associated cmd window
                         string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {process.Id} }} | ForEach-Object {{ $_.Terminate() }}";
                         RunPowerShellCommand(command);
                     }
-                    catch (Exception ex)
-                    {
-
-                    }
+                }
+                catch (Exception ex)
+                {
+                    //MessageBox.Show($"Error killing {processName} process: {ex.Message}");
+                    Thread.Sleep(1000);
                 }
             }
+
+            Thread.Sleep(1000);
+            processes = Process.GetProcesses();
         }
+
         static bool RunPowerShellCommand(string command)
         {
             ProcessStartInfo psi = new ProcessStartInfo
@@ -711,10 +654,10 @@ namespace Gui_Miner
 
 
     // Custom panel for rotating
-    public class RotatingPanel : Panel
+    public class RrotatingPanel : Panel
     {
         private double rotationAngle;
-
+        public Image Image { get; set; }
         public double RotationAngle
         {
             get { return rotationAngle; }
@@ -725,7 +668,7 @@ namespace Gui_Miner
             }
         }
 
-        public RotatingPanel()
+        public RrotatingPanel()
         {
             DoubleBuffered = true; // Enable double buffering
         }
@@ -735,7 +678,7 @@ namespace Gui_Miner
             base.OnPaint(e);
 
             // Rotate the image and draw it on the panel
-            using (Image rotatedImage = RotateImage(Properties.Resources.kas_world, (float)rotationAngle, ClientRectangle.Size))
+            using (Image rotatedImage = RotateImage(Image, (float)rotationAngle, ClientRectangle.Size))
             {
                 e.Graphics.DrawImage(rotatedImage, Point.Empty);
             }
