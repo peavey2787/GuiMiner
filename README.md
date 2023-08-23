@@ -35,6 +35,9 @@ Make sure to click Generate .bat file after making any changes and stop then sta
 # Windows Settings
 ![windows-settings](https://github.com/peavey2787/GuiMiner/assets/11081113/665ea91f-7ee8-4c53-a91e-c3a5985f214b)
 
+# Tips
+
+If you use MSI Afterburner you can set short-cut keys to change profiles. Create a profile for mining and another for gaming. Use the same short-cut keys in this app to switch profiles when stopping/starting. For example, if MSI Afterburner's short-cut keys for mining are Ctrl+Alt+1 and and for gaming Ctrl+Alt+2. Then in this app set the start short-cut keys to Ctrl+Alt+1 and the stop short-cut keys to Ctrl+Alt+2.
 
 # FAQ
 ## Why is the miner not starting?
