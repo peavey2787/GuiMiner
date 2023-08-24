@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Gui_Miner
@@ -202,7 +203,7 @@ namespace Gui_Miner
         public (string filePath, string args) GetMinerFilePathAndArgs(string batFileArgs)
         {
             string filePath = "";
-            string arguments = "";
+            string arguments = batFileArgs;
             string defaultPath = Directory.GetCurrentDirectory() + "\\miner.exe";
 
             if (batFileArgs.IndexOf(".exe") >= -1)
@@ -228,7 +229,19 @@ namespace Gui_Miner
             else
                 filePath = defaultPath;
 
-            return (filePath, arguments);
+            // Remove any trailing new lines
+            string pattern = @"[\r\n]+$";
+            arguments = Regex.Replace(arguments, pattern, String.Empty);
+
+            // Remove any 'pause' keywords
+            string lastNineChars = arguments.Substring(Math.Max(0, arguments.Length - 9));
+            if (lastNineChars.Contains("pause"))
+            {
+                lastNineChars = lastNineChars.Replace("pause", "").TrimEnd();
+                arguments = arguments.Substring(0, arguments.Length - 9) + lastNineChars;
+            }
+
+            return (filePath, arguments.Trim());
         }
     }
 }

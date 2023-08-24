@@ -326,19 +326,22 @@ namespace Gui_Miner
                     }
                     else if (control is ComboBox walletComboBox)
                     {
-                        int propertyValue = int.Parse(walletComboBox.Text.Split('/')[1].Trim());
-                        
-                        // Get wallet
-                        var wallet = _settings.Wallets.Find(w => w.Id.Equals(propertyValue));
-                        
-                        if(wallet == null)
+                        if (walletComboBox.Text.Contains('/'))
                         {
-                            // Get Pool
-                            var pool = _settings.Pools.Find(p => p.Id.Equals(propertyValue));
-                            property.SetValue(configObject, pool.Address);
+                            int propertyValue = int.Parse(walletComboBox.Text.Split('/')[1].Trim());
+
+                            // Get wallet
+                            var wallet = _settings.Wallets.Find(w => w.Id.Equals(propertyValue));
+
+                            if (wallet == null)
+                            {
+                                // Get Pool
+                                var pool = _settings.Pools.Find(p => p.Id.Equals(propertyValue));
+                                property.SetValue(configObject, pool.Address);
+                            }
+                            else
+                                property.SetValue(configObject, wallet.Address);
                         }
-                        else
-                            property.SetValue(configObject, wallet.Address);
                     }
                 }
 
@@ -411,7 +414,16 @@ namespace Gui_Miner
                         // Create a CheckBox for boolean properties
                         CheckBox checkBox = new CheckBox();
                         checkBox.BackColor = Color.FromArgb(12, 20, 52);
-                        checkBox.Checked = (bool)property.GetValue(configObject);
+
+                        if (property.Name == "Active")
+                            checkBox.Name = "activeCheckBox";
+
+                        if (bool.TryParse(property.GetValue(configObject).ToString(), out bool active))
+                        {
+                            // Use saved value
+                            checkBox.Checked = (bool)property.GetValue(configObject);
+                        }
+
                         checkBox.CheckedChanged += (sender, e) =>
                         {
                             property.SetValue(configObject, checkBox.Checked);
@@ -419,25 +431,28 @@ namespace Gui_Miner
 
                         inputControl = checkBox;
                     }
-                    else if(property.Name.Contains("user") || property.Name.Contains("wallet"))
+                    else if (property.Name.Contains("user") || property.Name.Contains("wallet"))
                     {
                         ComboBox walletComboBox = new ComboBox();
                         walletComboBox.BackColor = Color.FromArgb(12, 20, 52);
                         walletComboBox.ForeColor = Color.White;
-                        walletComboBox.Name = property.Name;                        
+                        walletComboBox.Name = property.Name;
                         var propertyValue = (string)property.GetValue(configObject);
 
                         int i = 0;
                         int selectedIndex = 0;
-                        foreach (Wallet wallet in _settings.Wallets)
+                        if (_settings.Wallets != null)
                         {
-                            walletComboBox.Items.Add(wallet.Name + " - " + wallet.Coin + " / " + wallet.Id);
-                            if (wallet.Address == propertyValue)
-                                selectedIndex = i;
-                            i++;
-                        }
+                            foreach (Wallet wallet in _settings.Wallets)
+                            {
+                                walletComboBox.Items.Add(wallet.Name + " - " + wallet.Coin + " / " + wallet.Id);
+                                if (wallet.Address == propertyValue)
+                                    selectedIndex = i;
+                                i++;
+                            }
 
-                        walletComboBox.SelectedIndex = selectedIndex;
+                            walletComboBox.SelectedIndex = selectedIndex;
+                        }
 
                         walletComboBox.SelectedIndexChanged += (sender, e) =>
                         {
@@ -446,29 +461,35 @@ namespace Gui_Miner
 
                         inputControl = walletComboBox;
                     }
-                    else if(property.Name.Contains("server") || property.Name.Contains("pool"))
+                    else if (property.Name.Contains("server") || property.Name.Contains("pool"))
                     {
                         ComboBox poolComboBox = new ComboBox();
                         poolComboBox.BackColor = Color.FromArgb(12, 20, 52);
                         poolComboBox.ForeColor = Color.White;
                         poolComboBox.Name = property.Name;
-                        var propertyValue = (string)property.GetValue(configObject);
+                        string propertyValue = "";
+                        if (property.GetValue(configObject) != null)
+                        {
+                            propertyValue = (string)property.GetValue(configObject).ToString();
+                        }
 
                         int i = 0;
                         int selectedIndex = 0;
-
-                        foreach (Pool pool in _settings.Pools)
+                        if (_settings.Pools != null)
                         {
-                            poolComboBox.Items.Add(pool.Name + " - SSL: " + pool.Ssl + " / " + pool.Id);
-                            if (pool.Address == propertyValue)
+                            foreach (Pool pool in _settings.Pools)
                             {
-                                selectedIndex = i;
-                                port = pool.Port;
+                                poolComboBox.Items.Add(pool.Name + " - SSL: " + pool.Ssl + " / " + pool.Id);
+                                if (pool.Address == propertyValue)
+                                {
+                                    selectedIndex = i;
+                                    port = pool.Port;
+                                }
+                                i++;
                             }
-                            i++;
-                        }
 
-                        poolComboBox.SelectedIndex = selectedIndex;
+                            poolComboBox.SelectedIndex = selectedIndex;
+                        }
 
                         poolComboBox.SelectedIndexChanged += (sender, e) =>
                         {
@@ -549,9 +570,13 @@ namespace Gui_Miner
         {
             if (minerSettingsListBox.SelectedIndex == -1) return;
 
+            bool setDefaults = false;
+
             // Adding new item
             if (minerSettingsListBox.SelectedIndex == 0)
             {
+                setDefaults = true;
+
                 // Create and add new miner setting
                 if (_settings.MinerSettings == null)
                     _settings.MinerSettings = new List<MinerConfig>();
@@ -562,6 +587,16 @@ namespace Gui_Miner
             }
 
             DisplayMinerSettings();
+
+            if(setDefaults)
+            {
+                CheckBox activeCheckBox = minerSettingsPanel.Controls.Find("activeCheckBox", true).OfType<CheckBox>().FirstOrDefault();
+                if (activeCheckBox != null)
+                {
+                    activeCheckBox.Checked = true;
+                }
+
+            }
         }
         private void minerSettingsListBox_KeyDown(object sender, KeyEventArgs e)
         {
@@ -596,6 +631,12 @@ namespace Gui_Miner
         }
         private void importBatButton_Click(object sender, EventArgs e)
         {
+            // Add new miner setting if there aren't any yet
+            if(minerSettingsListBox.Items.Count == 1)
+            {
+                minerSettingsListBox.SelectedIndex = 0;
+            }
+
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
                 openFileDialog.Filter = "Batch Files (*.bat)|*.bat";

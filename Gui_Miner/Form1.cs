@@ -95,6 +95,8 @@ namespace Gui_Miner
                 image = Properties.Resources.bitcoin;
             else if (bgImage == "Zilliqa")
                 image = Properties.Resources.zilliqa;
+            else
+                image = Properties.Resources.bitcoin;
 
             return image;
         }
@@ -591,7 +593,6 @@ namespace Gui_Miner
                 }
             }
         }
-
         static void KillProcesses(string processName)
         {
             Process[] processes = Process.GetProcesses();
@@ -623,7 +624,6 @@ namespace Gui_Miner
             Thread.Sleep(1000);
             processes = Process.GetProcesses();
         }
-
         static bool RunPowerShellCommand(string command)
         {
             ProcessStartInfo psi = new ProcessStartInfo
