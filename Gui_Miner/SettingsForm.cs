@@ -494,12 +494,12 @@ namespace Gui_Miner
                         poolComboBox.SelectedIndexChanged += (sender, e) =>
                         {
                             SaveSettings();
-                            var currentComboBox = (ComboBox)sender;                            
+                            var currentComboBox = (ComboBox)sender;
 
                             // Get the selected pool
                             var parts = currentComboBox.Text.Split('/');
                             int id = int.Parse(parts[1].Trim());
-                            Pool selectedPool = _settings.Pools.Find(p => p.Id.Equals(id));                            
+                            Pool selectedPool = _settings.Pools.Find(p => p.Id.Equals(id));
 
                             // Find the next TextBox control
                             Control nextControl = this.GetNextControl(currentComboBox, true);
@@ -523,14 +523,36 @@ namespace Gui_Miner
                         textbox.BackColor = Color.FromArgb(12, 20, 52);
                         textbox.ForeColor = Color.White;
                         textbox.Text = property.GetValue(configObject)?.ToString();
-                        textbox.KeyUp += (sender, e) =>
+
+                        if (property.Name == "MinerFilePath")
                         {
-                            if (e.KeyCode == Keys.Enter)
+                            textbox.ReadOnly = true;
+
+                            textbox.Click += (sender, e) =>
                             {
-                                SaveSettings();
-                                UpdateMinerSettingsListBox(minerSettingsListBox.SelectedIndex);
-                            }
-                        };
+                                OpenFileDialog openFileDialog = new OpenFileDialog();
+                                openFileDialog.Filter = "Executable Files (*.exe)|*.exe";
+
+                                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                                {
+                                    textbox.Text = openFileDialog.FileName;
+
+                                    UpdateStatusLabel("Remove the .exe from the .bat File");
+                                }
+
+                            };
+                        }
+                        else
+                        {                            
+                            textbox.KeyUp += (sender, e) =>
+                            {
+                                if (e.KeyCode == Keys.Enter)
+                                {
+                                    SaveSettings();
+                                    UpdateMinerSettingsListBox(minerSettingsListBox.SelectedIndex);
+                                }
+                            };
+                        }
 
                         inputControl = textbox;
                     }
