@@ -1303,6 +1303,9 @@ namespace Gui_Miner
         }
         private void DisplayWalletSettings()
         {
+            // Show panel
+            walletPanel.Visible = true;
+
             Wallet selectedWallet = GetSelectedWallet();
             if(selectedWallet == null) return;
 
@@ -1411,6 +1414,9 @@ namespace Gui_Miner
         }
         private void DisplayPoolSettings()
         {
+            // Show panel
+            poolPanel.Visible = true;
+
             Pool selectedPool = GetSelectedPool();
             if (selectedPool == null) return;
 
@@ -1595,13 +1601,15 @@ namespace Gui_Miner
             {
                 string propertyName = property.Name;
                 object propertyValue = property.GetValue(configObject);
-                
-                if (propertyValue == null || String.IsNullOrWhiteSpace(propertyValue.ToString())) continue; // skip empty properties
-                if (propertyName.StartsWith("Command")) continue; // skip 
-                if (propertyName.Equals("Name")) continue; // skip 
-                if (propertyName.Equals("Active")) continue; // skip 
-                if (propertyName.Equals("runAsAdmin")) continue; // skip 
-                if (propertyName.Equals("pl") && propertyValue.ToString().Trim().Equals("-1")) continue; // skip 
+
+                // skip
+                if (propertyValue == null || String.IsNullOrWhiteSpace(propertyValue.ToString())) continue; 
+                if (propertyName.StartsWith("Command")) continue;
+                if (propertyName.Equals("Name")) continue; 
+                if (propertyName.Equals("Active")) continue; 
+                if (propertyName.Equals("runAsAdmin")) continue;
+                if (propertyName.Equals("pl") && propertyValue.ToString().Trim().Equals("-1")) continue; 
+                if (propertyValue.ToString().Trim() == "-1") continue;
                 
 
                 if (propertyName.Equals("MinerFilePath"))

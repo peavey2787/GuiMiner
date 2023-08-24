@@ -206,7 +206,7 @@
             // statusLabel
             // 
             this.statusLabel.AutoSize = true;
-            this.statusLabel.Location = new System.Drawing.Point(392, 446);
+            this.statusLabel.Location = new System.Drawing.Point(392, 473);
             this.statusLabel.Name = "statusLabel";
             this.statusLabel.Size = new System.Drawing.Size(0, 13);
             this.statusLabel.TabIndex = 13;
@@ -488,6 +488,7 @@
             this.walletPanel.Name = "walletPanel";
             this.walletPanel.Size = new System.Drawing.Size(301, 182);
             this.walletPanel.TabIndex = 1;
+            this.walletPanel.Visible = false;
             // 
             // walletCoinTextBox
             // 
@@ -589,6 +590,7 @@
             this.poolPanel.Name = "poolPanel";
             this.poolPanel.Size = new System.Drawing.Size(301, 279);
             this.poolPanel.TabIndex = 5;
+            this.poolPanel.Visible = false;
             // 
             // poolSsslCheckBox
             // 

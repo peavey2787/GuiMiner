@@ -355,7 +355,7 @@ namespace Gui_Miner
 
                     if (!IsRunningAsAdmin())
                     {
-                        MessageBox.Show("App is not running as admin! Please restart the app and run as admin.");
+                        Task.Run(()=>MessageBox.Show("App is not running as admin! Please restart the app and run as admin."));
                     }
                 }
 

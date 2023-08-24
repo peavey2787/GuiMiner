@@ -19,7 +19,7 @@ namespace Gui_Miner
         public string ListDevicesCommand = "--list_devices";
         public string algo { get; set; } // --algo or -a
         public string server { get; set; } // --server or -s
-        public int port { get; set; } // --port or -n
+        public int port { get; set; } = -1; // --port or -n
         public string user { get; set; } // --user or -u
         public string worker { get; set; } // --worker
         public string pass { get; set; } // --pass or -p
@@ -61,11 +61,11 @@ namespace Gui_Miner
         public string templimit { get; set; } // --templimit or -t
         public string templimit_mem { get; set; } // --templimit_mem or -tm
         public bool watchdog { get; set; } // --watchdog or -w
-        public int watchdog_restart_delay { get; set; } // --watchdog_restart_delay
-        public int watchdog_mode { get; set; } // --watchdog_mode
-        public double min_rig_speed { get; set; } // --min_rig_speed
-        public int report_interval { get; set; } // --report_interval
-        public int api { get; set; } // --api
+        public int watchdog_restart_delay { get; set; } = -1; // --watchdog_restart_delay
+        public int watchdog_mode { get; set; } = -1;// --watchdog_mode
+        public double min_rig_speed { get; set; } = -1; // --min_rig_speed
+        public int report_interval { get; set; } = 30; // --report_interval
+        public int api { get; set; } = -1; // --api
         public string config { get; set; } // --config
         public string pers { get; set; } // --pers
         public bool pec { get; set; } // --pec
@@ -78,14 +78,14 @@ namespace Gui_Miner
         public bool secure_dns { get; set; } // --secure_dns
         public string dalgo { get; set; } // --dalgo
         public string dserver { get; set; } // --dserver
-        public int dport { get; set; } // --dport
+        public int dport { get; set; } = -1; // --dport
         public string duser { get; set; } // --duser
         public string dpass { get; set; } // --dpass
         public bool dssl { get; set; } // --dssl
         public string dworker { get; set; } // --dworker
         public string dual_intensity { get; set; } // --dual_intensity or -di
         public string zilserver { get; set; } // --zilserver
-        public int zilport { get; set; } // --zilport
+        public int zilport { get; set; } = -1;// --zilport
         public string ziluser { get; set; } // --ziluser
         public bool zilssl { get; set; } // --zilssl
 
