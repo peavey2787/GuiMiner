@@ -699,9 +699,8 @@ namespace Gui_Miner
         }      
         private Gpu GetGpuSettingsFromUI()
         {
-            var newGpu = new Gpu();
-            TableLayoutPanel tableLayoutPanel = this.Controls.Find(GPUSETTINGSPANELNAME, true).FirstOrDefault() as TableLayoutPanel;
-            int id = 0;
+            var newGpu = GetSelectedGpu();
+            TableLayoutPanel tableLayoutPanel = this.Controls.Find(GPUSETTINGSPANELNAME, true).FirstOrDefault() as TableLayoutPanel;            
 
             if (tableLayoutPanel == null) return newGpu;
 
@@ -720,9 +719,6 @@ namespace Gui_Miner
                     if (control is TextBox textBox)
                     {
                         string propertyValue = textBox.Text;
-
-                        if (propertyName.ToLower() == "id" && propertyValue != null)
-                            id = int.Parse(propertyValue);
 
                         if (!string.IsNullOrEmpty(propertyValue))
                         {
@@ -771,6 +767,10 @@ namespace Gui_Miner
                     {
                         // Create a CheckBox for boolean properties
                         CheckBox checkBox = new CheckBox();
+
+                        if (property.Name == "Enabled")
+                            checkBox.Name = "gpuEnabledCheckBox";
+
                         checkBox.Checked = (bool)property.GetValue(gpu);
                         checkBox.CheckedChanged += (sender, e) =>
                         {
@@ -824,9 +824,13 @@ namespace Gui_Miner
         {
             if (gpuListBox.SelectedIndex == -1) return;
 
+            bool setDefaults = false;
+
             // Adding new item
-            if(gpuListBox.SelectedIndex == 0)
+            if (gpuListBox.SelectedIndex == 0)
             {
+                setDefaults = true;
+
                 // Create and add new gpu
                 if (_settings.Gpus == null)
                     _settings.Gpus = new List<Gpu> { new Gpu("New Gpu") };
@@ -839,6 +843,16 @@ namespace Gui_Miner
             DisplayGpuSettings();
 
             UpdateStatusLabel("Edit Gpu Then Click Add GPUs");
+
+            if (setDefaults)
+            {
+                CheckBox activeCheckBox = gpuSettingsPanel.Controls.Find("gpuEnabledCheckBox", true).OfType<CheckBox>().FirstOrDefault();
+                if (activeCheckBox != null)
+                {
+                    activeCheckBox.Checked = true;
+                }
+
+            }
         }
         private void gpuListBox_KeyDown(object sender, KeyEventArgs e)
         {
@@ -1015,7 +1029,7 @@ namespace Gui_Miner
                 return;
             }
 
-            statusLabel.Text = message;
+            statusLabel.Text = "Hint: " + message;
         }
 
 
