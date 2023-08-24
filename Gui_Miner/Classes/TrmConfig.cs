@@ -142,6 +142,9 @@ namespace Gui_Miner
         {
             ClearGpuSettings();
 
+            runAsAdmin = true;
+            bool overclocking = false;
+
             foreach (Gpu gpu in gpus)
             {
                 if (!gpu.Enabled) continue;
@@ -157,6 +160,16 @@ namespace Gui_Miner
                 mem_temp_limit += gpu.Max_Mem_Temp.ToString();
                 dual_intensity += gpu.Dual_Intensity.ToString();
 
+                // Check if over/under clocking gpu
+                bool anyGreaterThanZero = new[]
+                {
+                    clk_core_mhz, clk_core_mv, clk_mem_mhz, clk_mem_mv
+                }
+                .Select(int.Parse)
+                .Any(value => value > 0);
+                if (anyGreaterThanZero)
+                    overclocking = true;
+
                 // Add separators
                 devices += CommandSeparator;
                 clk_core_mhz += CommandSeparator;
@@ -167,6 +180,12 @@ namespace Gui_Miner
                 temp_limit += CommandSeparator;
                 mem_temp_limit += CommandSeparator;
                 dual_intensity += CommandSeparator;                
+            }
+
+            if (overclocking)
+            {
+                // Required for over/under clocking
+                runAsAdmin = true;
             }
         }
         public int GetApiPort(string batFileArgs)

@@ -118,8 +118,7 @@ namespace Gui_Miner
         {
             ClearGpuSettings();
 
-            // Required for Nvidia overclocking
-            nvml = true;
+            bool overclocking = false;
 
             foreach (Gpu gpu in gpus)
             {
@@ -136,6 +135,16 @@ namespace Gui_Miner
                 intensity += gpu.Intensity.ToString();
                 dual_intensity += gpu.Dual_Intensity.ToString();
 
+                // Check if over/under clocking gpu
+                bool anyGreaterThanZero = new[]
+                {
+                    lock_cclock, lock_mclock
+                }
+                .Select(int.Parse)
+                .Any(value => value > 0);
+                if(anyGreaterThanZero)
+                    overclocking = true;
+
                 // Add separators
                 devices += CommandSeparator;
                 lock_cclock += CommandSeparator;
@@ -146,6 +155,13 @@ namespace Gui_Miner
                 templimit_mem += CommandSeparator;
                 intensity += CommandSeparator;
                 dual_intensity += CommandSeparator;
+            }
+
+            if(overclocking)
+            {
+                // Required for Nvidia overclocking
+                nvml = true;
+                runAsAdmin = true;
             }
         }
 
