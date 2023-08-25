@@ -288,8 +288,8 @@ namespace Gui_Miner
             newMinerSetting.Bat_File_Arguments = batLineTextBox.Text;
 
             // Set selected miner config
-            var comboBox = tableLayoutPanel.Controls.Find("ChooseMinerComboBox", true).FirstOrDefault();
-            MinerConfig.MinerConfigType matchedEnumValue = (MinerConfig.MinerConfigType)Enum.Parse(typeof(MinerConfig.MinerConfigType), comboBox.Text);
+            var minerComboBox = tableLayoutPanel.Controls.Find("ChooseMinerComboBox", true).FirstOrDefault();
+            MinerConfig.MinerConfigType matchedEnumValue = (MinerConfig.MinerConfigType)Enum.Parse(typeof(MinerConfig.MinerConfigType), minerComboBox.Text);
             newMinerSetting.Current_Miner_Config_Type = matchedEnumValue;
 
             string propertyName = "";
@@ -337,11 +337,12 @@ namespace Gui_Miner
                         bool propertyValue = checkBox.Checked;
                         property.SetValue(newMinerSetting, propertyValue);
                     }
-                    else if (control is ComboBox walletComboBox)
+                    else if (control is ComboBox comboBox)
                     {
-                        if (walletComboBox.Text.Contains('/'))
+                        // Get Wallet/Pool
+                        if (comboBox.Text.Contains('/'))
                         {
-                            int propertyValue = int.Parse(walletComboBox.Text.Split('/')[1].Trim());
+                            int propertyValue = int.Parse(comboBox.Text.Split('/')[1].Trim());
 
                             // Get wallet
                             var wallet = _settings.Wallets.Find(w => w.Id.Equals(propertyValue));
@@ -354,6 +355,11 @@ namespace Gui_Miner
                             }
                             else
                                 property.SetValue(newMinerSetting, wallet.Address);
+                        }
+                        else
+                        {
+                            // Get Algo
+                            property.SetValue(newMinerSetting, comboBox.Text);
                         }
                     }
                 }
@@ -388,21 +394,21 @@ namespace Gui_Miner
                 minerLabel.TextAlign = ContentAlignment.MiddleCenter;
 
                 // Create a dropdown menu
-                ComboBox comboBox = new ComboBox();
-                comboBox.Name = "ChooseMinerComboBox";
-                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
-                comboBox.ForeColor = Color.White;
-                comboBox.BackColor = Color.FromArgb(12, 20, 52);
+                ComboBox minerComboBox = new ComboBox();
+                minerComboBox.Name = "ChooseMinerComboBox";
+                minerComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                minerComboBox.ForeColor = Color.White;
+                minerComboBox.BackColor = Color.FromArgb(12, 20, 52);
 
                 foreach (MinerConfig.MinerConfigType value in Enum.GetValues(typeof(MinerConfig.MinerConfigType)))
-                    comboBox.Items.Add(value);
+                    minerComboBox.Items.Add(value);
 
-                comboBox.Text = minerSetting.Current_Miner_Config_Type.ToString();
+                minerComboBox.Text = minerSetting.Current_Miner_Config_Type.ToString();
 
                 // Add event handler for when an item is selected
-                comboBox.SelectedIndexChanged += ComboBox_SelectedIndexChanged;
-                comboBox.Anchor = AnchorStyles.None;
-                tableLayoutPanel.Controls.Add(comboBox, 0, tableLayoutPanel.RowCount);
+                minerComboBox.SelectedIndexChanged += ComboBox_SelectedIndexChanged;
+                minerComboBox.Anchor = AnchorStyles.None;
+                tableLayoutPanel.Controls.Add(minerComboBox, 0, tableLayoutPanel.RowCount);
                 tableLayoutPanel.Controls.Add(minerLabel, 0, tableLayoutPanel.RowCount);
                 tableLayoutPanel.RowCount++;
 
@@ -415,13 +421,13 @@ namespace Gui_Miner
                         || property.Name.Equals("Current_Miner_Config_Type")
                         || property.Name.Equals("Bat_File_Arguments")) continue;                    
 
-                    Label label = new Label();
-                    label.Text = property.Name;
-                    label.AutoSize = true;
-                    label.Anchor = AnchorStyles.None;
-                    label.TextAlign = ContentAlignment.MiddleCenter;
+                    Label nameLabel = new Label();
+                    nameLabel.Text = property.Name;
+                    nameLabel.AutoSize = true;
+                    nameLabel.Anchor = AnchorStyles.None;
+                    nameLabel.TextAlign = ContentAlignment.MiddleCenter;
 
-                    Control inputControl; // This will be either a TextBox or CheckBox
+                    Control inputControl; // This will be either a TextBox/CheckBox/Label
 
                     if (property.PropertyType == typeof(bool))
                     {
@@ -431,6 +437,8 @@ namespace Gui_Miner
 
                         if (property.Name == "Active")
                             checkBox.Name = "activeCheckBox";
+                        else
+                            checkBox.Name = property.Name;
 
                         // Use saved value
                         checkBox.Checked = (bool)property.GetValue(minerSetting);                        
@@ -442,7 +450,7 @@ namespace Gui_Miner
 
                         inputControl = checkBox;
                     }
-                    else if (property.Name.Contains("user") || property.Name.Contains("wallet"))
+                    else if (property.Name.StartsWith("Wallet"))
                     {
                         ComboBox walletComboBox = new ComboBox();
                         walletComboBox.BackColor = Color.FromArgb(12, 20, 52);
@@ -472,7 +480,7 @@ namespace Gui_Miner
 
                         inputControl = walletComboBox;
                     }
-                    else if (property.Name.Contains("server") || property.Name.Contains("pool"))
+                    else if (property.Name.StartsWith("Pool"))
                     {
                         ComboBox poolComboBox = new ComboBox();
                         poolComboBox.BackColor = Color.FromArgb(12, 20, 52);
@@ -512,25 +520,68 @@ namespace Gui_Miner
                             int id = int.Parse(parts[1].Trim());
                             Pool selectedPool = _settings.Pools.Find(p => p.Id.Equals(id));
 
-                            // Find the next TextBox control
-                            Control nextControl = this.GetNextControl(currentComboBox, true);
+                            // Extract the single-digit number from end of name
+                            int prevNumber = int.Parse(property.Name.Substring(property.Name.Length - 1));
 
-                            // Loop until we find a TextBox control
-                            while (nextControl != null && !(nextControl is TextBox))
-                            {
-                                nextControl = this.GetNextControl(nextControl, true);
-                            }
+                            // Change Port
+                            Control matchingTextBox = minerSettingsPanel.Controls.Find($"Port{prevNumber}", true).First();
+                            if (matchingTextBox != null && matchingTextBox is TextBox)
+                                matchingTextBox.Text = selectedPool.Port.ToString();
 
-                            // Set the next textbox to the port number
-                            nextControl.Text = selectedPool.Port.ToString();
+                            // Change SSL
+                            CheckBox matchingCheckBox = minerSettingsPanel.Controls.Find($"SSL{prevNumber}", true).OfType<CheckBox>().FirstOrDefault();
+                            if (matchingCheckBox != null)
+                                matchingCheckBox.Checked = selectedPool.SSL;
+
                         };
 
                         inputControl = poolComboBox;
+                    }
+                    else if (property.Name.StartsWith("Algo"))
+                    {
+                        ComboBox algoComboBox = new ComboBox();
+                        algoComboBox.BackColor = Color.FromArgb(12, 20, 52);
+                        algoComboBox.ForeColor = Color.White;
+                        algoComboBox.Name = property.Name;
+                        string propertyValue = "";
+                        if (property.GetValue(minerSetting) != null)
+                        {
+                            propertyValue = property.GetValue(minerSetting).ToString();
+                        }
+
+                        int i = 0;
+                        int selectedIndex = 0;
+                        var algos = minerSetting.GetAlgos();
+                        if (algos != null && algos.Count > 0)
+                        {
+                            foreach (string algo in minerSetting.Algos)
+                            {
+                                algoComboBox.Items.Add(algo);
+                            }
+                        }
+
+                        string selectedAlgo = "";
+                        if(property.Name == "Algo1")
+                            selectedAlgo = minerSetting.Algo1;
+                        if (property.Name == "Algo2")
+                            selectedAlgo = minerSetting.Algo2;
+                        if (property.Name == "Algo3")
+                            selectedAlgo = minerSetting.Algo3;
+
+                        algoComboBox.Text = selectedAlgo;
+
+                        algoComboBox.SelectedIndexChanged += (sender, e) =>
+                        {
+                            SaveSettings();
+                        };
+
+                        inputControl = algoComboBox;
                     }
                     else
                     {
                         // Create a TextBox 
                         TextBox textbox = new TextBox();
+                        textbox.Name = property.Name;
                         textbox.BackColor = Color.FromArgb(12, 20, 52);
                         textbox.ForeColor = Color.White;
 
@@ -597,7 +648,7 @@ namespace Gui_Miner
                         inputControl.Enabled = false;
                     }
 
-                    tableLayoutPanel.Controls.Add(label, 0, tableLayoutPanel.RowCount);
+                    tableLayoutPanel.Controls.Add(nameLabel, 0, tableLayoutPanel.RowCount);
                     tableLayoutPanel.Controls.Add(inputControl, 1, tableLayoutPanel.RowCount);
 
                     tableLayoutPanel.RowCount++;
@@ -1615,6 +1666,7 @@ namespace Gui_Miner
         public string Command_Prefix;
         public char Command_Separator;
         public string List_Devices_Command;
+        public List<string> Algos;
         public string Name { get; set; }
         public string Miner_File_Path
         {
@@ -1697,10 +1749,12 @@ namespace Gui_Miner
             Port2 = -1;
             Port3 = -1;
 
-            //Current_Miner_Config = CreateConfigInstance(Current_Miner_Config_Type);
-            //Sub_Configs = new List<IMinerConfig>();
-
             ClearGpuSettings();
+        }
+        internal List<string> GetAlgos()
+        {
+            ChangeCurrentMinerConfig(Current_Miner_Config_Type);
+            return Algos;
         }
         // Miner Specific Setup
         private void GminerSetup()
@@ -1708,12 +1762,22 @@ namespace Gui_Miner
             Command_Prefix = "--";
             Command_Separator = ' ';
             List_Devices_Command = "--list_devices";
+            Algos = new List<string> { "ethash", "etchash", "kawpow",
+                "cortex", "autolykos2", "kheavyhash",
+                "aeternity", "beamhash", "octopus",
+                "ironfish", "radiant", "zilliqa",
+                "firo", "125_4", "cuckatoo32",
+                "sero", "vds", "210_9"};
         }
         private void TrmSetup()
         {
             Command_Prefix = "--";
             Command_Separator = ',';
             List_Devices_Command = "--list_devices";
+            Algos = new List<string> { "ethash", "etchash", "kawpow",
+                "autolykos2", "kheavyhash", "verthash",
+                "ironfish", "radiant", "zilliqa",
+                "mtp_firopow"};
         }
         /*internal void AddOrUpdateSubConfig(IMinerConfig config)
         {
@@ -1851,7 +1915,8 @@ namespace Gui_Miner
             // Check if file path has been supplied, if not extract from .bat file if .exe is preesnt or set to default
             if (!string.IsNullOrWhiteSpace(_batFilePath))
                 filePath = _batFilePath;
-            else if (_batFileArguments.IndexOf(".exe") >= 0)
+
+            if (_batFileArguments.IndexOf(".exe") >= 0)
             {
                 // Get miner path
                 if (_batFileArguments.StartsWith("\""))
@@ -1869,8 +1934,7 @@ namespace Gui_Miner
 
                 if (!File.Exists(filePath)) filePath = defaultPath;
             }
-            else
-                filePath = defaultPath;
+
 
             // Remove any trailing new lines
             string pattern = @"[\r\n]+$";
@@ -2014,7 +2078,7 @@ namespace Gui_Miner
 
             // Required for Nvidia
             if (overclocking)
-                args += "--nvml 1";
+                args += "--nvml 1 ";
 
             if (Power_Limit.Any(item => item >= 0))
                 args += $"--pl {ConvertListToStr(Power_Limit)} ";

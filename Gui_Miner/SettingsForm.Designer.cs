@@ -101,14 +101,14 @@
             this.minerSettingsPanel.Location = new System.Drawing.Point(27, 160);
             this.minerSettingsPanel.Name = "minerSettingsPanel";
             this.minerSettingsPanel.Size = new System.Drawing.Size(299, 227);
-            this.minerSettingsPanel.TabIndex = 0;
+            this.minerSettingsPanel.TabIndex = 3;
             // 
             // gpuSettingsPanel
             // 
             this.gpuSettingsPanel.Location = new System.Drawing.Point(395, 160);
             this.gpuSettingsPanel.Name = "gpuSettingsPanel";
             this.gpuSettingsPanel.Size = new System.Drawing.Size(299, 227);
-            this.gpuSettingsPanel.TabIndex = 1;
+            this.gpuSettingsPanel.TabIndex = 4;
             // 
             // gpuListBox
             // 
@@ -121,7 +121,7 @@
             this.gpuListBox.Location = new System.Drawing.Point(395, 19);
             this.gpuListBox.Name = "gpuListBox";
             this.gpuListBox.Size = new System.Drawing.Size(299, 82);
-            this.gpuListBox.TabIndex = 3;
+            this.gpuListBox.TabIndex = 2;
             this.gpuListBox.SelectedIndexChanged += new System.EventHandler(this.gpuListBox_SelectedIndexChanged);
             this.gpuListBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.gpuListBox_KeyDown);
             // 
@@ -136,7 +136,7 @@
             this.minerSettingsListBox.Location = new System.Drawing.Point(27, 19);
             this.minerSettingsListBox.Name = "minerSettingsListBox";
             this.minerSettingsListBox.Size = new System.Drawing.Size(299, 82);
-            this.minerSettingsListBox.TabIndex = 4;
+            this.minerSettingsListBox.TabIndex = 1;
             this.minerSettingsListBox.SelectedIndexChanged += new System.EventHandler(this.minerSettingsListBox_SelectedIndexChanged);
             this.minerSettingsListBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.minerSettingsListBox_KeyDown);
             // 
@@ -148,7 +148,7 @@
             this.batLineTextBox.Multiline = true;
             this.batLineTextBox.Name = "batLineTextBox";
             this.batLineTextBox.Size = new System.Drawing.Size(702, 96);
-            this.batLineTextBox.TabIndex = 5;
+            this.batLineTextBox.TabIndex = 10;
             // 
             // label1
             // 
@@ -186,7 +186,7 @@
             this.addGpuSettingsButton.Location = new System.Drawing.Point(224, 393);
             this.addGpuSettingsButton.Name = "addGpuSettingsButton";
             this.addGpuSettingsButton.Size = new System.Drawing.Size(102, 21);
-            this.addGpuSettingsButton.TabIndex = 11;
+            this.addGpuSettingsButton.TabIndex = 6;
             this.addGpuSettingsButton.Text = "Add GPU Settings";
             this.addGpuSettingsButton.UseVisualStyleBackColor = false;
             this.addGpuSettingsButton.Click += new System.EventHandler(this.addGpuSettingsButton_Click);
@@ -198,7 +198,7 @@
             this.clearGpuSettingsButton.Location = new System.Drawing.Point(27, 393);
             this.clearGpuSettingsButton.Name = "clearGpuSettingsButton";
             this.clearGpuSettingsButton.Size = new System.Drawing.Size(106, 21);
-            this.clearGpuSettingsButton.TabIndex = 12;
+            this.clearGpuSettingsButton.TabIndex = 5;
             this.clearGpuSettingsButton.Text = "Clear GPU Settings";
             this.clearGpuSettingsButton.UseVisualStyleBackColor = false;
             this.clearGpuSettingsButton.Click += new System.EventHandler(this.clearGpuSettingsButton_Click);
@@ -241,7 +241,7 @@
             this.importBatButton.Location = new System.Drawing.Point(224, 473);
             this.importBatButton.Name = "importBatButton";
             this.importBatButton.Size = new System.Drawing.Size(54, 21);
-            this.importBatButton.TabIndex = 14;
+            this.importBatButton.TabIndex = 9;
             this.importBatButton.Text = "Import";
             this.importBatButton.UseVisualStyleBackColor = false;
             this.importBatButton.Click += new System.EventHandler(this.importBatButton_Click);
@@ -255,7 +255,7 @@
             this.getAllGpusButton.Location = new System.Drawing.Point(600, 393);
             this.getAllGpusButton.Name = "getAllGpusButton";
             this.getAllGpusButton.Size = new System.Drawing.Size(94, 66);
-            this.getAllGpusButton.TabIndex = 10;
+            this.getAllGpusButton.TabIndex = 7;
             this.getAllGpusButton.UseVisualStyleBackColor = false;
             this.getAllGpusButton.Click += new System.EventHandler(this.getAllGpusButton_Click);
             // 
@@ -268,7 +268,7 @@
             this.generateButton.Location = new System.Drawing.Point(10, 446);
             this.generateButton.Name = "generateButton";
             this.generateButton.Size = new System.Drawing.Size(62, 52);
-            this.generateButton.TabIndex = 9;
+            this.generateButton.TabIndex = 8;
             this.generateButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
             this.generateButton.UseVisualStyleBackColor = false;
             this.generateButton.Click += new System.EventHandler(this.generateButton_Click);
@@ -497,7 +497,7 @@
             this.walletCoinTextBox.Location = new System.Drawing.Point(62, 145);
             this.walletCoinTextBox.Name = "walletCoinTextBox";
             this.walletCoinTextBox.Size = new System.Drawing.Size(169, 20);
-            this.walletCoinTextBox.TabIndex = 5;
+            this.walletCoinTextBox.TabIndex = 3;
             this.walletCoinTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.walletCoinTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.walletCoinTextBox_KeyDown);
             // 
@@ -546,7 +546,7 @@
             this.walletAddressTextBox.Location = new System.Drawing.Point(0, 89);
             this.walletAddressTextBox.Name = "walletAddressTextBox";
             this.walletAddressTextBox.Size = new System.Drawing.Size(301, 20);
-            this.walletAddressTextBox.TabIndex = 0;
+            this.walletAddressTextBox.TabIndex = 2;
             this.walletAddressTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.walletAddressTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.walletAddressTextBox_KeyDown);
             // 
@@ -599,7 +599,7 @@
             this.poolSsslCheckBox.Location = new System.Drawing.Point(108, 250);
             this.poolSsslCheckBox.Name = "poolSsslCheckBox";
             this.poolSsslCheckBox.Size = new System.Drawing.Size(52, 17);
-            this.poolSsslCheckBox.TabIndex = 8;
+            this.poolSsslCheckBox.TabIndex = 5;
             this.poolSsslCheckBox.Text = "SSL?";
             this.poolSsslCheckBox.UseVisualStyleBackColor = true;
             this.poolSsslCheckBox.CheckedChanged += new System.EventHandler(this.poolSsslCheckBox_CheckedChanged);
@@ -620,7 +620,7 @@
             this.poolLinkTextBox.Location = new System.Drawing.Point(0, 205);
             this.poolLinkTextBox.Name = "poolLinkTextBox";
             this.poolLinkTextBox.Size = new System.Drawing.Size(301, 20);
-            this.poolLinkTextBox.TabIndex = 6;
+            this.poolLinkTextBox.TabIndex = 4;
             this.poolLinkTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.poolLinkTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.poolLinkTextBox_KeyDown);
             // 
@@ -631,7 +631,7 @@
             this.poolPortTextBox.Location = new System.Drawing.Point(111, 139);
             this.poolPortTextBox.Name = "poolPortTextBox";
             this.poolPortTextBox.Size = new System.Drawing.Size(61, 20);
-            this.poolPortTextBox.TabIndex = 5;
+            this.poolPortTextBox.TabIndex = 3;
             this.poolPortTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.poolPortTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBox1_KeyDown);
             // 
@@ -680,7 +680,7 @@
             this.poolAddressTextBox.Location = new System.Drawing.Point(0, 83);
             this.poolAddressTextBox.Name = "poolAddressTextBox";
             this.poolAddressTextBox.Size = new System.Drawing.Size(301, 20);
-            this.poolAddressTextBox.TabIndex = 0;
+            this.poolAddressTextBox.TabIndex = 2;
             this.poolAddressTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.poolAddressTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.poolAddressTextBox_KeyDown);
             // 

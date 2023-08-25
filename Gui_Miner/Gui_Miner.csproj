@@ -77,7 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Classes\Extensions.cs" />
-    <Compile Include="Classes\KeySimulator.cs" />
+    <Compile Include="Classes\KeyboardHook.cs" />
     <Compile Include="Classes\RotatingPanel.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -87,7 +87,6 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="Classes\GminerConfig.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SettingsForm.cs">
@@ -96,8 +95,6 @@
     <Compile Include="SettingsForm.Designer.cs">
       <DependentUpon>SettingsForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Classes\TrmConfig.cs" />
-    <Compile Include="Classes\UnknownConfig.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>
