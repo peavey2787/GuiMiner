@@ -14,9 +14,11 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Gui_Miner.Form1;
+using static Gui_Miner.MinerConfig;
 using static Gui_Miner.SettingsForm;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolBar;
@@ -45,7 +47,7 @@ namespace Gui_Miner
         public Settings Settings { get { return _settings; } }
         public Form1 Form1 { get; set; }
         public void SetSettings(Settings settings) { _settings = settings; }
-        
+
         public SettingsForm()
         {
             InitializeComponent();
@@ -91,7 +93,7 @@ namespace Gui_Miner
             toolTip.SetToolTip(getAllGpusButton, "Add all available GPUs");
             toolTip.SetToolTip(addGpuSettingsButton, "Add all active GPU settings. Be sure to click generate .bat file after.");
             toolTip.SetToolTip(clearGpuSettingsButton, "Remove all GPU specific settings from the miner settings.");
-            toolTip.SetToolTip(generateButton, "Use all miner settings above to generate the .bat file. Be sure to restart the miner to use the latest settings."); 
+            toolTip.SetToolTip(generateButton, "Use all miner settings above to generate the .bat file. Be sure to restart the miner to use the latest settings.");
         }
         private void SettingsForm_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -153,7 +155,7 @@ namespace Gui_Miner
                 if (stopShortKeysTextBox.Text.EndsWith(" + "))
                     stopShortKeysTextBox.Text = stopShortKeysTextBox.Text.Substring(0, stopShortKeysTextBox.Text.Length - 3);
             }
-            
+
             keys = AppSettings.Load<List<Keys>>(STARTSHORTKEYS);
             if (keys != null)
             {
@@ -177,11 +179,7 @@ namespace Gui_Miner
 
             foreach (MinerConfig minerSetting in _settings.MinerSettings)
             {
-                (Type configType, Object configObject) = minerSetting.GetSelectedMinerConfig();
-                PropertyInfo property = configType.GetProperty("Name");
-                string name = (string)property.GetValue(configObject);
-
-                minerSettingsListBox.Items.Add(name + " / " + minerSetting.Id);
+                minerSettingsListBox.Items.Add(minerSetting.Name + " / " + minerSetting.Id);
             }
             minerSettingsListBox.SelectedIndex = selectedIndex;
         }
@@ -202,7 +200,7 @@ namespace Gui_Miner
             {
                 gpuListBox.Items.Add(gpu.Name + " / " + gpu.Id);
             }
-            if(_settings.Gpus.Count > 0)
+            if (_settings.Gpus.Count > 0)
                 gpuListBox.SelectedIndex = selectedIndex;
         }
         private void UpdateWalletsListBox(int selectedIndex = 1)
@@ -287,14 +285,12 @@ namespace Gui_Miner
             if (tableLayoutPanel == null) return newMinerSetting;
 
             // CUSTOM SETTINGS
-            newMinerSetting.batFileArguments = batLineTextBox.Text;
+            newMinerSetting.Bat_File_Arguments = batLineTextBox.Text;
 
             // Set selected miner config
             var comboBox = tableLayoutPanel.Controls.Find("ChooseMinerComboBox", true).FirstOrDefault();
             MinerConfig.MinerConfigType matchedEnumValue = (MinerConfig.MinerConfigType)Enum.Parse(typeof(MinerConfig.MinerConfigType), comboBox.Text);
-            newMinerSetting.CurrentMinerConfig = matchedEnumValue;
-
-            (Type configType, Object configObject) = newMinerSetting.GetSelectedMinerConfig();
+            newMinerSetting.Current_Miner_Config_Type = matchedEnumValue;
 
             string propertyName = "";
             foreach (Control control in tableLayoutPanel.Controls)
@@ -304,7 +300,7 @@ namespace Gui_Miner
                     propertyName = label.Text;
                 }
 
-                PropertyInfo property = configType.GetProperty(propertyName);
+                PropertyInfo property = newMinerSetting.GetType().GetProperty(propertyName);
 
                 if (property != null)
                 {
@@ -315,14 +311,31 @@ namespace Gui_Miner
                         if (propertyName.ToLower() == "id" && propertyValue != null)
                             id = int.Parse(propertyValue);
 
-                        object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
-                        property.SetValue(configObject, convertedValue);
-
+                        // Check if the property is of type List<int>
+                        if (property.PropertyType == typeof(List<int>))
+                        {
+                            var newValue = newMinerSetting.ConvertStrToIntList(propertyValue);
+                            //object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
+                            property.SetValue(newMinerSetting, newValue);
+                        }
+                        // Check if the property is of type List<float>
+                        else if (property.PropertyType == typeof(List<float>))
+                        {
+                            // It's a List<float>
+                            var newValue = newMinerSetting.ConvertStrToFloatList(propertyValue);
+                            //object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
+                            property.SetValue(newMinerSetting, newValue);
+                        }
+                        else
+                        {
+                            object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
+                            property.SetValue(newMinerSetting, convertedValue);
+                        }          
                     }
                     else if (control is CheckBox checkBox)
                     {
                         bool propertyValue = checkBox.Checked;
-                        property.SetValue(configObject, propertyValue);
+                        property.SetValue(newMinerSetting, propertyValue);
                     }
                     else if (control is ComboBox walletComboBox)
                     {
@@ -337,10 +350,10 @@ namespace Gui_Miner
                             {
                                 // Get Pool
                                 var pool = _settings.Pools.Find(p => p.Id.Equals(propertyValue));
-                                property.SetValue(configObject, pool.Address);
+                                property.SetValue(newMinerSetting, pool.Address);
                             }
                             else
-                                property.SetValue(configObject, wallet.Address);
+                                property.SetValue(newMinerSetting, wallet.Address);
                         }
                     }
                 }
@@ -362,18 +375,17 @@ namespace Gui_Miner
                 MinerConfig minerSetting = GetSelectedMinerSettings();
 
                 // Get miner config
-                (Type configType, Object configObject) = minerSetting.GetSelectedMinerConfig();
-                PropertyInfo[] properties = configType.GetProperties();
+                PropertyInfo[] properties = minerSetting.GetType().GetProperties();
 
                 // CUSTOM SETTINGS
                 // Set .bat file textbox
-                batLineTextBox.Text = minerSetting.batFileArguments;
+                batLineTextBox.Text = minerSetting.Bat_File_Arguments;
 
                 // Choose Miner Label
                 Label minerLabel = new Label();
                 minerLabel.Text = "Choose Miner:";
                 minerLabel.Anchor = AnchorStyles.None;
-                minerLabel.TextAlign = ContentAlignment.MiddleCenter;                
+                minerLabel.TextAlign = ContentAlignment.MiddleCenter;
 
                 // Create a dropdown menu
                 ComboBox comboBox = new ComboBox();
@@ -385,11 +397,11 @@ namespace Gui_Miner
                 foreach (MinerConfig.MinerConfigType value in Enum.GetValues(typeof(MinerConfig.MinerConfigType)))
                     comboBox.Items.Add(value);
 
-                comboBox.Text = minerSetting.CurrentMinerConfig.ToString();
-                
+                comboBox.Text = minerSetting.Current_Miner_Config_Type.ToString();
+
                 // Add event handler for when an item is selected
                 comboBox.SelectedIndexChanged += ComboBox_SelectedIndexChanged;
-                comboBox.Anchor = AnchorStyles.None;              
+                comboBox.Anchor = AnchorStyles.None;
                 tableLayoutPanel.Controls.Add(comboBox, 0, tableLayoutPanel.RowCount);
                 tableLayoutPanel.Controls.Add(minerLabel, 0, tableLayoutPanel.RowCount);
                 tableLayoutPanel.RowCount++;
@@ -398,14 +410,16 @@ namespace Gui_Miner
                 foreach (PropertyInfo property in properties)
                 {
                     // Skip default properties
-                    if (property.Name.StartsWith("Default") 
-                        || property.Name.Equals("batFileArguments")) continue;
+                    if (property.Name.StartsWith("Default")
+                        || property.Name.Equals("Id")
+                        || property.Name.Equals("Current_Miner_Config_Type")
+                        || property.Name.Equals("Bat_File_Arguments")) continue;                    
 
                     Label label = new Label();
                     label.Text = property.Name;
                     label.AutoSize = true;
                     label.Anchor = AnchorStyles.None;
-                    label.TextAlign = ContentAlignment.MiddleCenter; 
+                    label.TextAlign = ContentAlignment.MiddleCenter;
 
                     Control inputControl; // This will be either a TextBox or CheckBox
 
@@ -418,15 +432,12 @@ namespace Gui_Miner
                         if (property.Name == "Active")
                             checkBox.Name = "activeCheckBox";
 
-                        if (bool.TryParse(property.GetValue(configObject).ToString(), out bool active))
-                        {
-                            // Use saved value
-                            checkBox.Checked = (bool)property.GetValue(configObject);
-                        }
+                        // Use saved value
+                        checkBox.Checked = (bool)property.GetValue(minerSetting);                        
 
                         checkBox.CheckedChanged += (sender, e) =>
                         {
-                            property.SetValue(configObject, checkBox.Checked);
+                            property.SetValue(minerSetting, checkBox.Checked);
                         };
 
                         inputControl = checkBox;
@@ -437,7 +448,7 @@ namespace Gui_Miner
                         walletComboBox.BackColor = Color.FromArgb(12, 20, 52);
                         walletComboBox.ForeColor = Color.White;
                         walletComboBox.Name = property.Name;
-                        var propertyValue = (string)property.GetValue(configObject);
+                        var propertyValue = (string)property.GetValue(minerSetting);
 
                         int i = 0;
                         int selectedIndex = 0;
@@ -468,9 +479,9 @@ namespace Gui_Miner
                         poolComboBox.ForeColor = Color.White;
                         poolComboBox.Name = property.Name;
                         string propertyValue = "";
-                        if (property.GetValue(configObject) != null)
+                        if (property.GetValue(minerSetting) != null)
                         {
-                            propertyValue = (string)property.GetValue(configObject).ToString();
+                            propertyValue = property.GetValue(minerSetting).ToString();
                         }
 
                         int i = 0;
@@ -479,7 +490,7 @@ namespace Gui_Miner
                         {
                             foreach (Pool pool in _settings.Pools)
                             {
-                                poolComboBox.Items.Add(pool.Name + " - SSL: " + pool.Ssl + " / " + pool.Id);
+                                poolComboBox.Items.Add(pool.Name + " - SSL: " + pool.SSL + " / " + pool.Id);
                                 if (pool.Address == propertyValue)
                                 {
                                     selectedIndex = i;
@@ -522,7 +533,28 @@ namespace Gui_Miner
                         TextBox textbox = new TextBox();
                         textbox.BackColor = Color.FromArgb(12, 20, 52);
                         textbox.ForeColor = Color.White;
-                        textbox.Text = property.GetValue(configObject)?.ToString();
+
+                        // Extract value
+                        string value = "";
+                        object propertyValue = property.GetValue(minerSetting);
+
+                        if (propertyValue is List<int>)
+                        {
+                            // Property is a List<int>
+                            List<int> intValue = (List<int>)propertyValue;
+                            value = minerSetting.ConvertListToStr(intValue);
+                        }
+                        else if (propertyValue is List<float>)
+                        {
+                            // Property is a List<float>
+                            List<float> floatValue = (List<float>)propertyValue;
+                            value = minerSetting.ConvertListToStr(floatValue);
+                        }
+                        else
+                        {
+                            value = property.GetValue(minerSetting)?.ToString();
+                        }
+                        textbox.Text = value;
 
                         if (property.Name == "MinerFilePath")
                         {
@@ -530,6 +562,7 @@ namespace Gui_Miner
 
                             textbox.Click += (sender, e) =>
                             {
+                                // Have user select miner.exe file
                                 OpenFileDialog openFileDialog = new OpenFileDialog();
                                 openFileDialog.Filter = "Executable Files (*.exe)|*.exe";
 
@@ -538,12 +571,13 @@ namespace Gui_Miner
                                     textbox.Text = openFileDialog.FileName;
 
                                     UpdateStatusLabel("Remove the .exe from the .bat File");
+                                    SaveSettings();
                                 }
 
                             };
                         }
                         else
-                        {                            
+                        {
                             textbox.KeyUp += (sender, e) =>
                             {
                                 if (e.KeyCode == Keys.Enter)
@@ -556,7 +590,6 @@ namespace Gui_Miner
 
                         inputControl = textbox;
                     }
-
 
                     // Hide Id's
                     if (property.Name.ToLower().Equals("id"))
@@ -585,7 +618,7 @@ namespace Gui_Miner
             ComboBox comboBox = (ComboBox)sender;
             var selectedMinerSettings = GetSelectedMinerSettings();
             MinerConfig.MinerConfigType matchedEnumValue = (MinerConfig.MinerConfigType)Enum.Parse(typeof(MinerConfig.MinerConfigType), comboBox.Text);
-            selectedMinerSettings.CurrentMinerConfig = matchedEnumValue;
+            selectedMinerSettings.Current_Miner_Config_Type = matchedEnumValue;
             DisplayMinerSettings();
         }
         private void minerSettingsListBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -610,7 +643,7 @@ namespace Gui_Miner
 
             DisplayMinerSettings();
 
-            if(setDefaults)
+            if (setDefaults)
             {
                 CheckBox activeCheckBox = minerSettingsPanel.Controls.Find("activeCheckBox", true).OfType<CheckBox>().FirstOrDefault();
                 if (activeCheckBox != null)
@@ -645,7 +678,7 @@ namespace Gui_Miner
         private void generateButton_Click(object sender, EventArgs e)
         {
             var minerSetting = GetSelectedMinerSettings();
-            batLineTextBox.Text = minerSetting.GeneratebatFileArguments();
+            batLineTextBox.Text = minerSetting.GenerateBatFile();
 
             UpdateStatusLabel("");
 
@@ -654,7 +687,7 @@ namespace Gui_Miner
         private void importBatButton_Click(object sender, EventArgs e)
         {
             // Add new miner setting if there aren't any yet
-            if(minerSettingsListBox.Items.Count == 1)
+            if (minerSettingsListBox.Items.Count == 1)
             {
                 minerSettingsListBox.SelectedIndex = 0;
             }
@@ -707,22 +740,22 @@ namespace Gui_Miner
         {
             Gpu gpu = new Gpu();
 
-            if(gpuListBox.SelectedIndex <= 0) return gpu;
+            if (gpuListBox.SelectedIndex <= 0) return gpu;
 
             int id = int.Parse(gpuListBox.SelectedItem.ToString().Split('/')[1].Trim());
 
-            foreach(Gpu savedGpu in _settings.Gpus)
+            foreach (Gpu savedGpu in _settings.Gpus)
             {
-                if(savedGpu.Id == id)
+                if (savedGpu.Id == id)
                     return savedGpu;
             }
 
             return gpu;
-        }      
+        }
         private Gpu GetGpuSettingsFromUI()
         {
             var newGpu = GetSelectedGpu();
-            TableLayoutPanel tableLayoutPanel = this.Controls.Find(GPUSETTINGSPANELNAME, true).FirstOrDefault() as TableLayoutPanel;            
+            TableLayoutPanel tableLayoutPanel = this.Controls.Find(GPUSETTINGSPANELNAME, true).FirstOrDefault() as TableLayoutPanel;
 
             if (tableLayoutPanel == null) return newGpu;
 
@@ -905,11 +938,12 @@ namespace Gui_Miner
             Task.Run(() =>
             {
                 var devices = GetDevicesFromMiner();
-                
+
                 foreach (var device in devices)
                 {
                     // Create new gpu
                     Gpu newGpu = new Gpu();
+                    newGpu.Enabled = true;
                     var parts = device.Split(' ');
                     string vram = parts[parts.Length - 3];
                     string name = parts[parts.Length - 4];
@@ -946,25 +980,16 @@ namespace Gui_Miner
         {
             var minerSettings = GetSelectedMinerSettings();
 
-            if(minerSettings == null)
+            if (minerSettings == null)
             {
                 UpdateStatusLabel("Please select/create a miner config.");
                 return new List<string>();
             }
 
-            (Type configType, Object configObject) = minerSettings.GetSelectedMinerConfig();
-            PropertyInfo minerFilePathProperty = configType.GetProperty("MinerFilePath");
-            string minerFilePath = (string)minerFilePathProperty.GetValue(configObject);
-
-            FieldInfo listDevicesCommandField = configType.GetField("ListDevicesCommand", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            string listDevicesCommand = (string)listDevicesCommandField.GetValue(configObject);
-
             // Create a new process
             Process process = new Process();
 
-            string path = minerFilePath;
-            if (!File.Exists(minerFilePath))
-                path = Directory.GetCurrentDirectory() + "\\" + minerFilePath;
+            string path = minerSettings.Miner_File_Path;
 
             if (!File.Exists(path) && File.Exists("miner.exe"))
                 path = "miner.exe";
@@ -973,7 +998,7 @@ namespace Gui_Miner
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = path,
-                Arguments = listDevicesCommand,
+                Arguments = minerSettings.List_Devices_Command,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
@@ -995,8 +1020,8 @@ namespace Gui_Miner
             };
 
             // Start the process
-            try 
-            { 
+            try
+            {
                 process.Start();
 
                 // Begin asynchronously reading the output
@@ -1019,21 +1044,17 @@ namespace Gui_Miner
         private void addGpuSettingsButton_Click(object sender, EventArgs e)
         {
             var minerSettings = GetSelectedMinerSettings();
-            (Type configType, Object configObject) = minerSettings.GetSelectedMinerConfig();
-            MethodInfo methodInfo = configType.GetMethod("AddGpuSettings");
-            methodInfo.Invoke(configObject, new object[] { _settings.Gpus });
-            DisplayMinerSettings();
+            minerSettings.AddGpuSettings(_settings.Gpus);
 
+            DisplayMinerSettings();
             UpdateStatusLabel();
         }
         private void clearGpuSettingsButton_Click(object sender, EventArgs e)
         {
             var minerSettings = GetSelectedMinerSettings();
-            (Type configType, Object configObject) = minerSettings.GetSelectedMinerConfig();
-            MethodInfo methodInfo = configType.GetMethod("ClearGpuSettings");
-            methodInfo.Invoke(configObject, null);
-            DisplayMinerSettings();
+            minerSettings.ClearGpuSettings();
 
+            DisplayMinerSettings();
             UpdateStatusLabel();
         }
         #endregion
@@ -1051,14 +1072,17 @@ namespace Gui_Miner
                 return;
             }
 
-            statusLabel.Text = "Hint: " + message;
+            if (!string.IsNullOrWhiteSpace(message))
+                statusLabel.Text = "Hint: " + message;
+            else
+                statusLabel.Text = "";
         }
 
 
         #region Navigation Buttons
         // Navigation buttons
         private void generalButton_Click(object sender, EventArgs e)
-        {            
+        {
             HideAllPanels();
             CreateRotatingPanel();
             generalPanel.Show();
@@ -1167,14 +1191,14 @@ namespace Gui_Miner
                     stopShortKeysTextBox.Tag.ToString() == "false")
                 { stopShortKeysTextBox.Text += " + "; }
 
-               
+
                 if (e.KeyCode == Keys.Delete)
                 {
                     // Clear short-cut keys
                     stopShortKeysTextBox.Text = "";
                     stopShortKeysTextBox.Tag = "true";
                     keysPressed = new List<Keys>();
-                }               
+                }
                 else
                 {
                     // Add key
@@ -1185,7 +1209,7 @@ namespace Gui_Miner
 
                 AppSettings.Save<List<Keys>>(STOPSHORTKEYS, keysPressed);
 
-                
+
                 e.SuppressKeyPress = true; // Prevent the key press from being entered into textBox
             }
         }
@@ -1194,9 +1218,9 @@ namespace Gui_Miner
             AppSettings.Save<string>(BGIMAGE, bgComboBox.Text);
             if (MainForm != null)
             {
-                if(MainForm.rotatingPanel != null)
+                if (MainForm.rotatingPanel != null)
                     MainForm.rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
-                if(rotatingPanel != null)
+                if (rotatingPanel != null)
                     rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
             }
         }
@@ -1226,8 +1250,8 @@ namespace Gui_Miner
             if (rotatingPanel != null)
             {
                 rotatingPanel.Dispose();
-                bgImagePanel.Controls.Remove(rotatingPanel); 
-                rotatingPanel = null; 
+                bgImagePanel.Controls.Remove(rotatingPanel);
+                rotatingPanel = null;
             }
         }
 
@@ -1265,9 +1289,9 @@ namespace Gui_Miner
             }
             catch (Exception ex)
             {
-                if(IsRunningAsAdmin())
+                if (IsRunningAsAdmin())
                     MessageBox.Show($"Failed to add auto start task to windows task scheduler: {ex.Message}");
-                
+
                 return false;
             }
         }
@@ -1329,7 +1353,7 @@ namespace Gui_Miner
             walletPanel.Visible = true;
 
             Wallet selectedWallet = GetSelectedWallet();
-            if(selectedWallet == null) return;
+            if (selectedWallet == null) return;
 
             walletNameTextBox.Text = selectedWallet.Name;
             walletAddressTextBox.Text = selectedWallet.Address;
@@ -1346,13 +1370,13 @@ namespace Gui_Miner
         }
         private Wallet GetSelectedWallet()
         {
-            if(walletsListBox.SelectedIndex <= 0) return null;
+            if (walletsListBox.SelectedIndex <= 0) return null;
 
             int id = int.Parse(walletsListBox.Text.Split('/')[1]);
 
             Wallet existingWallet = _settings.Wallets.Find(w => w.Id.Equals(id));
-            
-            return existingWallet;            
+
+            return existingWallet;
         }
         private void SaveWallets()
         {
@@ -1446,7 +1470,7 @@ namespace Gui_Miner
             poolAddressTextBox.Text = selectedPool.Address;
             poolPortTextBox.Text = selectedPool.Port.ToString();
             poolLinkTextBox.Text = selectedPool.Link;
-            poolSsslCheckBox.Checked = selectedPool.Ssl;
+            poolSsslCheckBox.Checked = selectedPool.SSL;
         }
         private Pool GetPoolFromUI()
         {
@@ -1456,7 +1480,7 @@ namespace Gui_Miner
             pool.Address = poolAddressTextBox.Text;
             pool.Port = int.TryParse(poolPortTextBox.Text, out int port) ? port : -1;
             pool.Link = poolLinkTextBox.Text;
-            pool.Ssl = poolSsslCheckBox.Checked;
+            pool.SSL = poolSsslCheckBox.Checked;
 
             return pool;
         }
@@ -1477,7 +1501,7 @@ namespace Gui_Miner
             savedPool.Name = updatedPool.Name;
             savedPool.Address = updatedPool.Address;
             savedPool.Port = updatedPool.Port;
-            savedPool.Ssl = updatedPool.Ssl;
+            savedPool.SSL = updatedPool.SSL;
             savedPool.Link = updatedPool.Link;
 
             AppSettings.Save<Settings>(SETTINGSNAME, _settings);
@@ -1558,7 +1582,23 @@ namespace Gui_Miner
 
         }
     }
-    public class MinerConfig
+    /*public interface IMinerConfig
+    {
+        int Id { get; set; }
+        string Name { get; set; }
+        string Miner_File_Path { get; set; }
+        bool Active { get; set; }
+        bool Run_As_Admin { get; set; }
+        string Bat_File_Arguments { get; set; }
+        MinerConfigType Current_Miner_Config_Type { get; set; }
+        IMinerConfig Current_Miner_Config { get; set; }
+        List<IMinerConfig> Sub_Configs { get; set; }
+
+        void AddGpuSettings(List<Gpu> gpus);
+        string GenerateBatFileArgs();
+    }*/
+
+    public class MinerConfig //: IMinerConfig
     {
         public enum MinerConfigType
         {
@@ -1566,97 +1606,590 @@ namespace Gui_Miner
             Gminer,
             Trm
         }
-
         Random random = new Random();
+        private string _batFileArguments;
+        private string _batFilePath;
+
+        public List<Gpu> Gpus;
         public int Id { get; set; }
-        public MinerConfigType CurrentMinerConfig { get; set; }
-        public UnknownConfig UnknownConfig { get; set; }
-        public GminerConfig GminerConfig { get; set; }
-        public TrmConfig TrmConfig { get; set; }
-        public string batFileArguments { get; set; }
+        public string Command_Prefix;
+        public char Command_Separator;
+        public string List_Devices_Command;
+        public string Name { get; set; }
+        public string Miner_File_Path
+        {
+            get
+            {
+                (string filePath, string arguments) = GetBatFilePathAndArguments();
+                _batFilePath = filePath;
+                return _batFilePath;
+            }
+            set
+            {
+                _batFilePath = value;
+            }
+        }
+        public bool Active { get; set; }
+        public bool Run_As_Admin { get; set; }
+        public string Bat_File_Arguments
+        {
+            get
+            {
+                (string filePath, string arguments) = GetBatFilePathAndArguments();
+                _batFileArguments = arguments;
+                return _batFileArguments;
+            }
+            set
+            {
+                _batFileArguments = value;
+            }
+        }
+        public MinerConfigType Current_Miner_Config_Type { get; set; }
+        //public IMinerConfig Current_Miner_Config { get; set; }
+        //public List<IMinerConfig> Sub_Configs { get; set; }
+        public virtual string Worker_Name { get; set; }
+        public virtual string Algo1 { get; set; }
+        public virtual string Algo2 { get; set; }
+        public virtual string Algo3 { get; set; }
+        public virtual string Wallet1 { get; set; }
+        public virtual string Wallet2 { get; set; }
+        public virtual string Wallet3 { get; set; }
+        public virtual string Pool1 { get; set; }
+        public virtual string Pool2 { get; set; }
+        public virtual string Pool3 { get; set; }
+        public virtual int Port1 { get; set; }
+        public virtual int Port2 { get; set; }
+        public virtual int Port3 { get; set; }
+        public virtual bool SSL1 { get; set; }
+        public virtual bool SSL2 { get; set; }
+        public virtual bool SSL3 { get; set; }
+        public virtual int Api { get; set; }
+        public virtual List<int> Devices { get; set; }
+        public virtual List<int> Fan_Percent { get; set; }
+        public virtual List<int> Power_Limit { get; set; }
+        public virtual List<int> Temp_Limit_Core { get; set; }
+        public virtual List<int> Temp_Limit_Mem { get; set; }        
+        public virtual List<int> Core_Clock { get; set; }
+        public virtual List<int> Core_Offset { get; set; }
+        public virtual List<int> Mem_Clock { get; set; }
+        public virtual List<int> Mem_Offset { get; set; }
+        public virtual List<int> Core_Micro_Volts { get; set; }
+        public virtual List<int> Mem_Micro_Volts { get; set; }
+        public virtual List<float> Intensity { get; set; }
+        public virtual List<float> Dual_Intensity { get; set; }
+
 
         public MinerConfig()
         {
+            // Interface
             Id = random.Next(2303, 40598);
-            CurrentMinerConfig = MinerConfigType.Unknown;
-            UnknownConfig = new UnknownConfig();
-            GminerConfig = new GminerConfig();
-            TrmConfig = new TrmConfig();
-            batFileArguments = "";
+            Command_Prefix = "--";
+            Command_Separator = ' ';
+            List_Devices_Command = "--list_devices";
+            Name = "New Miner Config";
+            Miner_File_Path = Directory.GetCurrentDirectory() + "\\miner.exe";
+            Active = true;
+            Run_As_Admin = false;
+            Bat_File_Arguments = "";
+            Current_Miner_Config_Type = MinerConfigType.Unknown;
+            Api = -1;
+            Port1 = -1;
+            Port2 = -1;
+            Port3 = -1;
+
+            //Current_Miner_Config = CreateConfigInstance(Current_Miner_Config_Type);
+            //Sub_Configs = new List<IMinerConfig>();
+
+            ClearGpuSettings();
+        }
+        // Miner Specific Setup
+        private void GminerSetup()
+        {
+            Command_Prefix = "--";
+            Command_Separator = ' ';
+            List_Devices_Command = "--list_devices";
+        }
+        private void TrmSetup()
+        {
+            Command_Prefix = "--";
+            Command_Separator = ',';
+            List_Devices_Command = "--list_devices";
+        }
+        /*internal void AddOrUpdateSubConfig(IMinerConfig config)
+        {
+            bool added = false;
+
+            for(int i = 0; i < Sub_Configs.Count(); i++)
+            {
+                if (Sub_Configs[i].Id == config.Id)
+                {
+                    // Update found config
+                    Sub_Configs[i] = config;
+                    added = true;
+                }
+            }
+
+            if (!added)
+            {
+                // Add new config
+                Sub_Configs.Add(config);
+            }
+        }*/
+        internal void ChangeCurrentMinerConfig(MinerConfigType minerConfigType)
+        {
+            Current_Miner_Config_Type = minerConfigType;
+
+            if(minerConfigType == MinerConfigType.Gminer || minerConfigType == MinerConfigType.Unknown)
+            {
+                GminerSetup();
+            }
+            else if (minerConfigType == MinerConfigType.Trm)
+            {
+                TrmSetup();
+            }
+            /*
+            bool changed = false;
+
+            foreach (IMinerConfig minerConfig in Sub_Configs)
+            {
+                if (minerConfig.Current_Miner_Config_Type == minerConfigType)
+                {
+                    Current_Miner_Config = minerConfig;
+                    changed = true;
+                }
+            }
+
+            if (!changed)
+            {
+                var newConfig = CreateConfigInstance(Current_Miner_Config_Type);
+                AddOrUpdateSubConfig(newConfig);
+            }*/
         }
 
-        internal (Type, object) GetSelectedMinerConfig()
-        {
-            Type configType;
-            object configObject;
 
-            if (CurrentMinerConfig == MinerConfigType.Gminer)
+
+
+        // Interface required
+        /*private IMinerConfig CreateConfigInstance(MinerConfigType configType)
+        {
+            switch (configType)
             {
-                configType = typeof(GminerConfig);
-                configObject = GminerConfig;
+                case MinerConfigType.Gminer:
+                    return new GminerConfig();
+                case MinerConfigType.Trm:
+                    return new TrmConfig();
+                default:
+                    return new UnknownConfig();
             }
-            else if (CurrentMinerConfig == MinerConfigType.Trm)
+        }*/
+        public virtual void ClearGpuSettings()
+        {
+            Devices = new List<int>();
+            Devices = new List<int>();
+            Fan_Percent = new List<int>();
+            Power_Limit = new List<int>();
+            Temp_Limit_Core = new List<int>();
+            Temp_Limit_Mem = new List<int>();
+            Core_Clock = new List<int>();
+            Core_Offset = new List<int>();
+            Mem_Clock = new List<int>();
+            Mem_Offset = new List<int>();
+            Core_Micro_Volts = new List<int>();
+            Mem_Micro_Volts = new List<int>();
+            Intensity = new List<float>();
+            Dual_Intensity = new List<float>();
+        }
+        public virtual void AddGpuSettings(List<Gpu> gpus)
+        {
+            ClearGpuSettings();
+
+            bool overclocking = false;
+
+            foreach (Gpu gpu in gpus)
             {
-                configType = typeof(TrmConfig);
-                configObject = TrmConfig;
+                if (!gpu.Enabled) continue;
+
+                // Add values
+                Devices.Add(gpu.Device_Id);
+                Core_Clock.Add(gpu.Core_Clock);
+                Core_Offset.Add(gpu.Core_Offset);
+                Mem_Clock.Add(gpu.Mem_Clock);
+                Mem_Offset.Add(gpu.Mem_Clock_Offset);
+                Power_Limit.Add(gpu.Power_Limit);
+                Core_Micro_Volts.Add(gpu.Core_Mv);
+                Mem_Micro_Volts.Add(gpu.Mem_Mv);
+                Fan_Percent.Add(gpu.Fan_Percent);
+                Temp_Limit_Core.Add(gpu.Max_Core_Temp);
+                Temp_Limit_Mem.Add(gpu.Max_Mem_Temp);
+                Intensity.Add(gpu.Intensity);
+                Dual_Intensity.Add(gpu.Dual_Intensity);
+
+                // Check if over/under clocking gpu
+                bool anyGreaterThanZero = new List<List<int>>
+                {
+                    Core_Clock, Core_Offset, Mem_Clock, Mem_Offset
+                }
+                .SelectMany(list => list)
+                .Any(value => value > 0);
+
+                if (anyGreaterThanZero)
+                    overclocking = true;
+            }
+
+            if (overclocking)
+            {
+                Run_As_Admin = true;
+            }
+        }
+
+
+        private (string filePath, string args) GetBatFilePathAndArguments()
+        {
+            string filePath = "";
+            string defaultPath = Directory.GetCurrentDirectory() + "\\miner.exe";
+
+            // Check if file path has been supplied, if not extract from .bat file if .exe is preesnt or set to default
+            if (!string.IsNullOrWhiteSpace(_batFilePath))
+                filePath = _batFilePath;
+            else if (_batFileArguments.IndexOf(".exe") >= 0)
+            {
+                // Get miner path
+                if (_batFileArguments.StartsWith("\""))
+                {
+                    // Quotes around path
+                    filePath = _batFileArguments.Substring(1, _batFileArguments.IndexOf(".exe") + 3);
+                    _batFileArguments = _batFileArguments.Replace($"\"{filePath}\"", string.Empty).Trim();
+                }
+                else
+                {
+                    // No quotes around path
+                    filePath = _batFileArguments.Substring(0, _batFileArguments.IndexOf(".exe") + 4);
+                    _batFileArguments = _batFileArguments.Replace($"{filePath}", string.Empty).Trim();
+                }
+
+                if (!File.Exists(filePath)) filePath = defaultPath;
             }
             else
+                filePath = defaultPath;
+
+            // Remove any trailing new lines
+            string pattern = @"[\r\n]+$";
+            _batFileArguments = Regex.Replace(_batFileArguments, pattern, String.Empty);
+
+            // Remove any 'pause' keywords
+            string lastNineChars = _batFileArguments.Substring(Math.Max(0, _batFileArguments.Length - 9));
+            if (lastNineChars.Contains("pause"))
             {
-                configType = typeof(UnknownConfig);
-                configObject = UnknownConfig;
+                lastNineChars = lastNineChars.Replace("pause", "").TrimEnd();
+                _batFileArguments = _batFileArguments.Substring(0, _batFileArguments.Length - 9) + lastNineChars;
             }
 
-            return (configType, configObject);
+            return (filePath, _batFileArguments.Trim());
         }
 
-        internal string GeneratebatFileArguments()
+
+        // Getter/Setter Helpers
+        internal List<int> ConvertStrToIntList(string str)
         {
-            (Type configType, object configObject) = GetSelectedMinerConfig();
-            PropertyInfo[] properties = configType.GetProperties();
+            List<int> listOfInts = new List<int>();
+            List<string> listOfParts = str.Split(Command_Separator).ToList();
 
-            StringBuilder configString = new StringBuilder();
+            foreach (string device in listOfParts)
+                if (int.TryParse(device, out int deviceNum))
+                    listOfInts.Add(deviceNum);
 
-            string commandPrefix = (string)configType.GetProperty("CommandPrefix")?.GetValue(configObject);
-            string commandSeparator = (string)configType.GetProperty("CommandSeparator")?.GetValue(configObject);
+            return listOfInts;
+        }
+        internal List<float> ConvertStrToFloatList(string str)
+        {
+            List<float> listOfInts = new List<float>();
+            List<string> listOfParts = str.Split(Command_Separator).ToList();
+
+            foreach (string device in listOfParts)
+                if (int.TryParse(device, out int deviceNum))
+                    listOfInts.Add(deviceNum);
+
+            return listOfInts;
+        }
+        internal string ConvertListToStr<T>(IEnumerable<T> items)
+        {
+            string str = "";
+
+            int count = 0;
+
+            foreach (T item in items)
+            {
+                str += item.ToString();
+
+                // Add separator if not the last item
+                if (count < items.Count() - 1)
+                {
+                    str += Command_Separator;
+                }
+
+                count++;
+            }
+
+            return str;
+        }
+
+        #region Generate Bat Files
+        // Miner Specific Generate Bat Files
+        public string GenerateBatFile()
+        {
+            if (Current_Miner_Config_Type == MinerConfigType.Gminer || Current_Miner_Config_Type == MinerConfigType.Unknown)
+                return GenerateGminerBatFile();
+            else if (Current_Miner_Config_Type == MinerConfigType.Trm)
+                return GenerateTrmBatFile();
+            else
+                return GenerateUnknownBatFileArgs();
+        }
+        private string GenerateGminerBatFile()
+        {
+            string args = "";
+
+            // Add "" around file path
+            args += $"\"{Miner_File_Path}\" ";
+
+            // 1st Algo
+            args += $"--algo {Algo1} ";
+            args += $"--ssl {SSL1} ";
+            args += $"--server {Pool1} ";
+            args += $"--port {Port1} ";
+            args += $"--user {Wallet1}.{Worker_Name} ";
+
+            // 2nd Algo
+            if (!string.IsNullOrWhiteSpace(Algo2))
+            {
+                args += $"--dalgo {Algo2} ";
+                args += $"--dssl {SSL2} ";
+                args += $"--dserver {Pool2} ";
+                args += $"--dport {Port2} ";
+                args += $"--duser {Wallet2}.{Worker_Name} ";
+            }
+
+            // 3rd Algo
+            if (!string.IsNullOrWhiteSpace(Algo3))
+            {
+                args += $"--zilssl {SSL3} ";
+                args += $"--zilserver {Pool3} ";
+                args += $"--zilport {Port3} ";
+                args += $"--ziluser {Wallet3}.{Worker_Name} ";
+            }
+
+            // Gpus
+            bool overclocking = false;
+
+            if (Devices.Any(item => item >= 0))
+                args += $"--devices {ConvertListToStr(Devices)} ";
+
+            // Clock
+            if (Core_Clock.Any(item => item >= 0))
+            {
+                args += $"--lock_cclock {ConvertListToStr(Core_Clock)} ";
+                overclocking = true;
+            }
+            else if (Core_Offset.Any(item => item >= 0))
+            {
+                args += $"--cclock {ConvertListToStr(Core_Offset)} ";
+                overclocking = true;
+            }
+            if (Core_Micro_Volts.Any(item => item >= 0))
+            {
+                args += $"--lock_voltage {ConvertListToStr(Core_Micro_Volts)} ";
+                overclocking = true;
+            }
+
+            // Mem
+            if (Mem_Clock.Any(item => item >= 0))
+            {
+                args += $"--lock_mclock {ConvertListToStr(Mem_Clock)} ";
+                overclocking = true;
+            }
+            else if (Mem_Offset.Any(item => item >= 0))
+            {
+                args += $"--mclock {ConvertListToStr(Mem_Offset)} ";
+                overclocking = true;
+            }
+
+            // Required for Nvidia
+            if (overclocking)
+                args += "--nvml 1";
+
+            if (Power_Limit.Any(item => item >= 0))
+                args += $"--pl {ConvertListToStr(Power_Limit)} ";
+
+            if (Fan_Percent.Any(item => item >= 0))
+                args += $"--fan {ConvertListToStr(Fan_Percent)} ";
+
+            if (Temp_Limit_Core.Any(item => item >= 0))
+                args += $"--templimit {ConvertListToStr(Temp_Limit_Core)} ";
+
+            if (Temp_Limit_Mem.Any(item => item >= 0))
+                args += $"--templimit_mem {ConvertListToStr(Temp_Limit_Mem)} ";
+
+            if (Intensity.Any(item => item >= 0))
+                args += $"--intensity {ConvertListToStr(Intensity)} ";
+
+            if (Dual_Intensity.Any(item => item >= 0))
+                args += $"--dual_intensity {ConvertListToStr(Dual_Intensity)} ";
+
+            return args.Trim();
+        }
+        private string GenerateTrmBatFile()
+        {
+            string args = "";
+
+            // Add "" around file path
+            args += $"\"{Miner_File_Path}\" ";
+
+            // 1st Algo
+            args += $"--algo {Algo1} ";
+            args += $"--ssl {SSL1} ";
+            args += $"--server {Pool1} ";
+            args += $"--port {Port1} ";
+            args += $"--user {Wallet1}.{Worker_Name} ";
+
+            // 2nd Algo
+            args += $"--dalgo {Algo2} ";
+            args += $"--dssl {SSL2} ";
+            args += $"--dserver {Pool2} ";
+            args += $"--dport {Port2} ";
+            args += $"--duser {Wallet2}.{Worker_Name} ";
+
+            // 3rd Algo
+            args += $"--zilssl {SSL3} ";
+            args += $"--zilserver {Pool3} ";
+            args += $"--zilport {Port3} ";
+            args += $"--ziluser {Wallet3}.{Worker_Name} ";
+
+            // Gpus
+            bool overclocking = false;
+
+            if (Devices.Any(item => item >= 0))
+                args += $"--devices {ConvertListToStr(Devices)} ";
+
+            // Clock
+            if (Core_Clock.Any(item => item >= 0))
+            {
+                args += $"--lock_cclock {ConvertListToStr(Core_Clock)} ";
+                overclocking = true;
+            }
+            else if (Core_Offset.Any(item => item >= 0))
+            {
+                args += $"--cclock {ConvertListToStr(Core_Offset)} ";
+                overclocking = true;
+            }
+            if (Core_Micro_Volts.Any(item => item >= 0))
+            {
+                args += $"--lock_voltage {ConvertListToStr(Core_Micro_Volts)} ";
+                overclocking = true;
+            }
+
+            // Mem
+            if (Mem_Clock.Any(item => item >= 0))
+            {
+                args += $"--lock_mclock {ConvertListToStr(Mem_Clock)} ";
+                overclocking = true;
+            }
+            else if (Mem_Offset.Any(item => item >= 0))
+            {
+                args += $"--mclock {ConvertListToStr(Mem_Offset)} ";
+                overclocking = true;
+            }
+
+            // Required for Nvidia
+            if (overclocking)
+                args += "--nvml 1";
+
+            if (Power_Limit.Any(item => item >= 0))
+                args += $"--pl {ConvertListToStr(Power_Limit)} ";
+
+            if (Fan_Percent.Any(item => item >= 0))
+                args += $"--fan {ConvertListToStr(Fan_Percent)} ";
+
+            if (Temp_Limit_Core.Any(item => item >= 0))
+                args += $"--templimit {ConvertListToStr(Temp_Limit_Core)} ";
+
+            if (Temp_Limit_Mem.Any(item => item >= 0))
+                args += $"--templimit_mem {ConvertListToStr(Temp_Limit_Mem)} ";
+
+            if (Intensity.Any(item => item >= 0))
+                args += $"--intensity {ConvertListToStr(Intensity)} ";
+
+            if (Dual_Intensity.Any(item => item >= 0))
+                args += $"--dual_intensity {ConvertListToStr(Dual_Intensity)} ";
+
+            return args.Trim();
+        }
+        private string GenerateUnknownBatFileArgs()
+        {
+            string args = "WARNING: YOU MUST MANUALLY EDIT THIS OR PICK YOUR DESIRED MINER AND GENERATE AGAIN OR ASK THE DEVELOPER TO ADD YOUR MINER";
+            Type type = this.GetType();
+            PropertyInfo[] properties = type.GetProperties();
 
             foreach (PropertyInfo property in properties)
             {
                 string propertyName = property.Name;
-                object propertyValue = property.GetValue(configObject);
+                object propertyValue = property.GetValue(this);
 
                 // skip
-                if (propertyValue == null || String.IsNullOrWhiteSpace(propertyValue.ToString())) continue; 
+                if (propertyValue == null || String.IsNullOrWhiteSpace(propertyValue.ToString())) continue;
                 if (propertyName.StartsWith("Command")) continue;
-                if (propertyName.Equals("Name")) continue; 
-                if (propertyName.Equals("Active")) continue; 
-                if (propertyName.Equals("runAsAdmin")) continue;
-                if (propertyName.Equals("pl") && propertyValue.ToString().Trim().Equals("-1")) continue; 
+                if (propertyName.Equals("Name")) continue;
+                if (propertyName.Equals("Active")) continue;
+                if (propertyName.Equals("Run_As_Admin")) continue;
                 if (propertyValue.ToString().Trim() == "-1") continue;
-                
 
-                if (propertyName.Equals("MinerFilePath"))
-                {
-                    configString.Append($"\"{propertyValue}\" ");
-                }
-                // Special gminer
-                else if(propertyName.Equals("nvml"))
-                {
-                    propertyValue.ToString().Replace(" ", commandSeparator);
-                    if (propertyValue.ToString().ToLower() == "true")
-                        propertyValue = "1";
 
-                    configString.Append($"{commandPrefix}{propertyName} {propertyValue} ");
-                }
-                else
+                // Add "" around file path
+                if (propertyName.Equals("Miner_File_Path"))
                 {
-                    propertyValue.ToString().Replace(" ", commandSeparator);
-                    configString.Append($"{commandPrefix}{propertyName} {propertyValue} ");
+                    args += $"\"{propertyValue}\" ";
+                }
+
+                // List<int>
+                if (propertyValue != null && propertyValue.GetType().IsGenericType &&
+                    propertyValue.GetType().GetGenericTypeDefinition() == typeof(List<>) &&
+                    propertyValue.GetType().GetGenericArguments()[0] == typeof(int))
+                {
+                    List<int> nums = (List<int>)propertyValue;
+
+                    // Only add nums >= 0
+                    if (nums.Count > 0 && nums.First() >= 0)
+                        args += $"{Command_Prefix}{propertyName} {ConvertListToStr(nums)}";
+                }
+                else // Default name value
+                {
+                    args += $"{Command_Prefix}{propertyName} {propertyValue} ";
                 }
             }
 
-            return configString.ToString().Trim();
+            return args.Trim();
+        }
+        #endregion
+
+        public string GetPool1DomainName()
+        {
+            if (string.IsNullOrWhiteSpace(Pool1)) return "";
+            var parts = Pool1.Trim().Split('.');
+
+            // mining url
+            if (parts.Length == 3)
+            {
+                return parts[1] + "." + parts[2];
+            }
+            // pool url
+            else if (parts.Length == 2)
+            {
+                return parts[0] + "." + parts[1];
+            }
+            return Pool1.Trim();
         }
     }
+
+
+
     public class Gpu
     {
         Random random = new Random();
@@ -1665,12 +2198,14 @@ namespace Gui_Miner
         public string Name { get; set; }
         public bool Enabled { get; set; }
         public int Core_Clock { get; set; }
+        public int Core_Offset { get; set; }
+        public int Mem_Clock { get; set; }
         public int Mem_Clock_Offset { get; set; }
         public int Power_Limit { get; set; }
-        public double Core_Mv { get; set; }
-        public double Mem_Mv { get; set; } 
-        public double Intensity { get; set; }
-        public double Dual_Intensity { get; set; }
+        public int Core_Mv { get; set; }
+        public int Mem_Mv { get; set; } 
+        public float Intensity { get; set; }
+        public float Dual_Intensity { get; set; }
         public int Max_Core_Temp { get; set; }
         public int Max_Mem_Temp { get; set; }
         public int Fan_Percent { get; set; }
@@ -1679,16 +2214,20 @@ namespace Gui_Miner
         public Gpu()
         {
             Id = random.Next(2303, 40598);
+            Device_Id = -1;
             Name = "";
             Enabled = false;
             Core_Clock = 1200;
+            Core_Offset = -1;
+            Mem_Clock = -1;
             Mem_Clock_Offset = 1000;
             Power_Limit = -1;
             Core_Mv = -1;
+            Mem_Mv = -1;
             Intensity = -1;
             Dual_Intensity = -1;
             Max_Core_Temp = 85;
-            Max_Mem_Temp = 115;
+            Max_Mem_Temp = 110;
             Fan_Percent = 100;
         }
         public Gpu(string name)
@@ -1728,6 +2267,9 @@ namespace Gui_Miner
         public Wallet() 
         {
             Id = random.Next(2303, 40598);
+            Name = "";
+            Address = "";
+            Coin = "";
         }
     }
     public class Pool
@@ -1738,10 +2280,15 @@ namespace Gui_Miner
         public string Address { get; set; }
         public int Port { get; set; }
         public string Link { get; set; }
-        public bool Ssl { get; set; }
+        public bool SSL { get; set; }
         public Pool()
         {
             Id = random.Next(2303, 40598);
+            Name = "";
+            Address = "";
+            Port = -1;
+            Link = "";
+            SSL = false;
         }
     }
     #endregion

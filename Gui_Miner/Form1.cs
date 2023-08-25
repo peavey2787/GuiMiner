@@ -242,26 +242,14 @@ namespace Gui_Miner
             tabControl.Dock = DockStyle.Fill;
 
             foreach (MinerConfig minerConfig in settingsForm.Settings.MinerSettings)
-            {
-                (Type configType, Object configObject) = minerConfig.GetSelectedMinerConfig();
-                PropertyInfo activeProperty = configType.GetProperty("Active");
-                bool isActive = (bool)activeProperty.GetValue(configObject);
-                if (isActive)
+            {                
+                if (minerConfig.Active)
                 {
                     TabPage tabPage = new TabPage();
-                    tabPage.Text = minerConfig.CurrentMinerConfig.ToString();
-
-                    PropertyInfo runAsAdminProperty = configType.GetProperty("runAsAdmin");
-                    bool runAsAdmin = (bool)runAsAdminProperty.GetValue(configObject);
-
-                    // Try to get api
-                    MethodInfo getApiPortMethod = configType.GetMethod("GetApiPort");
-
-                    // Invoke the method with the specified arguments
-                    int api = (int)getApiPortMethod.Invoke(configObject, new object[] { minerConfig.batFileArguments });
+                    tabPage.Text = minerConfig.Current_Miner_Config_Type.ToString();
 
                     // Set link to api stats
-                    string url = "http://localhost:" + api;
+                    string url = "http://localhost:" + minerConfig.Api;
 
                     LinkLabel linkLabel = new LinkLabel();
                     linkLabel.Text = "Api Stats: " + url;
@@ -273,12 +261,11 @@ namespace Gui_Miner
                     };        
                     
                     // Add link
-                    if(api > 0)
+                    if(minerConfig.Api > 0)
                         tabPage.Controls.Add(linkLabel);
 
                     // Try to get pool link
-                    MethodInfo getPoolDomainNameMethod = configType.GetMethod("GetPoolDomainName1");
-                    string poolDomainName1 = (string)getPoolDomainNameMethod.Invoke(configObject, null);
+                    string poolDomainName1 = minerConfig.GetPool1DomainName();
                     string poolLink1 = "";
                     if (poolDomainName1 != null)
                     {
@@ -322,11 +309,8 @@ namespace Gui_Miner
 
                     tabControl.TabPages.Add(tabPage);
 
-                    MethodInfo methodInfo = configType.GetMethod("GetMinerFilePathAndArgs");
-                    (string minerFilePath, string batFileArgs) = (ValueTuple<string, string>)methodInfo.Invoke(configObject, new object[] { minerConfig.batFileArguments });
-
                     // Start the miner in a separate thread with the miner-specific RichTextBox
-                    Task minerTask = Task.Run(() => StartMiner(minerFilePath, batFileArgs, runAsAdmin, tabPageRichTextBox, ctsRunningMiners.Token));
+                    Task minerTask = Task.Run(() => StartMiner(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, tabPageRichTextBox, ctsRunningMiners.Token));
 
                     runningTasks.Add(minerTask);
                 }
@@ -568,27 +552,15 @@ namespace Gui_Miner
         {
             foreach (MinerConfig minerConfig in settingsForm.Settings.MinerSettings)
             {
-                (Type configType, Object configObject) = minerConfig.GetSelectedMinerConfig();
-                PropertyInfo activeProperty = configType.GetProperty("Active");
-                bool isActive = (bool)activeProperty.GetValue(configObject);
-
-                if (isActive)
+                if (minerConfig.Active)
                 {
-                    PropertyInfo filePathProperty = configType.GetProperty("MinerFilePath");
-                    string filePath = (string)filePathProperty.GetValue(configObject);
-
-                    // Check if .bat file arguments contain ".exe"
-                    if (!String.IsNullOrWhiteSpace(filePath))
+                    if (!String.IsNullOrWhiteSpace(minerConfig.Miner_File_Path))
                     {
-                        KillProcesses(Path.GetFileNameWithoutExtension(filePath));
-                    }
-                    else if (minerConfig.batFileArguments.Contains(".exe"))
-                    {
-                        KillProcesses("miner.exe"); 
+                        KillProcesses(Path.GetFileNameWithoutExtension(minerConfig.Miner_File_Path));
                     }
                     else
                     {
-                        KillProcesses("miner.exe"); 
+                        KillProcesses("miner"); 
                     }
                 }
             }
@@ -648,76 +620,6 @@ namespace Gui_Miner
 
 
 
-
-    }
-
-
-
-    // Custom panel for rotating
-    public class RrotatingPanel : Panel
-    {
-        private double rotationAngle;
-        public Image Image { get; set; }
-        public double RotationAngle
-        {
-            get { return rotationAngle; }
-            set
-            {
-                rotationAngle = value;
-                Invalidate(); // Trigger a repaint when the rotation angle changes
-            }
-        }
-
-        public RrotatingPanel()
-        {
-            DoubleBuffered = true; // Enable double buffering
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-
-            // Rotate the image and draw it on the panel
-            using (Image rotatedImage = RotateImage(Image, (float)rotationAngle, ClientRectangle.Size))
-            {
-                e.Graphics.DrawImage(rotatedImage, Point.Empty);
-            }
-        }
-
-        // Function to rotate and resize an image by a specified angle while maintaining aspect ratio
-        private Image RotateImage(Image image, float angle, Size newSize)
-        {
-            // Calculate the new dimensions while maintaining the aspect ratio
-            int newWidth, newHeight;
-            float aspectRatio = (float)image.Width / image.Height;
-
-            if (newSize.Width / aspectRatio <= newSize.Height)
-            {
-                // Lock to height and calculate width based on aspect ratio
-                newHeight = newSize.Height;
-                newWidth = (int)(newHeight * aspectRatio);
-            }
-            else
-            {
-                // Lock to width and calculate height based on aspect ratio
-                newWidth = newSize.Width;
-                newHeight = (int)(newWidth / aspectRatio);
-            }
-
-            Bitmap rotatedImage = new Bitmap(newWidth, newHeight);
-            using (Graphics g = Graphics.FromImage(rotatedImage))
-            {
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias; // Enable anti-aliasing
-                g.TranslateTransform(newWidth / 2, newHeight / 2); // Set the rotation point at the center of the image
-                g.RotateTransform(angle);
-                g.TranslateTransform(-newWidth / 2, -newHeight / 2); // Reset the translation
-
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic; // Set interpolation mode
-
-                g.DrawImage(image, new RectangleF(Point.Empty, new Size(newWidth, newHeight)), new Rectangle(Point.Empty, image.Size), GraphicsUnit.Pixel);
-            }
-            return rotatedImage;
-        }
 
     }
 

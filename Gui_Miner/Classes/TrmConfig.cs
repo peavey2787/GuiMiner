@@ -1,22 +1,20 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace Gui_Miner
 {
-    public class TrmConfig
+    public class TrmConfig : MinerConfig
     {
-        public string CommandPrefix { get; set; }
-        public string CommandSeparator { get; set; }
-        public string MinerFilePath { get; set; }
-        public string Name { get; set; }
-        public bool Active { get; set; }
-        public bool runAsAdmin { get; set; }
         public string ListDevicesCommand = "--list_devices";
+        private string secondAlgo = "";
         public string algo { get; set; }
         public bool benchmark { get; set; }
         public int api_listen { get; set; }
@@ -122,145 +120,356 @@ namespace Gui_Miner
 
         public TrmConfig() 
         {
-            CommandPrefix = "--";
-            CommandSeparator = ",";
+            Command_Prefix = "--";
+            Command_Separator = ',';
         }
-        public void ClearGpuSettings()
+
+
+        // Interface Required
+        public MinerConfigType GetMinerConfigType()
         {
-            
-            devices = "";
-            clk_core_mhz = "";
-            clk_core_mv = "";
-            clk_mem_mhz = "";
-            clk_mem_mv = "";
-            fan_control = "";
-            temp_limit = "";
-            mem_temp_limit = "";
-            dual_intensity = "";            
+            return MinerConfigType.Gminer;
         }
-        public void AddGpuSettings(List<Gpu> gpus)
+
+        #region Property Overrides
+        // Property Overrides
+        public override string Algo1
         {
-            ClearGpuSettings();
-
-            runAsAdmin = true;
-            bool overclocking = false;
-
-            foreach (Gpu gpu in gpus)
+            get { return algo; }
+            set
             {
-                if (!gpu.Enabled) continue;
-                
-                // Add values
-                devices += gpu.Device_Id.ToString();
-                clk_core_mhz += gpu.Core_Clock.ToString();
-                clk_core_mv += gpu.Core_Mv.ToString();
-                clk_mem_mhz += gpu.Mem_Clock_Offset.ToString();
-                clk_mem_mv += gpu.Mem_Mv.ToString();
-                fan_control += ":::" + gpu.Fan_Percent.ToString();
-                temp_limit += gpu.Max_Core_Temp.ToString();
-                mem_temp_limit += gpu.Max_Mem_Temp.ToString();
-                dual_intensity += gpu.Dual_Intensity.ToString();
+                base.Algo1 = value;
+                algo = value;
+            }
+        }
+        public override string Algo2
+        {
+            get 
+            {
+                string algo = "";
 
-                // Check if over/under clocking gpu
-                bool anyGreaterThanZero = new[]
+                if(!string.IsNullOrWhiteSpace(secondAlgo))
+                    algo = secondAlgo;
+                else if (!string.IsNullOrWhiteSpace(kasWallet) || !string.IsNullOrWhiteSpace(kasPool))
+                    algo = "kaspa";
+                else if (!string.IsNullOrWhiteSpace(ironFishWallet) || !string.IsNullOrWhiteSpace(ironFishPool))
+                    algo = "ironfish";
+
+                return algo; 
+            }
+            set
+            {
+                base.Algo2 = value;
+                secondAlgo = value;
+            }
+        }
+        public override string Algo3
+        {
+            get { return "zilliqa"; }
+            set
+            {
+                base.Algo3 = value;
+            }
+        }
+        public override string Wallet1
+        {
+            get { return user; }
+            set
+            {
+                base.Wallet1 = value;
+                user = value;
+            }
+        }
+        public override string Wallet2
+        {
+            get 
+            {
+                string wallet = "";
+
+                if (Algo2.Contains("kaspa"))
+                    wallet = kasWallet;
+                else if (Algo2.Contains("ironfish"))
+                    wallet = ironFishWallet;
+
+                return wallet; 
+            }
+            set
+            {
+                base.Wallet2 = value;
+
+                if (Algo2.Contains("kaspa"))
+                    kasWallet = value;
+                else if (Algo2.Contains("ironfish"))
+                    ironFishWallet = value;
+            }
+        }
+        public override string Wallet3
+        {
+            get { return zilWallet; }
+            set
+            {
+                base.Wallet3 = value;
+                zilWallet = value;
+            }
+        }
+        public override string Pool1
+        {
+            get { return url; }
+            set
+            {
+                base.Pool1 = value;
+                url = value;
+            }
+        }
+        public override string Pool2
+        {
+            get 
+            {
+                string pool = "";
+
+                if (Algo2.Contains("kaspa"))
+                    pool = kasPool;
+                else if (Algo2.Contains("ironfish"))
+                    pool = ironFishPool;
+
+                return pool;
+            }
+            set
+            {
+                base.Pool2 = value;
+
+                if (Algo2.Contains("kaspa"))
+                    kasPool = value;
+                else if (Algo2.Contains("ironfish"))
+                    ironFishPool = value;
+            }
+        }
+        public override string Pool3
+        {
+            get { return zilWallet; }
+            set
+            {
+                base.Pool3 = value;
+                zilWallet = value;
+            }
+        }
+        public override int Port2
+        {
+            get 
+            {
+                int port = -1;
+
+                if (Algo2.Contains("kaspa"))
+                    port = kasPort;
+                else if (Algo2.Contains("ironfish"))
+                    port = ironFishPort;
+
+                return port; 
+            }
+            set
+            {
+                base.Port2 = value;
+
+                if (Algo2.Contains("kaspa"))
+                    kasPort = value;
+                else if (Algo2.Contains("ironfish"))
+                    ironFishPort = value;
+            }
+        }
+        public override int Port3
+        {
+            get { return zilPort; }
+            set
+            {
+                base.Port3 = value;
+                zilPort = value;
+            }
+        }
+        public override int Api
+        {
+            get { return api_listen; }
+            set
+            {
+                base.Api = value;
+                api_listen = value;
+            }
+        }
+        public override List<int> Devices
+        {
+            get
+            {
+                List<int> allDevicesToUse = ConvertStrToIntList(devices);
+                return allDevicesToUse;
+            }
+            set
+            {
+                base.Devices = value;
+                devices = ConvertListToStr(value);
+            }
+        }
+        public override List<int> Fan_Percent
+        {
+            get
+            {
+                List<int> allValues = ConvertStrToIntList(fan_control);
+                return allValues;
+            }
+            set
+            {
+                base.Fan_Percent = value;
+                fan_control = ConvertListToStr(value);
+            }
+        }
+        public override List<int> Temp_Limit_Core
+        {
+            get
+            {
+                List<int> allValues = ConvertStrToIntList(temp_limit);
+                return allValues;
+            }
+            set
+            {
+                base.Temp_Limit_Core = value;
+                temp_limit = ConvertListToStr(value);
+            }
+        }
+        public override List<int> Temp_Limit_Mem
+        {
+            get
+            {
+                List<int> allValues = ConvertStrToIntList(mem_temp_limit);
+                return allValues;
+            }
+            set
+            {
+                base.Temp_Limit_Mem = value;
+                mem_temp_limit = ConvertListToStr(value);
+            }
+        }
+        public override List<int> Core_Clock
+        {
+            get
+            {
+                List<int> allValues = ConvertStrToIntList(clk_core_mhz);
+                return allValues;
+            }
+            set
+            {
+                base.Core_Clock = value;
+                clk_core_mhz = ConvertListToStr(value);
+            }
+        }
+        public override List<int> Mem_Clock
+        {
+            get
+            {
+                List<int> allValues = ConvertStrToIntList(clk_mem_mhz);
+                return allValues;
+            }
+            set
+            {
+                base.Mem_Clock = value;
+                clk_mem_mhz = ConvertListToStr(value);
+            }
+        }
+        public override List<int> Core_Micro_Volts
+        {
+            get
+            {
+                List<int> allValues = ConvertStrToIntList(clk_core_mv);
+                return allValues;
+            }
+            set
+            {
+                base.Core_Micro_Volts = value;
+                clk_core_mv = ConvertListToStr(value);
+            }
+        }
+        public override List<int> Mem_Micro_Volts
+        {
+            get
+            {
+                List<int> allValues = ConvertStrToIntList(clk_mem_mv);
+                return allValues;
+            }
+            set
+            {
+                base.Mem_Micro_Volts = value;
+                clk_mem_mv = ConvertListToStr(value);
+            }
+        }
+
+        #endregion
+
+        #region Function Overrides
+        public override void AddGpuSettings(List<Gpu> gpus)
+        {
+            base.AddGpuSettings(gpus);
+
+            dual_intensity = "";
+        }
+        public override void ClearGpuSettings()
+        {
+            base.ClearGpuSettings();
+
+            dual_intensity = "";
+        }
+        public string GenerateBatFileArgs()
+        {
+            string args = "";
+            Type type = this.GetType();
+            PropertyInfo[] properties = type.GetProperties();
+
+            foreach (PropertyInfo property in properties)
+            {
+                // Skip base class items
+                if (property.DeclaringType != type)
+                    continue;
+
+                string propertyName = property.Name;
+                object propertyValue = property.GetValue(this);
+
+                // skip
+                if (propertyValue == null || String.IsNullOrWhiteSpace(propertyValue.ToString())
+                    || propertyValue.ToString().Trim() == "-1") continue;
+
+
+                // Add "" around file path
+                if (propertyName.Equals("Miner_File_Path"))
                 {
-                    clk_core_mhz, clk_core_mv, clk_mem_mhz, clk_mem_mv
+                    args += $"\"{propertyValue}\" ";
                 }
-                .Select(int.Parse)
-                .Any(value => value > 0);
-                if (anyGreaterThanZero)
-                    overclocking = true;
 
-                // Add separators
-                devices += CommandSeparator;
-                clk_core_mhz += CommandSeparator;
-                clk_core_mv += CommandSeparator;
-                clk_mem_mhz += CommandSeparator;
-                clk_mem_mv += CommandSeparator;
-                fan_control += CommandSeparator;
-                temp_limit += CommandSeparator;
-                mem_temp_limit += CommandSeparator;
-                dual_intensity += CommandSeparator;                
-            }
 
-            if (overclocking)
-            {
-                // Required for over/under clocking
-                runAsAdmin = true;
-            }
-        }
-        public int GetApiPort(string batFileArgs)
-        {
-            int apiPort = api_listen;
+                // ---------Trm Specific---------
+                if (propertyName.Equals("fan_control"))
+                    propertyValue = ":::" + propertyValue;
+                // ---------End Trm Specific---------
 
-            // Try getting api port from .bat file
-            if (apiPort <= 0 && batFileArgs.Contains("api "))
-            {
-                string args = batFileArgs + " ";
-                int start = args.IndexOf("api ") + 4;
-                int end = args.IndexOf(" ", start);
-                apiPort = int.TryParse(args.Substring(start, end - start), out int portResult) ? portResult : 0;
-            }
 
-            return apiPort;
-        }
-        public string GetPoolDomainName1()
-        {
-            var parts = url.Trim().Split('.');
-
-            // mining url
-            if (parts.Length == 3)
-            {
-                return parts[1] + "." + parts[2];
-            }
-            // pool url
-            else if (parts.Length == 2)
-            {
-                return parts[0] + "." + parts[1];
-            }
-            return url.Trim();
-        }
-        public (string filePath, string args) GetMinerFilePathAndArgs(string batFileArgs)
-        {
-            string filePath = "";
-            string arguments = batFileArgs;
-            string defaultPath = Directory.GetCurrentDirectory() + "\\miner.exe";
-
-            if (batFileArgs.IndexOf(".exe") >= -1)
-            {
-                // Get miner path
-                if (batFileArgs.StartsWith("\""))
+                // List<int>
+                if (propertyValue != null && propertyValue.GetType().IsGenericType &&
+                    propertyValue.GetType().GetGenericTypeDefinition() == typeof(List<>) &&
+                    propertyValue.GetType().GetGenericArguments()[0] == typeof(int))
                 {
-                    // Quotes around path
-                    filePath = batFileArgs.Substring(1, batFileArgs.IndexOf(".exe") + 3);
-                    arguments = batFileArgs.Replace($"\"{filePath}\"", string.Empty).Trim();
+                    List<int> nums = (List<int>)propertyValue;
+
+                    // Only add nums >= 0
+                    if (nums.Count > 0 && nums.First() >= 0)
+                        args += $"{Command_Prefix}{propertyName} {ConvertListToStr(nums)}";
                 }
-                else
+                else // Default name value
                 {
-                    // No quotes around path
-                    filePath = batFileArgs.Substring(0, batFileArgs.IndexOf(".exe") + 4);
-                    arguments = batFileArgs.Replace($"{filePath}", string.Empty).Trim();
+                    // Replace any spaces/commas with separator
+                    if (propertyValue.ToString().Contains(' ') || propertyValue.ToString().Contains(','))
+                        propertyValue = propertyValue.ToString().Replace(' ', Command_Separator);
+
+                    args += $"{Command_Prefix}{propertyName} {propertyValue} ";
                 }
-
-                if (!File.Exists(filePath)) filePath = defaultPath;
-            }
-            else if (!string.IsNullOrWhiteSpace(MinerFilePath))
-                filePath = MinerFilePath;
-            else
-                filePath = defaultPath;
-
-            // Remove any trailing new lines
-            string pattern = @"[\r\n]+$";
-            arguments = Regex.Replace(arguments, pattern, String.Empty);
-
-            // Remove any 'pause' keywords
-            string lastNineChars = arguments.Substring(Math.Max(0, arguments.Length - 9));
-            if (lastNineChars.Contains("pause"))
-            {
-                lastNineChars = lastNineChars.Replace("pause", "").TrimEnd();
-                arguments = arguments.Substring(0, arguments.Length - 9) + lastNineChars;
             }
 
-            return (filePath, arguments.Trim());
+            return args.Trim();
         }
+        #endregion
     }
 }
