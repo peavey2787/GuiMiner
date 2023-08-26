@@ -238,6 +238,11 @@ namespace Gui_Miner
         // Start Active Miners
         private void CreateTabControlAndStartMiners()
         {
+            if (InvokeRequired)
+            {
+                Invoke((MethodInvoker)CreateTabControlAndStartMiners);
+            }
+
             TabControl tabControl = new TabControl();
             tabControl.Name = "outputTabControl";
             tabControl.Dock = DockStyle.Fill;
@@ -551,7 +556,8 @@ namespace Gui_Miner
         // Kill Active Miners
         private void KillAllActiveMiners()
         {
-            foreach (MinerConfig minerConfig in settingsForm.Settings.MinerSettings)
+            var minerConfigs = new List<MinerConfig>(settingsForm.Settings.MinerSettings);
+            foreach (MinerConfig minerConfig in minerConfigs)
             {
                 if (minerConfig.Active)
                 {

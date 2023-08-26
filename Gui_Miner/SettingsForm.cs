@@ -1,6 +1,7 @@
 ﻿using Gui_Miner.Classes;
 using Microsoft.Win32.TaskScheduler;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,8 +22,10 @@ using static Gui_Miner.Form1;
 using static Gui_Miner.MinerConfig;
 using static Gui_Miner.SettingsForm;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolBar;
 using Action = System.Action;
+using CheckBox = System.Windows.Forms.CheckBox;
 using ComboBox = System.Windows.Forms.ComboBox;
 using Label = System.Windows.Forms.Label;
 using Task = System.Threading.Tasks.Task;
@@ -258,7 +261,8 @@ namespace Gui_Miner
 
             MinerConfig minerSetting = null;
 
-            if (minerSettingsListBox.SelectedIndex <= 0) return minerSetting;
+            if (minerSettingsListBox.SelectedIndex <= 0) 
+                return minerSetting;
 
             int id = int.Parse(minerSettingsListBox.SelectedItem.ToString().Split('/')[1].Trim());
 
@@ -272,6 +276,8 @@ namespace Gui_Miner
         }
         private MinerConfig GetMinerSettingsFromUI()
         {
+            if (minerSettingsListBox.SelectedIndex == 0) return new MinerConfig();
+
             MinerConfig newMinerSetting = GetSelectedMinerSettings();
             if (newMinerSetting == null)
             {
@@ -315,7 +321,6 @@ namespace Gui_Miner
                         if (property.PropertyType == typeof(List<int>))
                         {
                             var newValue = newMinerSetting.ConvertStrToIntList(propertyValue);
-                            //object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
                             property.SetValue(newMinerSetting, newValue);
                         }
                         // Check if the property is of type List<float>
@@ -323,13 +328,21 @@ namespace Gui_Miner
                         {
                             // It's a List<float>
                             var newValue = newMinerSetting.ConvertStrToFloatList(propertyValue);
-                            //object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
                             property.SetValue(newMinerSetting, newValue);
                         }
                         else
                         {
-                            object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
-                            property.SetValue(newMinerSetting, convertedValue);
+                            try 
+                            {
+                                object convertedValue = Convert.ChangeType(propertyValue, property.PropertyType);
+                                property.SetValue(newMinerSetting, convertedValue);
+                            }
+                            catch 
+                            {
+                                if (string.IsNullOrWhiteSpace(propertyValue.ToString()))
+                                    property.SetValue(newMinerSetting, -1); ;
+                            }
+                            
                         }          
                     }
                     else if (control is CheckBox checkBox)
@@ -427,6 +440,10 @@ namespace Gui_Miner
                     nameLabel.Anchor = AnchorStyles.None;
                     nameLabel.TextAlign = ContentAlignment.MiddleCenter;
 
+                    // Hide these properties
+                    if (property.Name.StartsWith("SSL") || property.Name.StartsWith("Port"))
+                        nameLabel.Visible = false;
+
                     Control inputControl; // This will be either a TextBox/CheckBox/Label
 
                     if (property.PropertyType == typeof(bool))
@@ -459,7 +476,7 @@ namespace Gui_Miner
                         var propertyValue = (string)property.GetValue(minerSetting);
 
                         int i = 0;
-                        int selectedIndex = 0;
+                        int selectedIndex = -1;
                         if (_settings.Wallets != null)
                         {
                             foreach (Wallet wallet in _settings.Wallets)
@@ -469,14 +486,20 @@ namespace Gui_Miner
                                     selectedIndex = i;
                                 i++;
                             }
-
+                            
                             walletComboBox.SelectedIndex = selectedIndex;
                         }
 
                         walletComboBox.SelectedIndexChanged += (sender, e) =>
                         {
-                            SaveSettings();
+                            if (string.IsNullOrWhiteSpace(walletComboBox.Text) || walletComboBox.Text == "none")
+                            { return; }
+
+                            SaveSettings();                            
                         };
+
+                        // Check if Algo is empty, if so set this wallet to none
+                        int prevNumber = int.Parse(property.Name.Substring(property.Name.Length - 1));
 
                         inputControl = walletComboBox;
                     }
@@ -493,7 +516,7 @@ namespace Gui_Miner
                         }
 
                         int i = 0;
-                        int selectedIndex = 0;
+                        int selectedIndex = -1;
                         if (_settings.Pools != null)
                         {
                             foreach (Pool pool in _settings.Pools)
@@ -512,28 +535,45 @@ namespace Gui_Miner
 
                         poolComboBox.SelectedIndexChanged += (sender, e) =>
                         {
-                            SaveSettings();
                             var currentComboBox = (ComboBox)sender;
-
                             // Get the selected pool
-                            var parts = currentComboBox.Text.Split('/');
-                            int id = int.Parse(parts[1].Trim());
-                            Pool selectedPool = _settings.Pools.Find(p => p.Id.Equals(id));
+                            if (!string.IsNullOrWhiteSpace(currentComboBox.Text))
+                            {                                
+                                var parts = currentComboBox.Text.Split('/');
+                                int id = int.Parse(parts[1].Trim());
+                                Pool selectedPool = _settings.Pools.Find(p => p.Id.Equals(id));
 
-                            // Extract the single-digit number from end of name
-                            int prevNumber = int.Parse(property.Name.Substring(property.Name.Length - 1));
+                                // Extract the single-digit number from end of name
+                                int prevNumber = int.Parse(property.Name.Substring(property.Name.Length - 1));
 
-                            // Change Port
-                            Control matchingTextBox = minerSettingsPanel.Controls.Find($"Port{prevNumber}", true).First();
-                            if (matchingTextBox != null && matchingTextBox is TextBox)
-                                matchingTextBox.Text = selectedPool.Port.ToString();
+                                // Change Port
+                                Control matchingTextBox = minerSettingsPanel.Controls.Find($"Port{prevNumber}", true).First();
+                                if (matchingTextBox != null && matchingTextBox is TextBox)
+                                    matchingTextBox.Text = selectedPool.Port.ToString();
 
-                            // Change SSL
-                            CheckBox matchingCheckBox = minerSettingsPanel.Controls.Find($"SSL{prevNumber}", true).OfType<CheckBox>().FirstOrDefault();
-                            if (matchingCheckBox != null)
-                                matchingCheckBox.Checked = selectedPool.SSL;
+                                // Change SSL
+                                CheckBox matchingCheckBox = minerSettingsPanel.Controls.Find($"SSL{prevNumber}", true).OfType<CheckBox>().FirstOrDefault();
+                                if (matchingCheckBox != null)
+                                    matchingCheckBox.Checked = selectedPool.SSL;
 
+                                SaveSettings();
+                            }
                         };
+
+                        // Check if Algo is empty, if so set this wallet to none
+                        int prevPoolNumber = int.Parse(property.Name.Substring(property.Name.Length - 1));
+
+                        // Show none if Algo empty
+                        if (minerSettingsPanel.Controls.Count > 0)
+                        {
+                            if ((prevPoolNumber == 1 && string.IsNullOrWhiteSpace(minerSetting.Algo1))
+                                || (prevPoolNumber == 2 && string.IsNullOrWhiteSpace(minerSetting.Algo2))
+                                || prevPoolNumber == 3 && string.IsNullOrWhiteSpace(minerSetting.Algo3))
+                            {
+                                poolComboBox.Text = "";
+                                poolComboBox.SelectedIndex = -1;
+                            }
+                        }
 
                         inputControl = poolComboBox;
                     }
@@ -572,6 +612,9 @@ namespace Gui_Miner
 
                         algoComboBox.SelectedIndexChanged += (sender, e) =>
                         {
+                            if (string.IsNullOrWhiteSpace(algoComboBox.Text) || algoComboBox.Text == "none")
+                            { return; }
+
                             SaveSettings();
                         };
 
@@ -605,7 +648,12 @@ namespace Gui_Miner
                         {
                             value = property.GetValue(minerSetting)?.ToString();
                         }
-                        textbox.Text = value;
+
+                        // Show "" instead of -1
+                        if (value == null || value.Trim() == "-1")
+                            textbox.Text = "";
+                        else
+                            textbox.Text = value;
 
                         if (property.Name == "MinerFilePath")
                         {
@@ -647,6 +695,8 @@ namespace Gui_Miner
                     {
                         inputControl.Enabled = false;
                     }
+                    else if (property.Name.StartsWith("SSL") || property.Name.StartsWith("Port"))
+                        inputControl.Visible = false;
 
                     tableLayoutPanel.Controls.Add(nameLabel, 0, tableLayoutPanel.RowCount);
                     tableLayoutPanel.Controls.Add(inputControl, 1, tableLayoutPanel.RowCount);
@@ -676,13 +726,9 @@ namespace Gui_Miner
         {
             if (minerSettingsListBox.SelectedIndex == -1) return;
 
-            bool setDefaults = false;
-
             // Adding new item
             if (minerSettingsListBox.SelectedIndex == 0)
             {
-                setDefaults = true;
-
                 // Create and add new miner setting
                 if (_settings.MinerSettings == null)
                     _settings.MinerSettings = new List<MinerConfig>();
@@ -690,19 +736,10 @@ namespace Gui_Miner
                     _settings.MinerSettings.Add(new MinerConfig());
 
                 UpdateMinerSettingsListBox(_settings.MinerSettings.Count);
+                return;
             }
 
             DisplayMinerSettings();
-
-            if (setDefaults)
-            {
-                CheckBox activeCheckBox = minerSettingsPanel.Controls.Find("activeCheckBox", true).OfType<CheckBox>().FirstOrDefault();
-                if (activeCheckBox != null)
-                {
-                    activeCheckBox.Checked = true;
-                }
-
-            }
         }
         private void minerSettingsListBox_KeyDown(object sender, KeyEventArgs e)
         {
@@ -891,7 +928,7 @@ namespace Gui_Miner
                         TextBox textbox = new TextBox();
                         textbox.BackColor = Color.FromArgb(12, 20, 52);
                         textbox.ForeColor = Color.White;
-                        textbox.Text = property.GetValue(gpu)?.ToString();
+                        
                         textbox.KeyUp += (sender, e) =>
                         {
                             if (e.KeyCode == Keys.Enter)
@@ -900,6 +937,13 @@ namespace Gui_Miner
                                 UpdateGpusListBox(gpuListBox.SelectedIndex);
                             }
                         };
+
+                        // Show "" instead of -1
+                        string value = property.GetValue(gpu)?.ToString();
+                        if (value.Trim() == "-1")
+                            textbox.Text = "";
+                        else
+                            textbox.Text = value;
 
                         inputControl = textbox;
                     }
@@ -1109,9 +1153,6 @@ namespace Gui_Miner
             UpdateStatusLabel();
         }
         #endregion
-
-
-
 
 
         private void UpdateStatusLabel(string message = "Click Generate to Update")
@@ -1633,23 +1674,8 @@ namespace Gui_Miner
 
         }
     }
-    /*public interface IMinerConfig
-    {
-        int Id { get; set; }
-        string Name { get; set; }
-        string Miner_File_Path { get; set; }
-        bool Active { get; set; }
-        bool Run_As_Admin { get; set; }
-        string Bat_File_Arguments { get; set; }
-        MinerConfigType Current_Miner_Config_Type { get; set; }
-        IMinerConfig Current_Miner_Config { get; set; }
-        List<IMinerConfig> Sub_Configs { get; set; }
 
-        void AddGpuSettings(List<Gpu> gpus);
-        string GenerateBatFileArgs();
-    }*/
-
-    public class MinerConfig //: IMinerConfig
+    public class MinerConfig 
     {
         public enum MinerConfigType
         {
@@ -1697,8 +1723,6 @@ namespace Gui_Miner
             }
         }
         public MinerConfigType Current_Miner_Config_Type { get; set; }
-        //public IMinerConfig Current_Miner_Config { get; set; }
-        //public List<IMinerConfig> Sub_Configs { get; set; }
         public virtual string Worker_Name { get; set; }
         public virtual string Algo1 { get; set; }
         public virtual string Algo2 { get; set; }
@@ -1744,10 +1768,11 @@ namespace Gui_Miner
             Run_As_Admin = false;
             Bat_File_Arguments = "";
             Current_Miner_Config_Type = MinerConfigType.Unknown;
+            Algo1 = ""; Algo2 = ""; Algo3 = "";
+            Wallet1 = ""; Wallet2 = ""; Wallet3 = "";            
+            Port1 = -1; Port2 = -1; Port3 = -1;
+            SSL1 = false; SSL2 = false; SSL3 = false;
             Api = -1;
-            Port1 = -1;
-            Port2 = -1;
-            Port3 = -1;
 
             ClearGpuSettings();
         }
@@ -1762,7 +1787,8 @@ namespace Gui_Miner
             Command_Prefix = "--";
             Command_Separator = ' ';
             List_Devices_Command = "--list_devices";
-            Algos = new List<string> { "ethash", "etchash", "kawpow",
+            Algos = new List<string> { "none",
+                "ethash", "etchash", "kawpow",
                 "cortex", "autolykos2", "kheavyhash",
                 "aeternity", "beamhash", "octopus",
                 "ironfish", "radiant", "zilliqa",
@@ -1774,31 +1800,12 @@ namespace Gui_Miner
             Command_Prefix = "--";
             Command_Separator = ',';
             List_Devices_Command = "--list_devices";
-            Algos = new List<string> { "ethash", "etchash", "kawpow",
+            Algos = new List<string> { "none",
+                "ethash", "etchash", "kawpow",
                 "autolykos2", "kheavyhash", "verthash",
                 "ironfish", "radiant", "zilliqa",
                 "mtp_firopow"};
         }
-        /*internal void AddOrUpdateSubConfig(IMinerConfig config)
-        {
-            bool added = false;
-
-            for(int i = 0; i < Sub_Configs.Count(); i++)
-            {
-                if (Sub_Configs[i].Id == config.Id)
-                {
-                    // Update found config
-                    Sub_Configs[i] = config;
-                    added = true;
-                }
-            }
-
-            if (!added)
-            {
-                // Add new config
-                Sub_Configs.Add(config);
-            }
-        }*/
         internal void ChangeCurrentMinerConfig(MinerConfigType minerConfigType)
         {
             Current_Miner_Config_Type = minerConfigType;
@@ -1833,19 +1840,6 @@ namespace Gui_Miner
 
 
 
-        // Interface required
-        /*private IMinerConfig CreateConfigInstance(MinerConfigType configType)
-        {
-            switch (configType)
-            {
-                case MinerConfigType.Gminer:
-                    return new GminerConfig();
-                case MinerConfigType.Trm:
-                    return new TrmConfig();
-                default:
-                    return new UnknownConfig();
-            }
-        }*/
         public virtual void ClearGpuSettings()
         {
             Devices = new List<int>();
