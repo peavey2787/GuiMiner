@@ -8,19 +8,19 @@ Tips: kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug
 
 # How To Use
 
-1. Add your favorite miner.exe file to this app's folder or get the path to it
-2. Open the app
-3. Click Settings
-4. Click Wallets and add each of your wallets
-5. Click Pools and add each of your pools
-6. Click Add Miner Settings
-7. Choose a miner, check __active__, and edit the settings (add miner path here)
-8. Click Get All GPUs
-9. Edit each GPU settings and check __enabled__
-10. Click Add Gpu Settings
-11. Click Generate in the bottom left
-12. Close Settings
-13. Click Start and all __active__ miner settings will start on all __enabled__ GPUs
+1. Open the app
+2. Click Settings
+3. Click Wallets and add each of your wallets
+4. Click Pools and add each of your pools
+5. Go to Miner Settings and click Add Miner Settings
+7. Choose a miner and click the textbox for the Miner File Path to open a pop-up to select the miner's .exe file
+8. Select the algos, wallets, and pools to use
+9. Click Get All GPUs
+10. Edit each GPUs settings
+11. Click Add Gpu Settings
+12. Click Generate in the bottom left
+13. Close Settings
+14. Click Start and all __active__ miner settings will start
 
 Make sure to click Generate .bat file after making any changes and stop then start the miner to use the latest settings. If you want to set GPU clock settings then the app must be run as admin by right clicking Gui_Miner.exe and clicking "Run as administrator".
 
