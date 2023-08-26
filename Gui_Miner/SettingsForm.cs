@@ -1351,40 +1351,6 @@ namespace Gui_Miner
                         SetImageForRotatingPanels(outputPanel);
                     }
                 }
-
-
-
-
-
-                /*
-                foreach (Control mainFormControl in MainForm.Controls)
-                {
-                    if (mainFormControl is Panel outputPanel && outputPanel.Name == "outputPanel")
-                    {
-                        foreach (Control outputPanelControl in outputPanel.Controls)
-                        {
-                            if (outputPanelControl is TabControl tabControl)
-                            {
-                                foreach (Control tabPageControl in tabControl.TabPages)
-                                {
-                                    if (tabPageControl is TabPage tabPage)
-                                    {
-                                        foreach (Control innerControl in tabPage.Controls)
-                                        {
-                                            if (innerControl is RotatingPanel rotatingPanel)
-                                            {
-                                                // Set the Image property of the RotatingPanel
-                                                rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }*/
-
-
             }
         }
         private void SetImageForRotatingPanels(Control parentControl)
