@@ -2248,6 +2248,7 @@ namespace Gui_Miner
             {
                 return parts[0] + "." + parts[1];
             }
+
             return Pool1.Trim();
         }
     }

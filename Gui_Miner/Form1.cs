@@ -229,6 +229,7 @@ namespace Gui_Miner
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
             settingsForm.Visible = true;
+            settingsForm.Focus();
         }
 
 
