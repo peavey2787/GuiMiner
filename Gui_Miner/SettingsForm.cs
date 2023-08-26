@@ -469,7 +469,8 @@ namespace Gui_Miner
                     }
                     else if (property.Name.StartsWith("Wallet"))
                     {
-                        ComboBox walletComboBox = new ComboBox();
+                        ComboBox walletComboBox = new ComboBox();                        
+
                         walletComboBox.BackColor = Color.FromArgb(12, 20, 52);
                         walletComboBox.ForeColor = Color.White;
                         walletComboBox.Name = property.Name;
@@ -697,6 +698,33 @@ namespace Gui_Miner
                     }
                     else if (property.Name.StartsWith("SSL") || property.Name.StartsWith("Port"))
                         inputControl.Visible = false;
+
+                    // Prevent mouse wheel from changing drop-down selections
+                    if (inputControl is ComboBox updateComboBox)
+                    {
+                        updateComboBox.MouseWheel += (sender, e) =>
+                        {
+                            ((HandledMouseEventArgs)e).Handled = true;
+
+                            // Get the parent panel
+                            Panel parentPanel = updateComboBox.Parent as Panel;
+
+                            if (parentPanel != null)
+                            {
+                                // Scroll the parent panel in the direction of the mouse wheel
+                                if (e.Delta > 0)
+                                {
+                                    // Scroll up
+                                    parentPanel.AutoScrollPosition = new Point(0, parentPanel.VerticalScroll.Value - SystemInformation.MouseWheelScrollDelta);
+                                }
+                                else
+                                {
+                                    // Scroll down
+                                    parentPanel.AutoScrollPosition = new Point(0, parentPanel.VerticalScroll.Value + SystemInformation.MouseWheelScrollDelta);
+                                }
+                            }
+                        };
+                    }
 
                     tableLayoutPanel.Controls.Add(nameLabel, 0, tableLayoutPanel.RowCount);
                     tableLayoutPanel.Controls.Add(inputControl, 1, tableLayoutPanel.RowCount);
@@ -1314,8 +1342,67 @@ namespace Gui_Miner
                     MainForm.rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
                 if (rotatingPanel != null)
                     rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
+
+                // Change home page bg image
+                foreach (Control mainFormControl in MainForm.Controls)
+                {
+                    if (mainFormControl is Panel outputPanel && outputPanel.Name == "outputPanel")
+                    {
+                        SetImageForRotatingPanels(outputPanel);
+                    }
+                }
+
+
+
+
+
+                /*
+                foreach (Control mainFormControl in MainForm.Controls)
+                {
+                    if (mainFormControl is Panel outputPanel && outputPanel.Name == "outputPanel")
+                    {
+                        foreach (Control outputPanelControl in outputPanel.Controls)
+                        {
+                            if (outputPanelControl is TabControl tabControl)
+                            {
+                                foreach (Control tabPageControl in tabControl.TabPages)
+                                {
+                                    if (tabPageControl is TabPage tabPage)
+                                    {
+                                        foreach (Control innerControl in tabPage.Controls)
+                                        {
+                                            if (innerControl is RotatingPanel rotatingPanel)
+                                            {
+                                                // Set the Image property of the RotatingPanel
+                                                rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }*/
+
+
             }
         }
+        private void SetImageForRotatingPanels(Control parentControl)
+        {
+            foreach (Control control in parentControl.Controls)
+            {
+                if (control is RotatingPanel rotatingPanel)
+                {
+                    // Set the Image property of the RotatingPanel
+                    rotatingPanel.Image = MainForm.GetBgImage(bgComboBox.Text);
+                }
+                else if (control.HasChildren)
+                {
+                    SetImageForRotatingPanels(control);
+                }
+            }
+        }
+
         private void tipLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             Clipboard.SetText("kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug");
@@ -1837,9 +1924,6 @@ namespace Gui_Miner
             }*/
         }
 
-
-
-
         public virtual void ClearGpuSettings()
         {
             Devices = new List<int>();
@@ -1899,7 +1983,6 @@ namespace Gui_Miner
                 Run_As_Admin = true;
             }
         }
-
 
         private (string filePath, string args) GetBatFilePathAndArguments()
         {
@@ -2010,14 +2093,17 @@ namespace Gui_Miner
             args += $"\"{Miner_File_Path}\" ";
 
             // 1st Algo
-            args += $"--algo {Algo1} ";
-            args += $"--ssl {SSL1} ";
-            args += $"--server {Pool1} ";
-            args += $"--port {Port1} ";
-            args += $"--user {Wallet1}.{Worker_Name} ";
+            if (!string.IsNullOrWhiteSpace(Algo1) && Algo1 != "none")
+            {
+                args += $"--algo {Algo1} ";
+                args += $"--ssl {SSL1} ";
+                args += $"--server {Pool1} ";
+                args += $"--port {Port1} ";
+                args += $"--user {Wallet1}.{Worker_Name} ";
+            }
 
             // 2nd Algo
-            if (!string.IsNullOrWhiteSpace(Algo2))
+            if (!string.IsNullOrWhiteSpace(Algo2) && Algo2 != "none")
             {
                 args += $"--dalgo {Algo2} ";
                 args += $"--dssl {SSL2} ";
@@ -2027,7 +2113,7 @@ namespace Gui_Miner
             }
 
             // 3rd Algo
-            if (!string.IsNullOrWhiteSpace(Algo3))
+            if (!string.IsNullOrWhiteSpace(Algo3) && Algo3 != "none")
             {
                 args += $"--zilssl {SSL3} ";
                 args += $"--zilserver {Pool3} ";
@@ -2101,25 +2187,34 @@ namespace Gui_Miner
             // Add "" around file path
             args += $"\"{Miner_File_Path}\" ";
 
-            // 1st Algo
-            args += $"--algo {Algo1} ";
-            args += $"--ssl {SSL1} ";
-            args += $"--server {Pool1} ";
-            args += $"--port {Port1} ";
-            args += $"--user {Wallet1}.{Worker_Name} ";
+            if (!string.IsNullOrWhiteSpace(Algo1) && Algo1 != "none")
+            {
+                // 1st Algo
+                args += $"--algo {Algo1} ";
+                args += $"--ssl {SSL1} ";
+                args += $"--server {Pool1} ";
+                args += $"--port {Port1} ";
+                args += $"--user {Wallet1}.{Worker_Name} ";
+            }
 
-            // 2nd Algo
-            args += $"--dalgo {Algo2} ";
-            args += $"--dssl {SSL2} ";
-            args += $"--dserver {Pool2} ";
-            args += $"--dport {Port2} ";
-            args += $"--duser {Wallet2}.{Worker_Name} ";
+            if (!string.IsNullOrWhiteSpace(Algo2) && Algo2 != "none")
+            {
+                // 2nd Algo
+                args += $"--dalgo {Algo2} ";
+                args += $"--dssl {SSL2} ";
+                args += $"--dserver {Pool2} ";
+                args += $"--dport {Port2} ";
+                args += $"--duser {Wallet2}.{Worker_Name} ";
+            }
 
-            // 3rd Algo
-            args += $"--zilssl {SSL3} ";
-            args += $"--zilserver {Pool3} ";
-            args += $"--zilport {Port3} ";
-            args += $"--ziluser {Wallet3}.{Worker_Name} ";
+            if (!string.IsNullOrWhiteSpace(Algo3) && Algo3 != "none")
+            {
+                // 3rd Algo
+                args += $"--zilssl {SSL3} ";
+                args += $"--zilserver {Pool3} ";
+                args += $"--zilport {Port3} ";
+                args += $"--ziluser {Wallet3}.{Worker_Name} ";
+            }
 
             // Gpus
             bool overclocking = false;

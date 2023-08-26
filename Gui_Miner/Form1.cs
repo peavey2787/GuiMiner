@@ -247,6 +247,23 @@ namespace Gui_Miner
             tabControl.Name = "outputTabControl";
             tabControl.Dock = DockStyle.Fill;
 
+            // Create the "Home" tab page
+            TabPage homeTabPage = new TabPage();
+            homeTabPage.BackColor = Color.FromArgb(12, 20, 52);
+            homeTabPage.Text = "Home";
+
+            var arotatingPanel = RotatingPanel.Create();
+
+            // Add image
+            string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
+            arotatingPanel.Image = GetBgImage(bgImage);
+
+            outputPanel.Controls.Add(arotatingPanel);
+            arotatingPanel.Start();
+
+            homeTabPage.Controls.Add(arotatingPanel);
+            tabControl.TabPages.Add(homeTabPage);
+
             foreach (MinerConfig minerConfig in settingsForm.Settings.MinerSettings)
             {                
                 if (minerConfig.Active)
@@ -380,12 +397,12 @@ namespace Gui_Miner
                                         richTextBox.SelectionColorThreadSafe(richTextBox.ForeColor); // Reset to the default color                                    
 
                                     // Errors
-                                    if (e.Data.ToLower().Contains("error on gpu"))
+                                    if (e.Data.ToLower().Contains("error on gpu") || e.Data.ToLower().Contains("miner terminated"))
                                     {
                                         // Restart miner
                                         richTextBox.AppendTextThreadSafe("Gpu failed/Miner terminated. Restarting...");
                                         ClickStopButton();
-                                        Thread.Sleep(2500);
+                                        Thread.Sleep(3500);
                                         ClickStartButton();
 
                                         // Extract the number from the restarts label text
