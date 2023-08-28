@@ -148,7 +148,7 @@ namespace Gui_Miner
             // Save window location
             AppSettings.Save<Point>("windowLocation", this.Location);
         }
-        private void CloseApp()
+        internal void CloseApp()
         {
             // Hide main form and remove notify icon
             this.Visible = false;
@@ -156,6 +156,12 @@ namespace Gui_Miner
 
             // Stop mining
             ClickStopButton();
+
+            // Close settings form
+            if (settingsForm.InvokeRequired)
+                settingsForm.Invoke(new Action(() => this.Close()));            
+            else
+                settingsForm.Close();            
 
             // Close the main form
             this.Close();
@@ -358,42 +364,7 @@ namespace Gui_Miner
                 {
                     verb = "runas";
 
-                    if (!IsRunningAsAdmin())
-                    {
-                        DialogResult result = MessageBox.Show("This miner setting requires admin privliges. Do you want to restart the app as admin?", "Restart App as Admin?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-                        // Check the user's response
-                        if (result == DialogResult.Yes)
-                        {
-                            string version = "0.0";
-                            string updateProjectPath = settingsForm.GetUpdateAppPath();
-                            string command = "runas";
-
-                            // Create a process start info
-                            ProcessStartInfo restartInfo = new ProcessStartInfo(updateProjectPath);
-                            restartInfo.Verb = "runas";
-                            restartInfo.Arguments = $"-{command} -{version} -{true}";
-
-                            // Start the "update" project as a separate process
-                            try
-                            {
-                                Process.Start(restartInfo);
-                                if (settingsForm.InvokeRequired)
-                                {
-                                    settingsForm.Invoke(new Action(() => this.Close()));
-                                }
-                                else
-                                {
-                                    settingsForm.Close();
-                                }
-                                this.Close();
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show("Error restarting app as admin " + ex.Message);
-                            }
-                        }
-                    }
+                    IsRunningAsAdmin();
                 }
 
                 // Set the process start information
@@ -505,14 +476,46 @@ namespace Gui_Miner
         }
 
 
-        // Helpers
-        public static bool IsRunningAsAdmin()
-        {
-            WindowsIdentity identity = WindowsIdentity.GetCurrent();
-            WindowsPrincipal principal = new WindowsPrincipal(identity);
+    // Helpers
+    public bool IsRunningAsAdmin()
+    {
+        WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        WindowsPrincipal principal = new WindowsPrincipal(identity);
 
-            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        bool isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
+
+        if (!isAdmin)
+        {
+            DialogResult result = MessageBox.Show("This miner setting requires admin privliges. Do you want to restart the app as admin?", "Restart App as Admin?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            // Check the user's response
+            if (result == DialogResult.Yes)
+            {
+                string version = "0.0";
+                string updateProjectPath = settingsForm.GetUpdateAppPath();
+                string command = "runas";
+
+                // Create a process start info
+                ProcessStartInfo restartInfo = new ProcessStartInfo(updateProjectPath);
+                restartInfo.Verb = "runas";
+                restartInfo.Arguments = $"-{command} -{version} -{true}";
+
+                // Start the "update" project as a separate process
+                try
+                {
+                    Process.Start(restartInfo);
+
+                    CloseApp();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error restarting app as admin " + ex.Message);
+                }
+            }
         }
+
+        return isAdmin;
+    }
         public async Task CancelAllTasksAsync()
         {
             var tasks = runningTasks;

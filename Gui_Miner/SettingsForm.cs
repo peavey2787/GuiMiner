@@ -1260,16 +1260,18 @@ namespace Gui_Miner
 
             if (autoStartWithWinCheckBox.Checked)
             {
-                if (IsRunningAsAdmin())
+                if (MainForm.IsRunningAsAdmin())
                 {
                     string assemblyPath = Assembly.GetEntryAssembly().Location;
                     if (CreateSchedulerTask("GuiMiner", assemblyPath))
                         successLabel.Text = "Successfully added auto start task";
                     else
-                        successLabel.Text = "Unable to add auto start task";
+                        successLabel.Text = "Unable to add auto start task, please try restarting your PC and try again.";
                 }
                 else
+                {
                     successLabel.Text = "Please restart the app as admin in order to start with Windows";
+                }
             }
             else
             {
@@ -1738,9 +1740,7 @@ namespace Gui_Miner
                     // Check if we need to run as admin
                     bool runAs = AppIsRunningAsAdmin();
                     UpdateApp(runAs);
-                    MainForm.Close();
-                    this.Close();
-                    Application.Exit();
+                    MainForm.CloseApp();
                 }
             }
             else
