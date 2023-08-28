@@ -6,6 +6,7 @@ using System.Reflection;
 
 class Program
 {
+    const string _appName = "Gui_Miner.exe";
     static void Main(string[] args)
     {
         string command = "";
@@ -17,7 +18,7 @@ class Program
         if (args.Length >= 2)
             version = args[1].Replace("-", "").Trim();
         if (args.Length >= 3)
-            runAsAdmin = bool.TryParse(args[2], out bool parsedRunAs) ? parsedRunAs : false;
+            runAsAdmin = bool.TryParse(args[2].Replace("-", "").Trim(), out bool parsedRunAs) ? parsedRunAs : false;
 
         Execute(command, version);
 
@@ -65,37 +66,12 @@ class Program
 
                 break;
             case "runas":
-
+                KillProcess(_appName);
                 break;
             default:
                 break;
         }
     }
-    static bool AreUpdatesAvailable(string version, out string url)
-    {
-        url = $"https://github.com/peavey2787/GuiMiner/archive/refs/tags/V{version}.zip";
-              //https://github.com/peavey2787/GuiMiner/archive/refs/tags/V1.2.zip
-
-        if (IsValidUrl(url))
-            return true;
-
-        return false;
-    }
-    static string GetExeFilePath()
-    {
-        // Get filename
-        string exeFileName = "Gui_Miner.exe";      
-        if(File.Exists(exeFileName))
-            return exeFileName;
-
-        // Return testing path
-        exeFileName = "C:\\Users\\5800x\\source\\repos\\GuiMiner\\GuiMiner\\Gui_Miner\\bin\\Debug\\Gui_Miner.exe";
-        if (File.Exists(exeFileName))
-            return exeFileName;
-
-        return "";
-    }
-    // Update App
     static bool Update(string url)
     {
         string fileName = GetExeFilePath();
@@ -127,9 +103,8 @@ class Program
             }
         }
 
-
         // Make sure the app isn't open, if so close it
-        KillProcess("Gui_Miner.exe");
+        KillProcess(_appName);
 
         // Unzip the update
         using (ZipArchive archive = ZipFile.OpenRead(zipPath))
@@ -154,7 +129,30 @@ class Program
 
         return true;
     }
+    static string GetExeFilePath()
+    {
+        // Get filename
+        string exeFileName = "Gui_Miner.exe";
+        if (File.Exists(exeFileName))
+            return exeFileName;
 
+        // Return testing path
+        exeFileName = "C:\\Users\\5800x\\source\\repos\\GuiMiner\\GuiMiner\\Gui_Miner\\bin\\Debug\\Gui_Miner.exe";
+        if (File.Exists(exeFileName))
+            return exeFileName;
+
+        return "";
+    }
+    static bool AreUpdatesAvailable(string version, out string url)
+    {
+        url = $"https://github.com/peavey2787/GuiMiner/archive/refs/tags/V{version}.zip";
+        //https://github.com/peavey2787/GuiMiner/archive/refs/tags/V1.2.zip
+
+        if (IsValidUrl(url))
+            return true;
+
+        return false;
+    }
     static bool IsValidUrl(string url)
     {
         using (HttpClient client = new HttpClient())
@@ -179,6 +177,7 @@ class Program
     static void RunExeAsAdmin(string exeFilePath, bool asAdmin = false)
     {
         ProcessStartInfo startInfo = new ProcessStartInfo(exeFilePath);
+
         if(asAdmin)
             startInfo.Verb = "runas";
 
@@ -191,7 +190,6 @@ class Program
             Console.WriteLine("Error: " + ex.Message);
         }
     }
-
     static void KillProcess(string processName)
     {
         Process[] processes = Process.GetProcessesByName(processName);

@@ -360,7 +360,39 @@ namespace Gui_Miner
 
                     if (!IsRunningAsAdmin())
                     {
-                        Task.Run(()=>MessageBox.Show("App is not running as admin! Please restart the app and run as admin."));
+                        DialogResult result = MessageBox.Show("This miner setting requires admin privliges. Do you want to restart the app as admin?", "Restart App as Admin?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                        // Check the user's response
+                        if (result == DialogResult.Yes)
+                        {
+                            string version = "0.0";
+                            string updateProjectPath = settingsForm.GetUpdateAppPath();
+                            string command = "runas";
+
+                            // Create a process start info
+                            ProcessStartInfo restartInfo = new ProcessStartInfo(updateProjectPath);
+                            restartInfo.Verb = "runas";
+                            restartInfo.Arguments = $"-{command} -{version} -{true}";
+
+                            // Start the "update" project as a separate process
+                            try
+                            {
+                                Process.Start(restartInfo);
+                                if (settingsForm.InvokeRequired)
+                                {
+                                    settingsForm.Invoke(new Action(() => this.Close()));
+                                }
+                                else
+                                {
+                                    settingsForm.Close();
+                                }
+                                this.Close();
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("Error restarting app as admin " + ex.Message);
+                            }
+                        }
                     }
                 }
 

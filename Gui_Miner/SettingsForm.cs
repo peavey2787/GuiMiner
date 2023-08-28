@@ -1757,7 +1757,7 @@ namespace Gui_Miner
             WindowsPrincipal principal = new WindowsPrincipal(identity);
             return principal.IsInRole(WindowsBuiltInRole.Administrator);
         }
-        private string GetUpdateAppPath()
+        internal string GetUpdateAppPath()
         {
             string updateProjectPath = Directory.GetCurrentDirectory() + "\\update.exe";
 
