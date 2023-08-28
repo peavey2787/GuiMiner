@@ -1738,8 +1738,6 @@ namespace Gui_Miner
                     // Check if we need to run as admin
                     bool runAs = AppIsRunningAsAdmin();
                     UpdateApp(runAs);
-                    rotatingPanel.Stop();
-                    MainForm.rotatingPanel.Stop();
                     MainForm.Close();
                     this.Close();
                     Application.Exit();
