@@ -177,11 +177,11 @@ namespace Gui_Miner
         // Start/Stop/Settings Buttons
         private void startButtonPictureBox_Click(object sender, EventArgs e)
         {
-            if (startButtonPictureBox.Tag == "play")
+            if ((string)startButtonPictureBox.Tag == "play")
             {
                 ClickStartButton();
             }
-            else if (startButtonPictureBox.Tag == "stop")
+            else if ((string)startButtonPictureBox.Tag == "stop")
             {
                 ClickStopButton();
             }
@@ -195,7 +195,7 @@ namespace Gui_Miner
             }
 
             await CancelAllTasksAsync();
-            Task.Run(() => { KillAllActiveMiners(); });
+            await Task.Run(() => { KillAllActiveMiners(); });
 
             // Play button pushed
             startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
@@ -207,6 +207,7 @@ namespace Gui_Miner
 
             // Reset restart counter
             restartsLabel.Text = $"Restarts 0";
+            restartsLabel.ForeColor = Color.White;
             restartsLabel.Show();
 
             CreateTabControlAndStartMiners();
@@ -380,14 +381,14 @@ namespace Gui_Miner
                 process.StartInfo = startInfo;
 
                 // Subscribe to the OutputDataReceived event
-                process.OutputDataReceived += async (sender, e) =>
+                process.OutputDataReceived += (sender, e) =>
                 {
                     if (!string.IsNullOrEmpty(e.Data) && !token.IsCancellationRequested)
                     {
                         try
                         {
                             // This event is called whenever there is data available in the standard output
-                            this.BeginInvoke((MethodInvoker)async delegate
+                            this.BeginInvoke((MethodInvoker) delegate
                             {
                                 if (e.Data.ToLower().Contains("failed") || e.Data.ToLower().Contains("error") || e.Data.ToLower().Contains("miner terminated"))
                                 {
@@ -450,7 +451,7 @@ namespace Gui_Miner
                                 richTextBox.ScrollToCaretThreadSafe();
                             });
                         }
-                        catch (Exception ex) { }
+                        catch { }
                     }
                 };
 
@@ -630,7 +631,6 @@ namespace Gui_Miner
         static void KillProcesses(string processName)
         {
             Process[] processes = Process.GetProcesses();
-            bool procExists = false;
 
             foreach (Process process in processes)
             {
@@ -638,8 +638,6 @@ namespace Gui_Miner
                 {
                     if (process.ProcessName == Path.GetFileNameWithoutExtension(processName))
                     {
-                        procExists = true;
-
                         // Kill the process
                         process.Kill();
 
@@ -648,7 +646,7 @@ namespace Gui_Miner
                         RunPowerShellCommand(command);
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
                     //MessageBox.Show($"Error killing {processName} process: {ex.Message}");
                     Thread.Sleep(1000);

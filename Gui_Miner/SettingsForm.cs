@@ -596,8 +596,6 @@ namespace Gui_Miner
                             propertyValue = property.GetValue(minerSetting).ToString();
                         }
 
-                        int i = 0;
-                        int selectedIndex = 0;
                         var algos = minerSetting.GetAlgos();
                         if (algos != null && algos.Count > 0)
                         {
@@ -1410,7 +1408,7 @@ namespace Gui_Miner
         }
 
         // Create/Delete Scheduler Task
-        public static bool CreateSchedulerTask(string taskName, string applicationPath)
+        public bool CreateSchedulerTask(string taskName, string applicationPath)
         {
             try
             {
@@ -1443,7 +1441,7 @@ namespace Gui_Miner
             }
             catch (Exception ex)
             {
-                if (IsRunningAsAdmin())
+                if (MainForm.IsRunningAsAdmin())
                     MessageBox.Show($"Failed to add auto start task to windows task scheduler: {ex.Message}");
 
                 return false;

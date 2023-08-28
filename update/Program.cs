@@ -49,6 +49,7 @@ class Program
                 }
 
                 break;
+
             case "checkupdate":
 
                 Console.WriteLine("Checking for updates...");
@@ -65,42 +66,31 @@ class Program
                 }
 
                 break;
+
             case "runas":
                 KillProcess(_appName);
                 break;
+
             default:
                 break;
         }
     }
     static bool Update(string url)
     {
+        string zipPath = "";
         string fileName = GetExeFilePath();
-        string currentFolder = Path.GetDirectoryName(fileName);
-        string zipPath = Path.Combine(currentFolder, "update.zip");
+        string? currentFolder = Path.GetDirectoryName(fileName);
+        if (currentFolder != null)
+            zipPath = Path.Combine(currentFolder, "update.zip");
+        else
+            currentFolder = "";
 
-        int retries = 3;
-        while (retries > 0)
+        if (DownloadedUpdateFile(url, zipPath))
+            Console.WriteLine("Update file downloaded.");
+        else
         {
-            // Download the update
-            using (WebClient client = new WebClient())
-            {
-                try
-                {                    
-                    client.DownloadFile(url, zipPath);
-                    Console.WriteLine("Update file downloaded.");
-                    break;                    
-                }
-                catch (Exception exc)
-                {
-                    retries--;
-                    if (retries == 0)
-                    {
-                        Console.WriteLine($"Failed to Update because the Download Failed from {url}");
-                        return false;
-                    }
-                    Thread.Sleep(500);
-                }
-            }
+            Console.WriteLine($"Failed to Update because the Download Failed from {url}");
+            return false;
         }
 
         // Make sure the app isn't open, if so close it
@@ -128,6 +118,42 @@ class Program
         Console.WriteLine("Update completed successfully!");
 
         return true;
+    }
+    static bool DownloadedUpdateFile(string url, string zipPath)
+    {
+        int retries = 3;
+        using (var httpClient = new HttpClient())
+        {
+            while (retries > 0)
+            {
+                try
+                {
+                    var response = httpClient.GetAsync(url).Result;
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using (var fileStream = File.Create(zipPath))
+                        {
+                            response.Content.CopyToAsync(fileStream).RunSynchronously();
+                        }
+
+                        return true;
+                    }
+                }
+                catch (HttpRequestException)
+                {
+                    retries--;
+
+                    if (retries == 0)
+                    {
+                        return false;
+                    }
+
+                    Task.Delay(500);
+                }
+            }
+        }
+        return false;
     }
     static string GetExeFilePath()
     {
