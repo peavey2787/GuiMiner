@@ -87,6 +87,7 @@
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.tipsLinkLabel = new System.Windows.Forms.LinkLabel();
             this.copiedLabel = new System.Windows.Forms.Label();
+            this.checkUpdatesButton = new System.Windows.Forms.Button();
             this.manageConfigPanel.SuspendLayout();
             this.topPanel.SuspendLayout();
             this.generalPanel.SuspendLayout();
@@ -335,6 +336,7 @@
             // 
             // generalPanel
             // 
+            this.generalPanel.Controls.Add(this.checkUpdatesButton);
             this.generalPanel.Controls.Add(this.bgImagePanel);
             this.generalPanel.Controls.Add(this.label15);
             this.generalPanel.Controls.Add(this.bgComboBox);
@@ -736,6 +738,18 @@
             this.copiedLabel.Text = "Address Copied, Thanks!";
             this.copiedLabel.Visible = false;
             // 
+            // checkUpdatesButton
+            // 
+            this.checkUpdatesButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.checkUpdatesButton.ForeColor = System.Drawing.Color.White;
+            this.checkUpdatesButton.Location = new System.Drawing.Point(11, 252);
+            this.checkUpdatesButton.Name = "checkUpdatesButton";
+            this.checkUpdatesButton.Size = new System.Drawing.Size(106, 21);
+            this.checkUpdatesButton.TabIndex = 10;
+            this.checkUpdatesButton.Text = "Check for Updates";
+            this.checkUpdatesButton.UseVisualStyleBackColor = false;
+            this.checkUpdatesButton.Click += new System.EventHandler(this.checkUpdatesButton_Click);
+            // 
             // SettingsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -834,5 +848,6 @@
         private System.Windows.Forms.Button importBatButton;
         private System.Windows.Forms.LinkLabel tipsLinkLabel;
         private System.Windows.Forms.Label copiedLabel;
+        private System.Windows.Forms.Button checkUpdatesButton;
     }
 }

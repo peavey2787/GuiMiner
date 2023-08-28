@@ -38,7 +38,8 @@
             // Rotate the image and draw it on the panel
             using (Image rotatedImage = RotateImage(Image, (float)rotationAngle, ClientRectangle.Size))
             {
-                e.Graphics.DrawImage(rotatedImage, Point.Empty);
+                try { e.Graphics.DrawImage(rotatedImage, Point.Empty); } 
+                catch { }
             }
         }
 
@@ -95,7 +96,7 @@
 
             Task.Run(async () =>
             {
-                while (true) // Run indefinitely
+                while (cts != null) // Run indefinitely
                 {
                     if (cts.Token.IsCancellationRequested)
                     {

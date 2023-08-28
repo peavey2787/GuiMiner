@@ -233,8 +233,6 @@ namespace Gui_Miner
         }
 
 
-
-
         // Start Active Miners
         private void CreateTabControlAndStartMiners()
         {
@@ -531,7 +529,8 @@ namespace Gui_Miner
             contextMenu.Items.Add(CreateMenuItem("Settings", Properties.Resources.settings, OnSettings, imageSize));
             contextMenu.Items.Add(CreateMenuItem("Start Mining", Properties.Resources.play_button, OnStartMining, imageSize));
             contextMenu.Items.Add(CreateMenuItem("Stop Mining", Properties.Resources.stop_button, OnStopMining, imageSize));
-            contextMenu.Items.Add(CreateMenuItem("Exit", Properties.Resources.exit_button, OnExit, imageSize));
+            contextMenu.Items.Add(CreateMenuItem("Check for Updates", Properties.Resources.check_for_updates, OnCheckForUpdates, imageSize));
+            contextMenu.Items.Add(CreateMenuItem("Exit", Properties.Resources.exit_button, OnExit, imageSize));            
 
             // Set the image scaling to None to prevent automatic resizing
             contextMenu.ImageScalingSize = new Size(imageSize, imageSize); // Set the desired size
@@ -567,6 +566,10 @@ namespace Gui_Miner
             this.WindowState = FormWindowState.Normal;
             this.Show();
             this.Focus();
+        }
+        private void OnCheckForUpdates(object sender, EventArgs e)
+        {
+            settingsForm.CheckForUpdates();
         }
 
 

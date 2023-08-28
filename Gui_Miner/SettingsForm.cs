@@ -1,4 +1,5 @@
 ﻿using Gui_Miner.Classes;
+using Gui_Miner.Properties;
 using Microsoft.Win32.TaskScheduler;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -10,10 +11,13 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -47,6 +51,7 @@ namespace Gui_Miner
         public const string STOPSHORTKEYS = "StopShortKeys";
         public const string STARTSHORTKEYS = "StartShortKeys";
         public const string BGIMAGE = "BackgroundImage";
+        const string APPVERSION = "AppVersion";
         public Settings Settings { get { return _settings; } }
         public Form1 Form1 { get; set; }
         public void SetSettings(Settings settings) { _settings = settings; }
@@ -90,7 +95,6 @@ namespace Gui_Miner
 
             // Load General settings
             LoadGeneralSettings();
-
 
             // Tooltip text
             toolTip.SetToolTip(getAllGpusButton, "Add all available GPUs");
@@ -169,6 +173,8 @@ namespace Gui_Miner
                 if (startShortKeysTextBox.Text.EndsWith(" + "))
                     startShortKeysTextBox.Text = startShortKeysTextBox.Text.Substring(0, startShortKeysTextBox.Text.Length - 3);
             }
+
+            successLabel.Text = "Version " + GetCurrentVersion();            
         }
 
 
@@ -656,7 +662,7 @@ namespace Gui_Miner
                         else
                             textbox.Text = value;
 
-                        if (property.Name == "MinerFilePath")
+                        if (property.Name == "Miner_File_Path")
                         {
                             textbox.ReadOnly = true;
 
@@ -1369,6 +1375,7 @@ namespace Gui_Miner
             }
         }
 
+        // Tip link
         private void tipLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             Clipboard.SetText("kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug");
@@ -1706,13 +1713,148 @@ namespace Gui_Miner
                 }
             }
         }
-
-
-
-
         #endregion
 
 
+        #region Update App
+        // Update App
+        private void checkUpdatesButton_Click(object sender, EventArgs e)
+        {
+            CheckForUpdates();
+        }
+        public void CheckForUpdates()
+        {
+            if (LaunchUpdateApp())
+            {
+                // Updates found
+                DialogResult result = MessageBox.Show("Update Found! Close the app and update?", "Update Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    // Update app settings version
+                    string nextVersion = GetNextVersion();
+                    AppSettings.Save<string>(APPVERSION, nextVersion);
+
+                    // Check if we need to run as admin
+                    bool runAs = AppIsRunningAsAdmin();
+                    UpdateApp(runAs);
+                    rotatingPanel.Stop();
+                    MainForm.rotatingPanel.Stop();
+                    MainForm.Close();
+                    this.Close();
+                    Application.Exit();
+                }
+            }
+            else
+            {
+                // No updates found
+                UpdateStatusLabel("No updates found at this time");
+            }
+        }
+        static bool AppIsRunningAsAdmin()
+        {
+            WindowsIdentity identity = WindowsIdentity.GetCurrent();
+            WindowsPrincipal principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        private string GetUpdateAppPath()
+        {
+            string updateProjectPath = Directory.GetCurrentDirectory() + "\\update.exe";
+
+            if(File.Exists(updateProjectPath))
+                return updateProjectPath;
+
+            // Check if we need to use testing filePath
+            string testingPath = "C:\\Users\\5800x\\source\\repos\\GuiMiner\\GuiMiner\\update\\bin\\Debug\\net6.0\\update.exe";
+            if (!File.Exists(updateProjectPath) && File.Exists(testingPath))
+                return testingPath;
+
+            return "";
+        }
+        private bool LaunchUpdateApp()
+        {
+            string updateProjectPath = GetUpdateAppPath();
+            string command = "checkUpdate";
+            string nextVersion = GetNextVersion();
+
+            // Create a process start info
+            ProcessStartInfo startInfo = new ProcessStartInfo(updateProjectPath);
+            startInfo.Arguments = $"-{command} -{nextVersion}";
+
+            // Start the "update" project as a separate process
+            try
+            {
+                using (Process process = Process.Start(startInfo))
+                {
+                    process.WaitForExit(); // Wait for the process to complete
+
+                    int exitCode = process.ExitCode;
+
+                    if (exitCode == 1)
+                        return true;                    
+                    else
+                        return false;     
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error updating " + ex.Message);
+                return false;
+            }
+        }
+        private void UpdateApp(bool runAsAdmin)
+        {
+            string nextVersion = GetNextVersion();
+            string updateProjectPath = GetUpdateAppPath();
+            string command = "update";            
+
+            // Create a process start info
+            ProcessStartInfo startInfo = new ProcessStartInfo(updateProjectPath);
+            startInfo.Arguments = $"-{command} -{nextVersion} {runAsAdmin}";
+
+            // Start the "update" project as a separate process
+            try
+            {
+                Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                string prevVersion = GetPrevVersion();
+                AppSettings.Save<string>(APPVERSION, prevVersion);
+
+                MessageBox.Show("Error updating " + ex.Message);
+            }
+        }
+        private string GetCurrentVersion()
+        {
+            string version = AppSettings.Load<string>(APPVERSION);
+
+            if (string.IsNullOrWhiteSpace(version))
+                version = "1.2";
+
+            return version;
+        }
+        private string GetNextVersion()
+        {
+            string version = GetCurrentVersion();
+            var parts = version.Split('.');
+
+            int major = int.Parse(parts[0]);
+            int minor = int.Parse(parts[1]) + 1;
+            version = $"{major}.{minor}";
+            return version;
+        }
+        private string GetPrevVersion()
+        {
+            string version = GetCurrentVersion();
+            var parts = version.Split('.');
+
+            int major = int.Parse(parts[0]);
+            int minor = int.Parse(parts[1]) - 1;
+            version = $"{major}.{minor}";
+            return version;
+        }
+        #endregion
     }
 
     #region Class Structure
