@@ -1,3 +1,6 @@
+[!WARNING] 
+Windows erroneously claims this app as potentially containing malware, but you can see every line of code for yourself to verify that it does not.
+
 # GuiMiner
 Manage CLI miners with a GUI and manage all .bat files in one place along with gpu settings, wallets, and pools.
 
