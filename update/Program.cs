@@ -132,14 +132,14 @@ class Program
     static string GetExeFilePath()
     {
         // Get filename
-        string exeFileName = "Gui_Miner.exe";
-        if (File.Exists(exeFileName))
-            return exeFileName;
+        string exeFilePath = Directory.GetCurrentDirectory() + "\\" + _appName;
+        if (File.Exists(exeFilePath))
+            return exeFilePath;
 
         // Return testing path
-        exeFileName = "C:\\Users\\5800x\\source\\repos\\GuiMiner\\GuiMiner\\Gui_Miner\\bin\\Debug\\Gui_Miner.exe";
-        if (File.Exists(exeFileName))
-            return exeFileName;
+        exeFilePath = "C:\\Users\\5800x\\source\\repos\\GuiMiner\\GuiMiner\\Gui_Miner\\bin\\Debug\\Gui_Miner.exe";
+        if (File.Exists(exeFilePath))
+            return exeFilePath;
 
         return "";
     }
