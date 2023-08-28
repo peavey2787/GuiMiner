@@ -29,7 +29,7 @@ class Program
             Console.WriteLine($"Restarting...");
 
         RunExeAsAdmin(GetExeFilePath(), runAsAdmin);
-        Environment.Exit(0);
+        CloseGuiMinerUpdateApp(0);
     }
     static void Execute(string command, string version)
     {
@@ -47,6 +47,11 @@ class Program
                     Console.WriteLine("Update found! Updating...");
                     Update(url);
                 }
+                else
+                {
+                    Console.WriteLine($"Update Not Found for {version}");
+                    CloseGuiMinerUpdateApp(0);
+                }
 
                 break;
 
@@ -57,12 +62,12 @@ class Program
                 if (AreUpdatesAvailable(version, out url))
                 {
                     Console.WriteLine("Update Found!");
-                    Environment.Exit(1); // return true
+                    CloseGuiMinerUpdateApp(1); // return true
                 }
                 else
                 {
                     Console.WriteLine($"Update Not Found for {version}");
-                    Environment.Exit(0);
+                    CloseGuiMinerUpdateApp(0);
                 }
 
                 break;
@@ -162,11 +167,6 @@ class Program
         if (File.Exists(exeFilePath))
             return exeFilePath;
 
-        // Return testing path
-        exeFilePath = "C:\\Users\\5800x\\source\\repos\\GuiMiner\\GuiMiner\\Gui_Miner\\bin\\Debug\\Gui_Miner.exe";
-        if (File.Exists(exeFilePath))
-            return exeFilePath;
-
         return "";
     }
     static bool AreUpdatesAvailable(string version, out string url)
@@ -213,7 +213,7 @@ class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error: " + ex.Message);
+            Console.WriteLine("Failed to run exe as admin " + ex.Message);
         }
     }
     static void KillProcess(string processName)
@@ -231,5 +231,15 @@ class Program
                 Console.WriteLine($"Failed to kill {processName}: {ex.Message}");
             }
         }
+    }
+    static void CloseGuiMinerUpdateApp(int exitCode)
+    {
+        for (int i = 5; i >= 1; i--)
+        {
+            Console.WriteLine($"This window will self destruct in {i}");
+            Thread.Sleep(1000);
+        }
+
+        Environment.Exit(exitCode);
     }
 }

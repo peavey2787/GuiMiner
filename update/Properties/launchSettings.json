@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "update": {
+      "commandName": "Project",
+      "commandLineArgs": "-checkUpdate -1.3 -false"
+    }
+  }
+}

@@ -1724,7 +1724,7 @@ namespace Gui_Miner
         }
         public void CheckForUpdates()
         {
-            if (LaunchUpdateApp())
+            if (UpdatesAvailable())
             {
                 // Updates found
                 DialogResult result = MessageBox.Show("Update Found! Close the app and update?", "Update Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -1760,37 +1760,33 @@ namespace Gui_Miner
             if(File.Exists(updateProjectPath))
                 return updateProjectPath;
 
-            // Check if we need to use testing filePath
-            string testingPath = "C:\\Users\\5800x\\source\\repos\\GuiMiner\\GuiMiner\\update\\bin\\Debug\\net6.0\\update.exe";
-            if (!File.Exists(updateProjectPath) && File.Exists(testingPath))
-                return testingPath;
-
             return "";
         }
-        private bool LaunchUpdateApp()
+        private bool UpdatesAvailable()
         {
             string updateProjectPath = GetUpdateAppPath();
-            string command = "checkUpdate";
             string nextVersion = GetNextVersion();
 
             // Create a process start info
             ProcessStartInfo startInfo = new ProcessStartInfo(updateProjectPath);
-            startInfo.Arguments = $"-{command} -{nextVersion}";
+            startInfo.Verb = "runas";
+            startInfo.Arguments = $"-checkupdate -{nextVersion} -false";
 
             // Start the "update" project as a separate process
             try
             {
-                using (Process process = Process.Start(startInfo))
-                {
-                    process.WaitForExit(); // Wait for the process to complete
+                Process proc = Process.Start(startInfo);
+                proc.WaitForExit();
+                int exitCode = proc.ExitCode;
+                proc.Close();
+                proc.Dispose();
 
-                    int exitCode = process.ExitCode;
-
-                    if (exitCode == 1)
-                        return true;                    
-                    else
-                        return false;     
-                }
+                if (exitCode == 1)
+                    return true;
+                else if (exitCode == 0)
+                    return false;
+                MessageBox.Show("No Go");
+                return false;
             }
             catch (Exception ex)
             {
@@ -1806,6 +1802,8 @@ namespace Gui_Miner
 
             // Create a process start info
             ProcessStartInfo startInfo = new ProcessStartInfo(updateProjectPath);
+            if(runAsAdmin)
+                startInfo.Verb = "runas";
             startInfo.Arguments = $"-{command} -{nextVersion} {runAsAdmin}";
 
             // Start the "update" project as a separate process
@@ -2010,23 +2008,6 @@ namespace Gui_Miner
             {
                 TrmSetup();
             }
-            /*
-            bool changed = false;
-
-            foreach (IMinerConfig minerConfig in Sub_Configs)
-            {
-                if (minerConfig.Current_Miner_Config_Type == minerConfigType)
-                {
-                    Current_Miner_Config = minerConfig;
-                    changed = true;
-                }
-            }
-
-            if (!changed)
-            {
-                var newConfig = CreateConfigInstance(Current_Miner_Config_Type);
-                AddOrUpdateSubConfig(newConfig);
-            }*/
         }
 
         public virtual void ClearGpuSettings()

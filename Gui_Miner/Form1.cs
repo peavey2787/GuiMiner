@@ -477,8 +477,8 @@ namespace Gui_Miner
         }
 
 
-    // Helpers
-    public bool IsRunningAsAdmin()
+        // Helpers
+        public bool IsRunningAsAdmin()
     {
         WindowsIdentity identity = WindowsIdentity.GetCurrent();
         WindowsPrincipal principal = new WindowsPrincipal(identity);

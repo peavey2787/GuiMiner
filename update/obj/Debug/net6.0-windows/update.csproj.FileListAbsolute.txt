@@ -1,0 +1,17 @@
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\bin\Debug\net6.0-windows\update.exe
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\bin\Debug\net6.0-windows\update.deps.json
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\bin\Debug\net6.0-windows\update.runtimeconfig.json
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\bin\Debug\net6.0-windows\update.dll
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\bin\Debug\net6.0-windows\update.pdb
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.csproj.AssemblyReference.cache
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.AssemblyInfoInputs.cache
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.AssemblyInfo.cs
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.csproj.CoreCompileInputs.cache
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.dll
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\refint\update.dll
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.pdb
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.genruntimeconfig.cache
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\ref\update.dll
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.Properties.Resources.resources
+C:\Users\5800x\source\repos\GuiMiner\GuiMiner\update\obj\Debug\net6.0-windows\update.csproj.GenerateResource.cache
