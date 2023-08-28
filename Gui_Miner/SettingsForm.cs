@@ -1829,7 +1829,8 @@ namespace Gui_Miner
 
             if (string.IsNullOrWhiteSpace(version))
                 version = "1.2";
-
+            version = "1.2";
+            AppSettings.Save<string>(APPVERSION, version);
             return version;
         }
         private string GetNextVersion()
