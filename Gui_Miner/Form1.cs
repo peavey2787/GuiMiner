@@ -1,6 +1,7 @@
 ﻿using Gui_Miner.Classes;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -21,6 +22,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using static System.Net.Mime.MediaTypeNames;
 using Application = System.Windows.Forms.Application;
 using Image = System.Drawing.Image;
@@ -33,12 +35,14 @@ namespace Gui_Miner
         NotifyIcon notify_icon;
         SettingsForm settingsForm = new SettingsForm();
         internal RotatingPanel rotatingPanel;
-        List<Task> runningTasks = new List<Task>();
+        Dictionary<int,Task> runningTasks = new Dictionary<int, Task>();
         CancellationTokenSource ctsRunningMiners = new CancellationTokenSource();
         private GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook(); 
         public Form1()
         {
             InitializeComponent();
+
+            KillAllRunningMiners();
 
             // Create notify icon
             CreateNotifyIcon();
@@ -58,7 +62,6 @@ namespace Gui_Miner
 
             // Listen for short-cut keys
             UpdateShortcutKeys();
- 
         }
         public void UpdateShortcutKeys()
         {
@@ -81,25 +84,7 @@ namespace Gui_Miner
 
         }
 
-        internal Image GetBgImage(string  bgImage)
-        {
-            Image image = null;
 
-            if (bgImage == "Kas - Globe")
-                image = Properties.Resources.kas_world;
-            else if (bgImage == "Kaspa")
-                image = Properties.Resources.kaspa;
-            else if (bgImage == "Ergo")
-                image = Properties.Resources.ergo;
-            else if (bgImage == "Bitcoin")
-                image = Properties.Resources.bitcoin;
-            else if (bgImage == "Zilliqa")
-                image = Properties.Resources.zilliqa;
-            else
-                image = Properties.Resources.bitcoin;
-
-            return image;
-        }
 
         // Rotate image
         private void CreateRotatingPanel()
@@ -143,7 +128,8 @@ namespace Gui_Miner
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            ClickStopButton();
+            // Close all running miners
+            KillAllRunningMiners();
 
             // Save window location
             AppSettings.Save<Point>("windowLocation", this.Location);
@@ -154,8 +140,8 @@ namespace Gui_Miner
             this.Visible = false;
             notify_icon.Dispose();
 
-            // Stop mining
-            ClickStopButton();
+            // Close all running miners
+            KillAllRunningMiners();
 
             // Close settings form
             if (settingsForm.InvokeRequired)
@@ -175,8 +161,11 @@ namespace Gui_Miner
 
 
         // Start/Stop/Settings Buttons
-        private void startButtonPictureBox_Click(object sender, EventArgs e)
+        private async void startButtonPictureBox_Click(object sender, EventArgs e)
         {
+            // Disable the button immediately
+            startButtonPictureBox.Enabled = false;
+
             if ((string)startButtonPictureBox.Tag == "play")
             {
                 ClickStartButton();
@@ -185,17 +174,18 @@ namespace Gui_Miner
             {
                 ClickStopButton();
             }
+
+            // Re-enable the button after a 3-second delay
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            startButtonPictureBox.Enabled = true;
         }
-        internal async void ClickStartButton()
+        internal void ClickStartButton(bool shortcutOnly = false)
         {
-            if (this.InvokeRequired)
+            if (InvokeRequired)
             {
-                this.Invoke(new Action(ClickStartButton));
+                Invoke(new Action(() => ClickStartButton(shortcutOnly)));
                 return;
             }
-
-            await CancelAllTasksAsync();
-            await Task.Run(() => { KillAllActiveMiners(); });
 
             // Play button pushed
             startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
@@ -210,13 +200,13 @@ namespace Gui_Miner
             restartsLabel.ForeColor = Color.White;
             restartsLabel.Show();
 
-            CreateTabControlAndStartMiners();
+            CreateTabControlAndStartMiners(shortcutOnly);
         }
-        internal async void ClickStopButton()
+        internal void ClickStopButton(bool shortcutOnly = false)
         {
-            if (this.InvokeRequired)
+            if (InvokeRequired)
             {
-                this.Invoke(new Action(ClickStopButton));
+                Invoke(new Action(() => ClickStopButton(shortcutOnly)));
                 return;
             }
 
@@ -231,7 +221,8 @@ namespace Gui_Miner
             restartsLabel.Text = $"Restarts 0";
             restartsLabel.Hide();
 
-            await Task.Run(() => { KillAllActiveMiners(); });
+            // Close all running miners
+            KillAllRunningMiners(shortcutOnly);           
         }
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
@@ -241,11 +232,12 @@ namespace Gui_Miner
 
 
         // Start Active Miners
-        private void CreateTabControlAndStartMiners()
+        private void CreateTabControlAndStartMiners(bool shortcutOnly = false)
         {
             if (InvokeRequired)
             {
-                Invoke((MethodInvoker)CreateTabControlAndStartMiners);
+                Invoke(new Action(() => CreateTabControlAndStartMiners(shortcutOnly)));
+                return;
             }
 
             TabControl tabControl = new TabControl();
@@ -269,12 +261,45 @@ namespace Gui_Miner
             homeTabPage.Controls.Add(arotatingPanel);
             tabControl.TabPages.Add(homeTabPage);
 
-            foreach (MinerConfig minerConfig in settingsForm.Settings.MinerSettings)
+            var minerConfgs = settingsForm.Settings.MinerSettings;
+            foreach (MinerConfig minerConfig in minerConfgs)
             {                
-                if (minerConfig.Active)
+                if (minerConfig.Active && !shortcutOnly || shortcutOnly && minerConfig.Use_Shortcut_Keys)
                 {
                     TabPage tabPage = new TabPage();
-                    tabPage.Text = minerConfig.Current_Miner_Config_Type.ToString();
+                    tabPage.Name = minerConfig.Id.ToString();
+                    tabPage.Text = minerConfig.Name;
+
+                    // Top panel
+                    Panel topPanel = new Panel();
+                    topPanel.Dock = DockStyle.Top;
+                    int padding = 10;
+                    topPanel.Size = new Size(outputPanel.Width, restartsLabel.Height * 4 + padding);
+                    topPanel.Padding = new Padding(padding, padding, 0, 0);
+
+                    RichTextBox tabPageRichTextBox = new RichTextBox();
+
+                    // Add stop button
+                    Button stopButton = new Button();
+                    stopButton.Location = new Point(outputPanel.Width - stopButton.Width - 40, padding);
+                    stopButton.Text = "Stop";
+                    stopButton.Click += (sender, e) =>
+                    {
+                        Button button = (Button)sender;
+                        if (button.Text == "Stop")
+                        {
+                            KillMinerById(minerConfig.Id);
+                            tabPageRichTextBox.Text = string.Empty;
+
+                            button.Text = "Start";
+                        }
+                        else if(button.Text == "Start")
+                        {
+                            StartMinerById(minerConfig.Id, ref tabPageRichTextBox);
+                            button.Text = "Stop";
+                        }
+                    };
+                    topPanel.Controls.Add(stopButton);
 
                     // Set link to api stats
                     string url = "http://localhost:" + minerConfig.Api;
@@ -290,46 +315,85 @@ namespace Gui_Miner
                     
                     // Add link
                     if(minerConfig.Api > 0)
-                        tabPage.Controls.Add(linkLabel);
+                        topPanel.Controls.Add(linkLabel);
 
-                    // Try to get pool link
+                    // Try to get pool link 1
                     string poolDomainName1 = minerConfig.GetPool1DomainName();
-                    string poolLink1 = "";
-                    if (poolDomainName1 != null)
-                    {
-                        // Get matching pool and return its link
-                        if (settingsForm.Settings.Pools != null && settingsForm.Settings.Pools.Count > 0)
-                        {
-                            foreach (Pool pool in settingsForm.Settings.Pools)
-                            {
-                                if (pool.Address.Contains(poolDomainName1) || pool.Link.Contains(poolDomainName1))
-                                {
-                                    poolLink1 = pool.Link;
-                                }
-                            }
-                        }
+                    string poolLink1 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName1)).Link;
 
-                    }
-
-                    // Set link to pool
-                    LinkLabel poolLinkLabel = new LinkLabel();
-                    poolLinkLabel.Text = "Pool Link: " + poolLink1;
-                    poolLinkLabel.Dock = DockStyle.Top;
-                    poolLinkLabel.LinkClicked += (sender, e) =>
+                    LinkLabel poolLinkLabel1 = new LinkLabel();
+                    string poolLinkText = poolLink1;
+                    var poolLinkTextParts = poolLink1.Split('.');
+                    if(poolLinkTextParts.Length > 0)
+                        poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
+                    poolLinkLabel1.Text = "Pool Link1: " + poolLinkText;
+                    poolLinkLabel1.Dock = DockStyle.Top;
+                    poolLinkLabel1.LinkClicked += (sender, e) =>
                     {
                         if (!string.IsNullOrEmpty(poolLink1) && Uri.IsWellFormedUriString(poolLink1, UriKind.Absolute))
                         {
                             // Open the default web browser with the specified URL
-                            Process.Start(poolLink1);
+                            Process.Start(AddHttpsIfNeeded(poolLink1));
                         }
                     };
+
+                    // Try to get pool link 2
+                    string poolDomainName2 = minerConfig.GetPool2DomainName();
+                    string poolLink2 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName2)).Link;
+                    poolLinkText = poolLink2;
+                    poolLinkTextParts = poolLink2.Split('.');
+                    if (poolLinkTextParts.Length > 0)
+                        poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
+                    LinkLabel poolLinkLabel2 = new LinkLabel();
+                    poolLinkLabel2.Text = "Pool Link2: " + new Uri(poolLink2).Host;
+                    poolLinkLabel2.Dock = DockStyle.Top;
+                    poolLinkLabel2.LinkClicked += (sender, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(poolLink2) && Uri.IsWellFormedUriString(poolLink2, UriKind.Absolute))
+                        {
+                            // Open the default web browser with the specified URL
+                            Process.Start(AddHttpsIfNeeded(poolLink2));
+                        }
+                    };
+
+                    // Try to get pool link 3
+                    string poolDomainName3 = minerConfig.GetPool3DomainName();
+                    string poolLink3 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName3)).Link;
+                    poolLinkText = poolLink3;
+                    poolLinkTextParts = poolLink3.Split('.');
+                    if (poolLinkTextParts.Length > 0)
+                        poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
+                    LinkLabel poolLinkLabel3 = new LinkLabel();
+                    poolLinkLabel3.Text = "Pool Link3: " + new Uri(poolLink3).Host;
+                    poolLinkLabel3.Dock = DockStyle.Top;
+                    poolLinkLabel3.LinkClicked += (sender, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(poolLink3) && Uri.IsWellFormedUriString(poolLink3, UriKind.Absolute))
+                        {
+                            // Open the default web browser with the specified URL
+                            Process.Start(AddHttpsIfNeeded(poolLink3));
+                        }
+                    };
+
+                    // Add pool links if they're not empty
+                    if (!string.IsNullOrWhiteSpace(poolLink1))
+                        topPanel.Controls.Add(poolLinkLabel1);
+
+                    if (!string.IsNullOrWhiteSpace(poolLink2))
+                        topPanel.Controls.Add(poolLinkLabel2);
+
+                    if (!string.IsNullOrWhiteSpace(poolLink3))
+                        topPanel.Controls.Add(poolLinkLabel3);
+
+                    tabPage.Controls.Add(topPanel);
+                    // End of Top Panel
+
+                    // Console output
                     
-                    if(!string.IsNullOrWhiteSpace(poolLink1))
-                        tabPage.Controls.Add(poolLinkLabel);
-
-
-                    RichTextBox tabPageRichTextBox = new RichTextBox();
-                    tabPageRichTextBox.Dock = DockStyle.Fill;
+                    tabPageRichTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+                    tabPageRichTextBox.Location = new Point(0, topPanel.Height);
+                    tabPageRichTextBox.Size = new Size(outputPanel.Width, outputPanel.Height - topPanel.Height);
+                    tabPageRichTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
                     tabPageRichTextBox.ReadOnly = true;
                     tabPageRichTextBox.ForeColor = Color.White;
                     tabPageRichTextBox.BackColor = Color.Black;
@@ -340,7 +404,8 @@ namespace Gui_Miner
                     // Start the miner in a separate thread with the miner-specific RichTextBox
                     Task minerTask = Task.Run(() => StartMiner(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, tabPageRichTextBox, ctsRunningMiners.Token));
 
-                    runningTasks.Add(minerTask);
+                    if(!runningTasks.ContainsKey(minerConfig.Id))
+                        runningTasks.Add(minerConfig.Id, minerTask);
                 }
             }
 
@@ -350,203 +415,207 @@ namespace Gui_Miner
             // Add the TabControl
             outputPanel.Controls.Add(tabControl);
         }
-        private void StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox, CancellationToken token)
+        static string AddHttpsIfNeeded(string url)
         {
-            if (File.Exists(filePath))
+            // Check if the URL starts with "https://" or "http://"
+            if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                !url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
             {
-                richTextBox.AppendTextThreadSafe("STARTING MINER...");
-                richTextBox.ForeColorThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
+                // If not, add "https://"
+                url = "https://" + url;
+            }
 
-                // Create a new process
-                Process process = new Process();
+            return url;
+        }
+        private async void StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox, CancellationToken token)
+        {
+            if (!File.Exists(filePath))
+            {
+                MessageBox.Show($"Unable to locate miner at {filePath}");
+                return;
+            }
 
-                string verb = "";
-                if (runAsAdmin)
+            richTextBox.AppendTextThreadSafe("\nSTARTING MINER...");
+            richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
+
+            // Create a new process
+            Process process = new Process();
+
+            string verb = "";
+            if (runAsAdmin)
+            {
+                verb = "runas";
+
+                IsRunningAsAdmin();
+            }
+
+            // Set the process start information
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = filePath,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                Verb = verb
+            };
+            process.StartInfo = startInfo;
+
+            // Subscribe to the OutputDataReceived event
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data) && !token.IsCancellationRequested)
                 {
-                    verb = "runas";
-
-                    IsRunningAsAdmin();
-                }
-
-                // Set the process start information
-                ProcessStartInfo startInfo = new ProcessStartInfo
-                {
-                    FileName = filePath,
-                    Arguments = arguments,
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    Verb = verb
+                    UpdateOutputConsole(e.Data, richTextBox);
                 };
-                process.StartInfo = startInfo;
+            };
 
-                // Subscribe to the OutputDataReceived event
-                process.OutputDataReceived += (sender, e) =>
-                {
-                    if (!string.IsNullOrEmpty(e.Data) && !token.IsCancellationRequested)
-                    {
-                        try
-                        {
-                            // This event is called whenever there is data available in the standard output
-                            this.BeginInvoke((MethodInvoker) delegate
-                            {
-                                if (e.Data.ToLower().Contains("failed") || e.Data.ToLower().Contains("error") || e.Data.ToLower().Contains("miner terminated"))
-                                {
-                                        richTextBox.SelectionStartThreadSafe(richTextBox.TextLength);
-                                        richTextBox.SelectionLengthThreadSafe(0);
-                                        richTextBox.SelectionColorThreadSafe(Color.Red);
-                                        richTextBox.AppendText(Environment.NewLine + e.Data);
-                                        richTextBox.SelectionColorThreadSafe(richTextBox.ForeColor); // Reset to the default color                                    
+            try
+            {
+                // Start the process
+                process.Start();
 
-                                    // Errors
-                                    if (e.Data.ToLower().Contains("error on gpu") || e.Data.ToLower().Contains("miner terminated"))
-                                    {
-                                        // Restart miner
-                                        richTextBox.AppendTextThreadSafe("Gpu failed/Miner terminated. Restarting...");
-                                        ClickStopButton();
-                                        Thread.Sleep(3500);
-                                        ClickStartButton();
+                // Begin asynchronously reading the output
+                process.BeginOutputReadLine();
 
-                                        // Extract the number from the restarts label text
-                                        int restarts;
-                                        if (int.TryParse(Regex.Match(restartsLabel.Text, @"\d+").Value, out restarts))
-                                        {
-                                            restarts++;
+                // Asynchronously wait for the process to exit
+                await Task.Run(() => process.WaitForExit());
 
-                                            // Update the label text with the new number
-                                            restartsLabel.TextThreadSafe($"Restarts {restarts}");
-                                            restartsLabel.ForeColorThreadSafe(Color.Red);
-                                            restartsLabel.Show();
-                                        }
-                                    }
-                                }
-                                else if (e.Data.ToLower().Contains("accepted"))
-                                {
-                                    richTextBox.SelectionStartThreadSafe(richTextBox.TextLength);
-                                    richTextBox.SelectionLengthThreadSafe(0);
-                                    richTextBox.SelectionColorThreadSafe(Color.ForestGreen);
-                                    richTextBox.AppendText(Environment.NewLine + e.Data);
-                                    richTextBox.SelectionColorThreadSafe(richTextBox.ForeColor); // Reset to the default color  
-                                }
-                                else
-                                {
-                                    richTextBox.BeginInvoke((MethodInvoker)delegate
-                                    {
-                                        richTextBox.SelectionStartThreadSafe(richTextBox.TextLength);
-                                        richTextBox.SelectionLengthThreadSafe(0);
-
-                                        // Check if e.Data starts with a number
-                                        if (e.Data.Length > 0 && char.IsDigit(e.Data[0]))
-                                        {
-                                            richTextBox.SelectionColorThreadSafe(Color.Yellow);
-                                        }
-                                        else
-                                        {
-                                            richTextBox.SelectionColorThreadSafe(richTextBox.ForeColor); // Reset to the default color
-                                        }
-
-                                        richTextBox.AppendText(Environment.NewLine + e.Data);
-                                    });
-                                }
-                                richTextBox.ScrollToCaretThreadSafe();
-                            });
-                        }
-                        catch { }
-                    }
-                };
-
-                try
-                {
-                    // Start the process
-                    process.Start();
-
-                    // Begin asynchronously reading the output
-                    process.BeginOutputReadLine();
-
-                    // Wait for the process to exit
-                    process.WaitForExit();
-
-                    // Close the standard output stream
-                    process.Close();
-                }
-                catch (Exception ex)
-                {
-                    richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
-                }
+                // Close the standard output stream
+                process.Close();
+                process.Dispose();
+            }
+            catch (Exception ex)
+            {
+                richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
             }
         }
 
+        private void UpdateOutputConsole(string output, RichTextBox richTextBox)
+        {
+            if (output.ToLower().Contains("failed") || output.ToLower().Contains("error") || output.ToLower().Contains("miner terminated"))
+            {
+                richTextBox.SelectionStartThreadSafe(richTextBox.TextLengthGetThreadSafe());
+                richTextBox.SelectionLengthThreadSafe(0);
+                richTextBox.SelectionColorThreadSafe(Color.Red);
+                richTextBox.AppendTextThreadSafe(Environment.NewLine + output);
+                richTextBox.SelectionColorThreadSafe(richTextBox.ForeColorGetThreadSafe()); // Reset to the default color                                    
+
+                // Errors
+                if (output.ToLower().Contains("error on gpu"))
+                {
+                    // Restart miner
+                    richTextBox.AppendTextThreadSafe("Gpu failed. Restarting...");
+                    ClickStopButton();
+                    Thread.Sleep(3500);
+                    ClickStartButton();
+
+                    // Extract the number from the restarts label text
+                    int restarts;
+                    if (int.TryParse(Regex.Match(restartsLabel.Text, @"\d+").Value, out restarts))
+                    {
+                        restarts++;
+
+                        // Update the label text with the new number
+                        restartsLabel.TextThreadSafe($"Restarts {restarts}");
+                        restartsLabel.ForeColorThreadSafe(Color.Red);
+                        restartsLabel.Show();
+                    }
+                }
+            }
+            else if (output.ToLower().Contains("accepted"))
+            {
+                richTextBox.SelectionStartThreadSafe(richTextBox.TextLengthGetThreadSafe());
+                richTextBox.SelectionLengthThreadSafe(0);
+                richTextBox.SelectionColorThreadSafe(Color.ForestGreen);
+                richTextBox.AppendTextThreadSafe(Environment.NewLine + output);
+                richTextBox.SelectionColorThreadSafe(richTextBox.ForeColorGetThreadSafe()); // Reset to the default color  
+            }
+            else
+            {
+
+                richTextBox.SelectionStartThreadSafe(richTextBox.TextLengthGetThreadSafe());
+                richTextBox.SelectionLengthThreadSafe(0);
+
+                // Check if output starts with a number
+                if (output.Length > 0 && char.IsDigit(output[0]))
+                {
+                    richTextBox.SelectionColorThreadSafe(Color.Yellow);
+                }
+                else
+                {
+                    richTextBox.SelectionColorThreadSafe(richTextBox.ForeColorGetThreadSafe()); // Reset to the default color
+                }
+
+                richTextBox.AppendTextThreadSafe(Environment.NewLine + output);
+
+            }
+            richTextBox.ScrollToCaretThreadSafe();
+        }
+        
 
         // Helpers
         public bool IsRunningAsAdmin()
-    {
-        WindowsIdentity identity = WindowsIdentity.GetCurrent();
-        WindowsPrincipal principal = new WindowsPrincipal(identity);
-
-        bool isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
-
-        if (!isAdmin)
         {
-            DialogResult result = MessageBox.Show("This miner setting requires admin privliges. Do you want to restart the app as admin?", "Restart App as Admin?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            WindowsIdentity identity = WindowsIdentity.GetCurrent();
+            WindowsPrincipal principal = new WindowsPrincipal(identity);
 
-            // Check the user's response
-            if (result == DialogResult.Yes)
+            bool isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
+
+            if (!isAdmin)
             {
-                string version = "0.0";
-                string updateProjectPath = settingsForm.GetUpdateAppPath();
-                string command = "runas";
+                DialogResult result = MessageBox.Show("This miner setting requires admin privliges. Do you want to restart the app as admin?", "Restart App as Admin?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-                // Create a process start info
-                ProcessStartInfo restartInfo = new ProcessStartInfo(updateProjectPath);
-                restartInfo.Verb = "runas";
-                restartInfo.Arguments = $"-{command} -{version} -{true}";
-
-                // Start the "update" project as a separate process
-                try
+                // Check the user's response
+                if (result == DialogResult.Yes)
                 {
-                    Process.Start(restartInfo);
+                    string version = "0.0";
+                    string updateProjectPath = settingsForm.GetUpdateAppPath();
+                    string command = "runas";
 
-                    CloseApp();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error restarting app as admin " + ex.Message);
-                }
-            }
-        }
+                    // Create a process start info
+                    ProcessStartInfo restartInfo = new ProcessStartInfo(updateProjectPath);
+                    restartInfo.Verb = "runas";
+                    restartInfo.Arguments = $"-{command} -{version} -{true}";
 
-        return isAdmin;
-    }
-        public async Task CancelAllTasksAsync()
-        {
-            var tasks = runningTasks;
-
-            if (tasks == null || tasks.Count == 0) return;
-
-            // Create a CancellationTokenSource to cancel tasks
-            ctsRunningMiners = new CancellationTokenSource();
-
-            // Cancel each task in the list
-            foreach (var task in tasks)
-            {
-                if (task.Status == TaskStatus.Running || task.Status == TaskStatus.WaitingForActivation)
-                {
-                    // Try to cancel the task
+                    // Start the "update" project as a separate process
                     try
                     {
-                        ctsRunningMiners.Cancel();
-                        // Await the task to allow it to complete (including cancellation)
-                        await task;
+                        Process.Start(restartInfo);
+
+                        CloseApp();
                     }
-                    catch (AggregateException)
+                    catch (Exception ex)
                     {
-                        // Handle any exceptions if needed
+                        MessageBox.Show("Error restarting app as admin " + ex.Message);
                     }
                 }
             }
+
+            return isAdmin;
+        }
+        internal Image GetBgImage(string bgImage)
+        {
+            Image image = null;
+
+            if (bgImage == "Kas - Globe")
+                image = Properties.Resources.kas_world;
+            else if (bgImage == "Kaspa")
+                image = Properties.Resources.kaspa;
+            else if (bgImage == "Ergo")
+                image = Properties.Resources.ergo;
+            else if (bgImage == "Bitcoin")
+                image = Properties.Resources.bitcoin;
+            else if (bgImage == "Zilliqa")
+                image = Properties.Resources.zilliqa;
+            else
+                image = Properties.Resources.bitcoin;
+
+            return image;
         }
 
 
+        #region Notify Icon
         // Notify Icon
         private void CreateNotifyIcon()
         {
@@ -607,36 +676,128 @@ namespace Gui_Miner
         {
             settingsForm.CheckForUpdates();
         }
+        #endregion
 
 
+        #region Kill Miners
         // Kill Active Miners
-        private void KillAllActiveMiners()
+        private async void KillAllRunningMiners(bool shortcutOnly = false)
         {
-            var minerConfigs = new List<MinerConfig>(settingsForm.Settings.MinerSettings);
-            foreach (MinerConfig minerConfig in minerConfigs)
+            var tasks = runningTasks;
+            if (tasks != null && tasks.Count > 0)
             {
-                if (minerConfig.Active)
+                // Create a CancellationTokenSource to cancel tasks
+                ctsRunningMiners = new CancellationTokenSource();
+
+                // Kill all configs or only Use Shortcut Keys = true
+                foreach (var taskDictItem in tasks)
                 {
-                    if (!String.IsNullOrWhiteSpace(minerConfig.Miner_File_Path))
+                    Task task = taskDictItem.Value;
+                    int taskId = taskDictItem.Key;
+
+                    var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.Equals(taskId));
+                    if (matchingConfig == null) return;
+
+                    if (task.Status == TaskStatus.Running || task.Status == TaskStatus.WaitingForActivation
+                        && !shortcutOnly || (shortcutOnly && matchingConfig.Use_Shortcut_Keys))
                     {
-                        KillProcesses(Path.GetFileNameWithoutExtension(minerConfig.Miner_File_Path));
+                        // Try to cancel the task
+                        try
+                        {
+                            ctsRunningMiners.Cancel();
+
+                            // Use Task.WhenAny to wait for either the task or a delay
+                            var completedTask = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(3)));
+
+                            // If the task completed, await it to observe any exceptions
+                            if (completedTask == task)
+                            {
+                                await task;
+                            }
+                            else
+                            {
+                                // The task did not complete within 3 seconds, so kill the process
+                                KillProcessByName(Path.GetFileNameWithoutExtension(matchingConfig.Miner_File_Path));
+                            }
+
+                            // Remove the tab page
+                            RemoveTabPage(matchingConfig.Id.ToString());
+                        }
+                        catch (AggregateException)
+                        {
+                            // Handle any exceptions if needed
+                        }
                     }
-                    else
+
+                }
+            }
+            // Kill all known miners
+            if (!shortcutOnly)
+            {
+                var minerConfigs = new List<MinerConfig>(settingsForm.Settings.MinerSettings);
+                foreach (MinerConfig minerConfig in minerConfigs)
+                {
+                    if (!string.IsNullOrWhiteSpace(minerConfig.Miner_File_Path))
                     {
-                        KillProcesses("miner"); 
+                        KillProcessByName(Path.GetFileNameWithoutExtension(minerConfig.Miner_File_Path));
                     }
                 }
             }
         }
-        static void KillProcesses(string processName)
+        private void KillMinerById(int id, bool removeTabPage = false)
+        {
+            if (runningTasks.ContainsKey(id))
+            {
+                var task = runningTasks[id];
+
+                if (removeTabPage)
+                {
+                    // Remove the tab page
+                    RemoveTabPage(id.ToString());
+                }
+
+                // If no more miners running change the play/stop button back to play
+                if (runningTasks.Count == 0)
+                    ClickStopButton();                
+
+                try
+                {
+                    // The task did not complete within 3 seconds, so kill the process
+                    var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.Equals(id));
+                    if (matchingConfig != null)
+                        KillProcessByName(Path.GetFileNameWithoutExtension(matchingConfig.Miner_File_Path));
+
+                    // Remove task
+                    runningTasks.Remove(id);
+                }
+                catch (AggregateException)
+                {
+                    // Handle any exceptions if needed
+                }
+            }
+        }
+        private void StartMinerById(int id, ref RichTextBox richTextBox)
+        {
+            // If running task already exists, kill it
+            KillMinerById(id);
+
+            MinerConfig minerConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.Equals(id));
+            if (minerConfig == null) return;
+
+            // Create a CancellationTokenSource to cancel tasks
+            ctsRunningMiners = new CancellationTokenSource();
+
+            StartMiner(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, richTextBox, ctsRunningMiners.Token);            
+        }
+        private void KillProcessByName(string name)
         {
             Process[] processes = Process.GetProcesses();
-
             foreach (Process process in processes)
             {
                 try
                 {
-                    if (process.ProcessName == Path.GetFileNameWithoutExtension(processName))
+                    if (process.ProcessName == Path.GetFileNameWithoutExtension(name)
+                        || process.ProcessName == "miner")
                     {
                         // Kill the process
                         process.Kill();
@@ -646,15 +807,8 @@ namespace Gui_Miner
                         RunPowerShellCommand(command);
                     }
                 }
-                catch
-                {
-                    //MessageBox.Show($"Error killing {processName} process: {ex.Message}");
-                    Thread.Sleep(1000);
-                }
+                catch { }
             }
-
-            Thread.Sleep(1000);
-            processes = Process.GetProcesses();
         }
         static bool RunPowerShellCommand(string command)
         {
@@ -677,8 +831,21 @@ namespace Gui_Miner
                 return powershell.ExitCode == 0 && !output.Contains("Error") && !output.Contains("error");
             }
         }
+        private void RemoveTabPage(string tabName)
+        {
+            TabControl foundTabControl = outputPanel.Controls.OfType<TabControl>().FirstOrDefault();
 
+            if (foundTabControl != null)
+            {
+                TabPage tabPageToRemove = foundTabControl.TabPages.OfType<TabPage>().FirstOrDefault(tabPage => tabPage.Name == tabName);
 
+                if (tabPageToRemove != null)
+                {
+                    foundTabControl.TabPages.Remove(tabPageToRemove);
+                }
+            }
+        }
+        #endregion
 
 
     }

@@ -63,7 +63,7 @@ namespace Gui_Miner
         }
         #endregion
 
-
+        #region Load/Close
         // Start/Stop Load/Save
         private void SettingsForm_Load(object sender, EventArgs e)
         {
@@ -176,6 +176,7 @@ namespace Gui_Miner
 
             successLabel.Text = "Version " + GetCurrentVersion();            
         }
+        #endregion
 
 
         // Update listboxes
@@ -690,6 +691,12 @@ namespace Gui_Miner
                                     UpdateMinerSettingsListBox(minerSettingsListBox.SelectedIndex);
                                 }
                             };
+                        }
+
+                        if (property.Name == "Extra_Args")
+                        {
+                            textbox.Multiline = true;
+                            textbox.Height = 100;
                         }
 
                         inputControl = textbox;
@@ -1478,9 +1485,13 @@ namespace Gui_Miner
 
         #region Wallets
         // Manage Wallets
+        int lastWalletIndex = -1;
         private void walletsListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (walletsListBox.SelectedIndex == -1) return;
+
+            // Save incase user fills out new wallet but never presses enter
+            if (lastWalletIndex == 0) SaveSettings();
 
             // Adding new item
             if (walletsListBox.SelectedIndex == 0)
@@ -1498,6 +1509,8 @@ namespace Gui_Miner
             }
 
             DisplayWalletSettings();
+
+            lastWalletIndex = walletsListBox.SelectedIndex;
         }
         private void DisplayWalletSettings()
         {
@@ -1589,9 +1602,13 @@ namespace Gui_Miner
 
         #region Pools
         // Manage Pools
+        int lastPoolIndex = -1;
         private void poolsListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (poolsListBox.SelectedIndex == -1) return;
+
+            // Save incase user fills out new pool but never presses enter
+            if (lastPoolIndex == 0) SaveSettings();
 
             // Adding new item
             if (poolsListBox.SelectedIndex == 0)
@@ -1609,6 +1626,8 @@ namespace Gui_Miner
             }
 
             DisplayPoolSettings();
+
+            lastPoolIndex = poolsListBox.SelectedIndex;
         }
         private void DisplayPoolSettings()
         {
@@ -1875,7 +1894,6 @@ namespace Gui_Miner
         }
         Random random = new Random();
         private string _batFileArguments;
-        private string _batFilePath;
 
         public List<Gpu> Gpus;
         public int Id { get; set; }
@@ -1884,27 +1902,15 @@ namespace Gui_Miner
         public string List_Devices_Command;
         public List<string> Algos;
         public string Name { get; set; }
-        public string Miner_File_Path
-        {
-            get
-            {
-                (string filePath, string arguments) = GetBatFilePathAndArguments();
-                _batFilePath = filePath;
-                return _batFilePath;
-            }
-            set
-            {
-                _batFilePath = value;
-            }
-        }
+        public string Miner_File_Path { get; set; }
         public bool Active { get; set; }
         public bool Run_As_Admin { get; set; }
+        public bool Use_Shortcut_Keys { get; set; }
         public string Bat_File_Arguments
         {
             get
             {
-                (string filePath, string arguments) = GetBatFilePathAndArguments();
-                _batFileArguments = arguments;
+                _batFileArguments = GetBatFileArguments();
                 return _batFileArguments;
             }
             set
@@ -1943,6 +1949,7 @@ namespace Gui_Miner
         public virtual List<int> Mem_Micro_Volts { get; set; }
         public virtual List<float> Intensity { get; set; }
         public virtual List<float> Dual_Intensity { get; set; }
+        public virtual string Extra_Args { get; set; }
 
 
         public MinerConfig()
@@ -1955,6 +1962,7 @@ namespace Gui_Miner
             Name = "New Miner Config";
             Miner_File_Path = Directory.GetCurrentDirectory() + "\\miner.exe";
             Active = true;
+            Use_Shortcut_Keys = true;
             Run_As_Admin = false;
             Bat_File_Arguments = "";
             Current_Miner_Config_Type = MinerConfigType.Unknown;
@@ -1963,6 +1971,7 @@ namespace Gui_Miner
             Port1 = -1; Port2 = -1; Port3 = -1;
             SSL1 = false; SSL2 = false; SSL3 = false;
             Api = -1;
+            Extra_Args = "";
 
             ClearGpuSettings();
         }
@@ -2070,17 +2079,13 @@ namespace Gui_Miner
             }
         }
 
-        private (string filePath, string args) GetBatFilePathAndArguments()
-        {
-            string filePath = "";
-            string defaultPath = Directory.GetCurrentDirectory() + "\\miner.exe";
-
-            // Check if file path has been supplied, if not extract from .bat file if .exe is preesnt or set to default
-            if (!string.IsNullOrWhiteSpace(_batFilePath))
-                filePath = _batFilePath;
-
+        private string GetBatFileArguments()
+        {            
+            // Remove filepath if there is one
             if (_batFileArguments.IndexOf(".exe") >= 0)
             {
+                string filePath = "";
+
                 // Get miner path
                 if (_batFileArguments.StartsWith("\""))
                 {
@@ -2094,10 +2099,7 @@ namespace Gui_Miner
                     filePath = _batFileArguments.Substring(0, _batFileArguments.IndexOf(".exe") + 4);
                     _batFileArguments = _batFileArguments.Replace($"{filePath}", string.Empty).Trim();
                 }
-
-                if (!File.Exists(filePath)) filePath = defaultPath;
             }
-
 
             // Remove any trailing new lines
             string pattern = @"[\r\n]+$";
@@ -2111,7 +2113,7 @@ namespace Gui_Miner
                 _batFileArguments = _batFileArguments.Substring(0, _batFileArguments.Length - 9) + lastNineChars;
             }
 
-            return (filePath, _batFileArguments.Trim());
+            return _batFileArguments.Trim();
         }
 
 
@@ -2174,9 +2176,6 @@ namespace Gui_Miner
         private string GenerateGminerBatFile()
         {
             string args = "";
-
-            // Add "" around file path
-            args += $"\"{Miner_File_Path}\" ";
 
             // 1st Algo
             if (!string.IsNullOrWhiteSpace(Algo1) && Algo1 != "none")
@@ -2264,14 +2263,14 @@ namespace Gui_Miner
             if (Dual_Intensity.Any(item => item >= 0))
                 args += $"--dual_intensity {ConvertListToStr(Dual_Intensity)} ";
 
+            if(!string.IsNullOrWhiteSpace(Extra_Args))
+                args += Extra_Args.Trim();
+
             return args.Trim();
         }
         private string GenerateTrmBatFile()
         {
             string args = "";
-
-            // Add "" around file path
-            args += $"\"{Miner_File_Path}\" ";
 
             if (!string.IsNullOrWhiteSpace(Algo1) && Algo1 != "none")
             {
@@ -2359,6 +2358,9 @@ namespace Gui_Miner
             if (Dual_Intensity.Any(item => item >= 0))
                 args += $"--dual_intensity {ConvertListToStr(Dual_Intensity)} ";
 
+            if (!string.IsNullOrWhiteSpace(Extra_Args))
+                args += Extra_Args.Trim();
+
             return args.Trim();
         }
         private string GenerateUnknownBatFileArgs()
@@ -2380,13 +2382,6 @@ namespace Gui_Miner
                 if (propertyName.Equals("Run_As_Admin")) continue;
                 if (propertyValue.ToString().Trim() == "-1") continue;
 
-
-                // Add "" around file path
-                if (propertyName.Equals("Miner_File_Path"))
-                {
-                    args += $"\"{propertyValue}\" ";
-                }
-
                 // List<int>
                 if (propertyValue != null && propertyValue.GetType().IsGenericType &&
                     propertyValue.GetType().GetGenericTypeDefinition() == typeof(List<>) &&
@@ -2404,14 +2399,29 @@ namespace Gui_Miner
                 }
             }
 
+            if (!string.IsNullOrWhiteSpace(Extra_Args))
+                args += Extra_Args.Trim();
+
             return args.Trim();
         }
         #endregion
 
         public string GetPool1DomainName()
         {
-            if (string.IsNullOrWhiteSpace(Pool1)) return "";
-            var parts = Pool1.Trim().Split('.');
+            return ExtractUrl(Pool1);
+        }
+        public string GetPool2DomainName()
+        {
+            return ExtractUrl(Pool2);
+        }
+        public string GetPool3DomainName()
+        {
+            return ExtractUrl(Pool3);
+        }
+        private string ExtractUrl(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return "";
+            var parts = text.Trim().Split('.');
 
             // mining url
             if (parts.Length == 3)
@@ -2424,7 +2434,7 @@ namespace Gui_Miner
                 return parts[0] + "." + parts[1];
             }
 
-            return Pool1.Trim();
+            return text.Trim();
         }
     }
 

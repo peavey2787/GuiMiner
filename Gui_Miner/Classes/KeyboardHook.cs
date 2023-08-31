@@ -118,7 +118,7 @@ namespace Gui_Miner
                         if(WereShortCutKeysPressed(StopKeys))
                         {
                             // Stop mining
-                            MainForm.ClickStopButton();
+                            MainForm.ClickStopButton(true);
                         }
                     }
                     if (StartKeys != null && lastKeysPressed.Count >= StartKeys.Count())
@@ -126,7 +126,7 @@ namespace Gui_Miner
                         if (WereShortCutKeysPressed(StartKeys))
                         {
                             // Start mining
-                            MainForm.ClickStartButton();
+                            MainForm.ClickStartButton(true);
                         }
                     }
                 }

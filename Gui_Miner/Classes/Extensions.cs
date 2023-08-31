@@ -24,7 +24,7 @@ namespace Gui_Miner.Classes
                 richTextBox.AppendText(text);
             }
         }
-        public static void ForeColorThreadSafe(this RichTextBox richTextBox, Color color)
+        public static void ForeColorSetThreadSafe(this RichTextBox richTextBox, Color color)
         {
             if (richTextBox.InvokeRequired)
             {
@@ -34,6 +34,21 @@ namespace Gui_Miner.Classes
             {
                 richTextBox.ForeColor = color;
             }
+        }
+        public static Color ForeColorGetThreadSafe(this RichTextBox richTextBox)
+        {
+            Color foreColor = new Color();
+
+            if (richTextBox.InvokeRequired)
+            {
+                richTextBox.Invoke(new Action(() => foreColor = richTextBox.ForeColor));
+            }
+            else
+            {
+                foreColor = richTextBox.ForeColor;
+            }
+
+            return foreColor;
         }
         public static void SelectionStartThreadSafe(this RichTextBox richTextBox, int start)
         {
@@ -57,6 +72,24 @@ namespace Gui_Miner.Classes
             else
             {
                 richTextBox.SelectionLength = length;
+            }
+        }
+        public static int TextLengthGetThreadSafe(this RichTextBox richTextBox)
+        {
+            if (richTextBox == null)
+            {
+                throw new ArgumentNullException(nameof(richTextBox));
+            }
+
+            if (richTextBox.InvokeRequired)
+            {
+                // If called from a different thread, invoke the method on the UI thread
+                return (int)richTextBox.Invoke(new Func<int>(() => richTextBox.TextLength));
+            }
+            else
+            {
+                // If called from the UI thread, access the TextLength property directly
+                return richTextBox.TextLength;
             }
         }
 
