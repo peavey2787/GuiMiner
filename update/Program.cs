@@ -31,7 +31,7 @@ class Program
         RunExeAsAdmin(GetExeFilePath(), runAsAdmin);
         CloseGuiMinerUpdateApp(0);
     }
-    static void Execute(string command, string version)
+    static async void Execute(string command, string version)
     {
         Console.WriteLine($"Incoming command: {command} {version}");
         string url = "";
@@ -45,7 +45,7 @@ class Program
                 if (AreUpdatesAvailable(version, out url))
                 {
                     Console.WriteLine("Update found! Updating...");
-                    Update(url);
+                    await Update(url);
                 }
                 else
                 {
@@ -80,7 +80,7 @@ class Program
                 break;
         }
     }
-    static bool Update(string url)
+    static async Task<bool> Update(string url)
     {
         string zipPath = "";
         string fileName = GetExeFilePath();
@@ -90,7 +90,8 @@ class Program
         else
             currentFolder = "";
 
-        if (DownloadedUpdateFile(url, zipPath))
+        Console.WriteLine("Update file downloading...");
+        if (await DownloadedUpdateFile(url, zipPath))
             Console.WriteLine("Update file downloaded.");
         else
         {
@@ -100,18 +101,38 @@ class Program
 
         // Make sure the app isn't open, if so close it
         KillProcess(_appName);
+        Thread.Sleep(1500);
 
         // Unzip the update
+        string outputPath = Path.Combine(currentFolder, fileName);
         using (ZipArchive archive = ZipFile.OpenRead(zipPath))
         {
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
-                if (entry.FullName.EndsWith(".exe"))
+                bool extracted = false;
+                int retries = 5;
+                while (!extracted || retries > 0)
                 {
-                    string outputPath = Path.Combine(currentFolder, fileName);
-                    entry.ExtractToFile(outputPath, true);
-                    break;
+                    try
+                    {
+                        entry.ExtractToFile(outputPath, true);
+                        extracted = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.Message.Contains("The process cannot access the file") && ex.Message.Contains("being used by another process"))
+                        {
+                            try { File.Delete(outputPath); }
+                            catch
+                            {
+                                Console.WriteLine("Unable to delete file as it is being used by another process");
+                            }
+                        }
+                        Thread.Sleep(1000);
+                    }
                 }
+                if (!extracted)
+                    Console.WriteLine("Unable to extract all files!");
             }
         }
         Console.WriteLine("Unzipping update files...");
@@ -124,7 +145,7 @@ class Program
 
         return true;
     }
-    static bool DownloadedUpdateFile(string url, string zipPath)
+    static async Task<bool> DownloadedUpdateFile(string url, string zipPath)
     {
         int retries = 3;
         using (var httpClient = new HttpClient())
@@ -139,7 +160,7 @@ class Program
                     {
                         using (var fileStream = File.Create(zipPath))
                         {
-                            response.Content.CopyToAsync(fileStream).RunSynchronously();
+                            await response.Content.CopyToAsync(fileStream);
                         }
 
                         return true;
@@ -224,12 +245,36 @@ class Program
             try
             {
                 process.Kill();
+                // Use PowerShell to find and kill the associated cmd window
+                string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {process.Id} }} | ForEach-Object {{ $_.Terminate() }}";
+                RunPowerShellCommand(command);
                 Console.WriteLine($"Closed {processName}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to kill {processName}: {ex.Message}");
             }
+        }
+    }
+    static bool RunPowerShellCommand(string command)
+    {
+        ProcessStartInfo psi = new ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            Arguments = $"-ExecutionPolicy ByPass -Command {command}",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+        };
+
+        using (Process powershell = new Process())
+        {
+            powershell.StartInfo = psi;
+            powershell.Start();
+            string output = powershell.StandardOutput.ReadToEnd();
+            powershell.WaitForExit();
+
+            return powershell.ExitCode == 0 && !output.Contains("Error") && !output.Contains("error");
         }
     }
     static void CloseGuiMinerUpdateApp(int exitCode)

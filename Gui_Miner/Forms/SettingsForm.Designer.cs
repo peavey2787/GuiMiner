@@ -51,6 +51,7 @@
             this.manageMinerConfigsButton = new System.Windows.Forms.Button();
             this.generalButton = new System.Windows.Forms.Button();
             this.generalPanel = new System.Windows.Forms.Panel();
+            this.checkUpdatesButton = new System.Windows.Forms.Button();
             this.bgImagePanel = new System.Windows.Forms.Panel();
             this.label15 = new System.Windows.Forms.Label();
             this.bgComboBox = new System.Windows.Forms.ComboBox();
@@ -87,7 +88,6 @@
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.tipsLinkLabel = new System.Windows.Forms.LinkLabel();
             this.copiedLabel = new System.Windows.Forms.Label();
-            this.checkUpdatesButton = new System.Windows.Forms.Button();
             this.manageConfigPanel.SuspendLayout();
             this.topPanel.SuspendLayout();
             this.generalPanel.SuspendLayout();
@@ -233,7 +233,7 @@
             this.manageConfigPanel.Controls.Add(this.minerSettingsPanel);
             this.manageConfigPanel.Location = new System.Drawing.Point(846, 160);
             this.manageConfigPanel.Name = "manageConfigPanel";
-            this.manageConfigPanel.Size = new System.Drawing.Size(720, 620);
+            this.manageConfigPanel.Size = new System.Drawing.Size(720, 351);
             this.manageConfigPanel.TabIndex = 14;
             // 
             // importBatButton
@@ -352,6 +352,18 @@
             this.generalPanel.Size = new System.Drawing.Size(720, 665);
             this.generalPanel.TabIndex = 16;
             // 
+            // checkUpdatesButton
+            // 
+            this.checkUpdatesButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.checkUpdatesButton.ForeColor = System.Drawing.Color.White;
+            this.checkUpdatesButton.Location = new System.Drawing.Point(11, 252);
+            this.checkUpdatesButton.Name = "checkUpdatesButton";
+            this.checkUpdatesButton.Size = new System.Drawing.Size(106, 21);
+            this.checkUpdatesButton.TabIndex = 10;
+            this.checkUpdatesButton.Text = "Check for Updates";
+            this.checkUpdatesButton.UseVisualStyleBackColor = false;
+            this.checkUpdatesButton.Click += new System.EventHandler(this.checkUpdatesButton_Click);
+            // 
             // bgImagePanel
             // 
             this.bgImagePanel.Location = new System.Drawing.Point(266, 100);
@@ -403,6 +415,7 @@
             this.stopShortKeysTextBox.Size = new System.Drawing.Size(169, 20);
             this.stopShortKeysTextBox.TabIndex = 3;
             this.stopShortKeysTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.stopShortKeysTextBox.Enter += new System.EventHandler(this.stopShortKeysTextBox_Enter);
             this.stopShortKeysTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.stopShortKeysTextBox_KeyDown);
             // 
             // label14
@@ -423,6 +436,7 @@
             this.startShortKeysTextBox.Size = new System.Drawing.Size(169, 20);
             this.startShortKeysTextBox.TabIndex = 5;
             this.startShortKeysTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.startShortKeysTextBox.Enter += new System.EventHandler(this.startShortKeysTextBox_Enter);
             this.startShortKeysTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.startShortKeysTextBox_KeyDown);
             // 
             // successLabel
@@ -717,7 +731,7 @@
             this.tipsLinkLabel.AutoSize = true;
             this.tipsLinkLabel.Cursor = System.Windows.Forms.Cursors.Hand;
             this.tipsLinkLabel.LinkColor = System.Drawing.Color.White;
-            this.tipsLinkLabel.Location = new System.Drawing.Point(27, 1308);
+            this.tipsLinkLabel.Location = new System.Drawing.Point(27, 1039);
             this.tipsLinkLabel.Name = "tipsLinkLabel";
             this.tipsLinkLabel.Size = new System.Drawing.Size(453, 13);
             this.tipsLinkLabel.TabIndex = 20;
@@ -731,31 +745,19 @@
             // 
             this.copiedLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.copiedLabel.AutoSize = true;
-            this.copiedLabel.Location = new System.Drawing.Point(515, 1308);
+            this.copiedLabel.Location = new System.Drawing.Point(515, 1039);
             this.copiedLabel.Name = "copiedLabel";
             this.copiedLabel.Size = new System.Drawing.Size(126, 13);
             this.copiedLabel.TabIndex = 21;
             this.copiedLabel.Text = "Address Copied, Thanks!";
             this.copiedLabel.Visible = false;
             // 
-            // checkUpdatesButton
-            // 
-            this.checkUpdatesButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
-            this.checkUpdatesButton.ForeColor = System.Drawing.Color.White;
-            this.checkUpdatesButton.Location = new System.Drawing.Point(11, 252);
-            this.checkUpdatesButton.Name = "checkUpdatesButton";
-            this.checkUpdatesButton.Size = new System.Drawing.Size(106, 21);
-            this.checkUpdatesButton.TabIndex = 10;
-            this.checkUpdatesButton.Text = "Check for Updates";
-            this.checkUpdatesButton.UseVisualStyleBackColor = false;
-            this.checkUpdatesButton.Click += new System.EventHandler(this.checkUpdatesButton_Click);
-            // 
             // SettingsForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
-            this.ClientSize = new System.Drawing.Size(1712, 1330);
+            this.ClientSize = new System.Drawing.Size(1712, 1061);
             this.Controls.Add(this.copiedLabel);
             this.Controls.Add(this.tipsLinkLabel);
             this.Controls.Add(this.manageConfigPanel);

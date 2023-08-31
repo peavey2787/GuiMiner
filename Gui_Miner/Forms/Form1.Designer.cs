@@ -69,9 +69,9 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.outputPanel.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("outputPanel.BackgroundImage")));
             this.outputPanel.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.outputPanel.Location = new System.Drawing.Point(-6, 56);
+            this.outputPanel.Location = new System.Drawing.Point(2, 56);
             this.outputPanel.Name = "outputPanel";
-            this.outputPanel.Size = new System.Drawing.Size(429, 420);
+            this.outputPanel.Size = new System.Drawing.Size(413, 415);
             this.outputPanel.TabIndex = 4;
             // 
             // restartsLabel

@@ -280,23 +280,27 @@ namespace Gui_Miner
                     RichTextBox tabPageRichTextBox = new RichTextBox();
 
                     // Add stop button
-                    Button stopButton = new Button();
-                    stopButton.Location = new Point(outputPanel.Width - stopButton.Width - 40, padding);
-                    stopButton.Text = "Stop";
+                    PictureBox stopButton = new PictureBox();
+                    stopButton.Location = new Point(outputPanel.Width - stopButton.Width, padding);
+                    stopButton.Tag = "Stop";
+                    stopButton.BackgroundImage = Properties.Resources.stop_button;
+                    stopButton.BackgroundImageLayout = ImageLayout.Zoom;
                     stopButton.Click += (sender, e) =>
                     {
-                        Button button = (Button)sender;
-                        if (button.Text == "Stop")
+                        PictureBox button = (PictureBox)sender;
+                        if ((string)button.Tag == "Stop")
                         {
                             KillMinerById(minerConfig.Id);
                             tabPageRichTextBox.Text = string.Empty;
 
-                            button.Text = "Start";
+                            button.Tag = "Start";
+                            stopButton.BackgroundImage = Properties.Resources.play_button;
                         }
-                        else if(button.Text == "Start")
+                        else if((string)button.Tag == "Start")
                         {
                             StartMinerById(minerConfig.Id, ref tabPageRichTextBox);
-                            button.Text = "Stop";
+                            button.Tag = "Stop";
+                            stopButton.BackgroundImage = Properties.Resources.stop_button;
                         }
                     };
                     topPanel.Controls.Add(stopButton);
@@ -324,7 +328,7 @@ namespace Gui_Miner
                     LinkLabel poolLinkLabel1 = new LinkLabel();
                     string poolLinkText = poolLink1;
                     var poolLinkTextParts = poolLink1.Split('.');
-                    if(poolLinkTextParts.Length > 0)
+                    if(poolLinkTextParts.Length > 0 && !string.IsNullOrWhiteSpace(poolLinkTextParts[0]))
                         poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
                     poolLinkLabel1.Text = "Pool Link1: " + poolLinkText;
                     poolLinkLabel1.Dock = DockStyle.Top;
@@ -345,7 +349,7 @@ namespace Gui_Miner
                     if (poolLinkTextParts.Length > 0)
                         poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
                     LinkLabel poolLinkLabel2 = new LinkLabel();
-                    poolLinkLabel2.Text = "Pool Link2: " + new Uri(poolLink2).Host;
+                    poolLinkLabel2.Text = "Pool Link2: " + poolLinkText;
                     poolLinkLabel2.Dock = DockStyle.Top;
                     poolLinkLabel2.LinkClicked += (sender, e) =>
                     {
@@ -364,7 +368,7 @@ namespace Gui_Miner
                     if (poolLinkTextParts.Length > 0)
                         poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
                     LinkLabel poolLinkLabel3 = new LinkLabel();
-                    poolLinkLabel3.Text = "Pool Link3: " + new Uri(poolLink3).Host;
+                    poolLinkLabel3.Text = "Pool Link3: " + poolLinkText;
                     poolLinkLabel3.Dock = DockStyle.Top;
                     poolLinkLabel3.LinkClicked += (sender, e) =>
                     {
@@ -388,11 +392,10 @@ namespace Gui_Miner
                     tabPage.Controls.Add(topPanel);
                     // End of Top Panel
 
-                    // Console output
-                    
+                    // Console output                    
                     tabPageRichTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
                     tabPageRichTextBox.Location = new Point(0, topPanel.Height);
-                    tabPageRichTextBox.Size = new Size(outputPanel.Width, outputPanel.Height - topPanel.Height);
+                    tabPageRichTextBox.Size = new Size(tabPage.Width - padding, tabPage.Height - topPanel.Height - padding);
                     tabPageRichTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
                     tabPageRichTextBox.ReadOnly = true;
                     tabPageRichTextBox.ForeColor = Color.White;
@@ -427,7 +430,7 @@ namespace Gui_Miner
 
             return url;
         }
-        private async void StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox, CancellationToken token)
+        private void StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox, CancellationToken token)
         {
             if (!File.Exists(filePath))
             {
@@ -466,7 +469,7 @@ namespace Gui_Miner
             {
                 if (!string.IsNullOrEmpty(e.Data) && !token.IsCancellationRequested)
                 {
-                    UpdateOutputConsole(e.Data, richTextBox);
+                     UpdateOutputConsole(e.Data, richTextBox);
                 };
             };
 
@@ -479,7 +482,7 @@ namespace Gui_Miner
                 process.BeginOutputReadLine();
 
                 // Asynchronously wait for the process to exit
-                await Task.Run(() => process.WaitForExit());
+                process.WaitForExit();
 
                 // Close the standard output stream
                 process.Close();
@@ -732,7 +735,7 @@ namespace Gui_Miner
                 }
             }
             // Kill all known miners
-            if (!shortcutOnly)
+            if (!shortcutOnly && settingsForm.Settings.MinerSettings != null)
             {
                 var minerConfigs = new List<MinerConfig>(settingsForm.Settings.MinerSettings);
                 foreach (MinerConfig minerConfig in minerConfigs)
