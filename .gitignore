@@ -1,13 +1,27 @@
 # Visual Studio
 .vscode/
 .vs/
+bin/
 
 # User-specific files
+*.wsuo
+*.cache
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
 *.pdb
+
+#  User-specific folders
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
 
 # Zip files
 *.zip
