@@ -24,6 +24,17 @@ namespace Gui_Miner.Classes
                 richTextBox.AppendText(text);
             }
         }
+        public static void SetTextThreadSafe(this RichTextBox richTextBox, string text)
+        {
+            if (richTextBox.InvokeRequired)
+            {
+                richTextBox.Invoke(new Action(() => richTextBox.Text = text));
+            }
+            else
+            {
+                richTextBox.Text = text;
+            }
+        }
         public static void ForeColorSetThreadSafe(this RichTextBox richTextBox, Color color)
         {
             if (richTextBox.InvokeRequired)
@@ -142,7 +153,35 @@ namespace Gui_Miner.Classes
                 label.ForeColor = color;
             }
         }
+        public static void ShowThreadSafe(this Label label)
+        {
+            if (label == null)
+                throw new ArgumentNullException(nameof(label));
 
+            if (label.InvokeRequired)
+            {
+                label.Invoke(new Action(() => label.Show()));
+            }
+            else
+            {
+                label.Show();
+            }
+        }
+
+        public static void HideThreadSafe(this Label label)
+        {
+            if (label == null)
+                throw new ArgumentNullException(nameof(label));
+
+            if (label.InvokeRequired)
+            {
+                label.Invoke(new Action(() => label.Hide()));
+            }
+            else
+            {
+                label.Hide();
+            }
+        }
         public static void ShowTextForDuration(this Label label, string text, int durationMillisecs)
         {
             if (label.InvokeRequired)
