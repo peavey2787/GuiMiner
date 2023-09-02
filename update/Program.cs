@@ -175,7 +175,7 @@ class Program
                         return false;
                     }
 
-                    Task.Delay(500);
+                    await Task.Delay(500);
                 }
             }
         }

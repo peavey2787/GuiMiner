@@ -1695,6 +1695,9 @@ namespace Gui_Miner
             poolPortTextBox.Text = selectedPool.Port.ToString();
             poolLinkTextBox.Text = selectedPool.Link;
             poolSsslCheckBox.Checked = selectedPool.SSL;
+
+            // Reset ping
+            pingLabel.Text = "";
         }
         private Pool GetPoolFromUI()
         {
@@ -1762,7 +1765,7 @@ namespace Gui_Miner
             }
             unsavedPoolChanges = true;
         }
-        private void textBox1_KeyDown(object sender, KeyEventArgs e)
+        private void poolPortTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
@@ -1803,6 +1806,98 @@ namespace Gui_Miner
                     DisplayMinerSettings();
                 }
             }
+        }
+
+        // Ping
+        private async void pingPictureBox_Click(object sender, EventArgs e)
+        {
+
+            // Make sure user supplied a url+port
+            if (string.IsNullOrWhiteSpace(poolAddressTextBox.Text))
+            {
+                pingLabel.Text = "Please enter a valid pool address";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(poolPortTextBox.Text))
+            {
+                pingLabel.Text = "Please enter a valid port";
+                return;
+            }
+
+            // Change bg image
+            pingPictureBox.BackgroundImage = Properties.Resources.pinging;
+            pingPictureBox.Enabled = false;
+            pingLabel.Text = "pinging...";
+
+            // Ping pool
+            string url = $"{poolAddressTextBox.Text}:{poolPortTextBox.Text}";
+            if (poolSsslCheckBox.Checked)
+                url = $"-tls {url}";            
+            pingLabel.Text = await PingPool(url) + " ms";
+
+            // Change bg image back
+            pingPictureBox.BackgroundImage = Properties.Resources.ping;
+            pingPictureBox.Enabled = true;
+
+        }
+        private async Task<int> PingPool(string url)
+        {
+            int latency = -1;
+            Process process = new Process();
+            string stratumPingPath = Directory.GetCurrentDirectory() + "\\stratum-ping.exe";
+
+            // Set the process start information
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = stratumPingPath,
+                Arguments = url,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            process.StartInfo = startInfo;
+
+            List<string> outputLines = new List<string>();
+
+            // Subscribe to the OutputDataReceived event
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    outputLines.Add(e.Data);
+                };
+            };
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    // Start the process
+                    process.Start();
+
+                    // Begin asynchronously reading the output
+                    process.BeginOutputReadLine();
+
+                    // Asynchronously wait for the process to exit
+                    process.WaitForExit();
+
+                    // Close the standard output stream
+                    process.Close();
+                    process.Dispose();
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("\nError starting stratum-ping " + ex.Message);
+            }
+
+            // Get avg latency
+            string latencyStr = outputLines.Last();
+            var parts = latencyStr.Split(',');
+            if(parts.Length == 3)
+                latency = int.TryParse(parts[1].Substring(0, parts[1].IndexOf('.')), out int parsedAvg) ? parsedAvg : -1;
+           
+            return latency;
         }
         #endregion
 
@@ -1938,6 +2033,7 @@ namespace Gui_Miner
             version = $"{major}.{minor}";
             return version;
         }
+
 
         #endregion
 

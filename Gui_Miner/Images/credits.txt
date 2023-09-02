@@ -10,3 +10,5 @@ pools = <a href="https://www.flaticon.com/free-icons/swimming-pool" title="swimm
 generate = <a href="https://www.flaticon.com/free-icons/create" title="create icons">Create icons created by Freepik - Flaticon</a>
 find-gpus = <a href="https://www.flaticon.com/free-icons/vision" title="vision icons">Vision icons created by Iconpro86 - Flaticon</a> + <a href="https://www.flaticon.com/free-icons/gpu" title="gpu icons">Gpu icons created by Chattapat - Flaticon</a> + <a href="https://www.flaticon.com/free-icons/gpu" title="gpu icons">Gpu icons created by Smashicons - Flaticon</a>
 check-for-updates = <a href="https://www.flaticon.com/free-icons/rotate" title="rotate icons">Rotate icons created by lakonicon - Flaticon</a>
+ping = <a href="https://www.flaticon.com/free-icons/ping" title="ping icons">Ping icons created by Darius Dan - Flaticon</a>
+pinging = <a href="https://www.flaticon.com/free-icons/internet" title="internet icons">Internet icons created by catkuro - Flaticon</a>
