@@ -733,8 +733,10 @@ namespace Gui_Miner
                             ctsRunningMiners.Cancel();
 
                             // Kill process
-                            Process process = Process.GetProcessById(procId);
-                            process.Kill();
+
+                            Process process = Process.GetProcesses().ToList().Find(p => p.Id.Equals(procId));
+                            if(process != null)
+                                process.Kill();
 
                             // Remove the tab page
                             RemoveTabPage(matchingConfig.Id.ToString());
