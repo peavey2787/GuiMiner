@@ -186,17 +186,20 @@ namespace Gui_Miner
                 return;
             }
 
-            // Play button pushed
-            startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
-            startButtonPictureBox.Tag = "stop";
+            if (!shortcutOnly)
+            {
+                // Play button pushed
+                startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
+                startButtonPictureBox.Tag = "stop";
 
-            // Remove background
-            RemoveRotatingPanel();
+                // Remove background
+                RemoveRotatingPanel();
 
-            // Reset restart counter
-            restartsLabel.Text = $"Restarts 0";
-            restartsLabel.ForeColor = Color.White;
-            restartsLabel.Show();
+                // Reset restart counter
+                restartsLabel.Text = $"Restarts 0";
+                restartsLabel.ForeColor = Color.White;
+                restartsLabel.Show();
+            }
 
             CreateTabControlAndStartMiners(shortcutOnly);
         }
@@ -208,16 +211,19 @@ namespace Gui_Miner
                 return;
             }
 
-            // Stop button pushed
-            startButtonPictureBox.BackgroundImage = Properties.Resources.play_button;
-            startButtonPictureBox.Tag = "play";
+            if (!shortcutOnly)
+            {
+                // Stop button pushed
+                startButtonPictureBox.BackgroundImage = Properties.Resources.play_button;
+                startButtonPictureBox.Tag = "play";
 
-            // Replace background
-            CreateRotatingPanel();
+                // Replace background
+                CreateRotatingPanel();
 
-            // Reset restart counter
-            restartsLabel.Text = $"Restarts 0";
-            restartsLabel.Hide();
+                // Reset restart counter
+                restartsLabel.Text = $"Restarts 0";
+                restartsLabel.Hide();
+            }
 
             // Close all running miners
             KillAllRunningMiners(shortcutOnly);           
@@ -236,174 +242,192 @@ namespace Gui_Miner
             {
                 Invoke(new Action(() => CreateTabControlAndStartMiners(shortcutOnly)));
                 return;
-            }        
+            }
 
-            TabControl tabControl = new TabControl();
-            tabControl.Name = "outputTabControl";
-            tabControl.Dock = DockStyle.Fill;
+            // Get current tab control
+            TabControl tabControl = outputPanel.Controls.Find("outputTabControl", true).FirstOrDefault() as TabControl;
 
-            // Create the "Home" tab page
-            TabPage homeTabPage = new TabPage();
-            homeTabPage.BackColor = Color.FromArgb(12, 20, 52);
-            homeTabPage.Text = "Home";
+            if (tabControl == null) // Or create a new tab control
+            {                
+                tabControl = new TabControl();
+                tabControl.Name = "outputTabControl";
+                tabControl.Dock = DockStyle.Fill;
 
-            var arotatingPanel = RotatingPanel.Create();
+                // Create the "Home" tab page
+                TabPage homeTabPage = new TabPage();
+                homeTabPage.BackColor = Color.FromArgb(12, 20, 52);
+                homeTabPage.Text = "Home";
 
-            // Add image
-            string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
-            arotatingPanel.Image = GetBgImage(bgImage);
+                var arotatingPanel = RotatingPanel.Create();
 
-            homeTabPage.Controls.Add(arotatingPanel);
-            arotatingPanel.Start();
+                // Add image
+                string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
+                arotatingPanel.Image = GetBgImage(bgImage);
 
-            homeTabPage.Controls.Add(arotatingPanel);
-            tabControl.TabPages.Add(homeTabPage);
+                homeTabPage.Controls.Add(arotatingPanel);
+                arotatingPanel.Start();
 
+                homeTabPage.Controls.Add(arotatingPanel);
+                tabControl.TabPages.Add(homeTabPage);
+            }
+
+            // Get all miner configs
             var minerConfigs = settingsForm.Settings.MinerSettings;
+
             foreach (MinerConfig minerConfig in minerConfigs)
             {
+                // If this config is active and we aren't using shortcut keys or we are using shortcut keys and this config also uses shortcut keys
                 if (minerConfig.Active && !shortcutOnly || shortcutOnly && minerConfig.Use_Shortcut_Keys)
                 {
-                    TabPage tabPage = new TabPage();
-                    tabPage.Name = minerConfig.Id.ToString();
-                    tabPage.Text = minerConfig.Name;
-
-                    #region Top Panel
-                    // Top panel
-                    Panel topPanel = new Panel();
-                    topPanel.Dock = DockStyle.Top;
-                    int padding = 10;
-                    topPanel.Size = new Size(outputPanel.Width, restartsLabel.Height * 4 + padding);
-                    topPanel.Padding = new Padding(padding, padding, 0, 0);
+                    TabPage tabPage = tabControl.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Name.Equals(minerConfig.Id));
 
                     RichTextBox tabPageRichTextBox = new RichTextBox();
 
-                    // Add stop button
-                    PictureBox stopButton = new PictureBox();
-                    stopButton.Location = new Point(outputPanel.Width - stopButton.Width, padding);
-                    stopButton.Tag = "Stop";
-                    stopButton.Cursor = Cursors.Hand;
-                    stopButton.BackgroundImage = Properties.Resources.stop_button;
-                    stopButton.BackgroundImageLayout = ImageLayout.Zoom;
-                    stopButton.Click += (sender, e) =>
+                    // If this config doesn't have a tab page yet 
+                    if (tabPage == null)
                     {
-                        PictureBox button = (PictureBox)sender;
-                        if ((string)button.Tag == "Stop")
+                        // Create one
+                        tabPage = new TabPage();
+                        tabPage.Name = minerConfig.Id.ToString();
+                        tabPage.Text = minerConfig.Name;
+
+                        #region Top Panel
+                        // Top panel
+                        Panel topPanel = new Panel();
+                        topPanel.Dock = DockStyle.Top;
+                        int padding = 10;
+                        topPanel.Size = new Size(outputPanel.Width, restartsLabel.Height * 4 + padding);
+                        topPanel.Padding = new Padding(padding, padding, 0, 0);                        
+
+                        // Add stop button
+                        PictureBox stopButton = new PictureBox();
+                        stopButton.Location = new Point(outputPanel.Width - stopButton.Width, padding);
+                        stopButton.Tag = "Stop";
+                        stopButton.Cursor = Cursors.Hand;
+                        stopButton.BackgroundImage = Properties.Resources.stop_button;
+                        stopButton.BackgroundImageLayout = ImageLayout.Zoom;
+                        stopButton.Click += (sender, e) =>
                         {
-                            KillMinerById(minerConfig.Id);
-                            tabPageRichTextBox.SetTextThreadSafe("");
+                            PictureBox button = (PictureBox)sender;
+                            if ((string)button.Tag == "Stop")
+                            {
+                                KillMinerById(minerConfig.Id);
+                                tabPageRichTextBox.SetTextThreadSafe("");
 
-                            button.Tag = "Start";
-                            stopButton.BackgroundImage = Properties.Resources.play_button;
-                        }
-                        else if ((string)button.Tag == "Start")
-                        {
-                            StartMinerById(minerConfig.Id, tabPageRichTextBox);
-                            button.Tag = "Stop";
-                            stopButton.BackgroundImage = Properties.Resources.stop_button;
-                        }
-                    };
-                    topPanel.Controls.Add(stopButton);
+                                button.Tag = "Start";
+                                stopButton.BackgroundImage = Properties.Resources.play_button;
+                            }
+                            else if ((string)button.Tag == "Start")
+                            {
+                                StartMinerById(minerConfig.Id, tabPageRichTextBox);
+                                button.Tag = "Stop";
+                                stopButton.BackgroundImage = Properties.Resources.stop_button;
+                            }
+                        };
+                        topPanel.Controls.Add(stopButton);
 
-                    // Set link to api stats
-                    string url = "http://localhost:" + minerConfig.Api;
+                        // Set link to api stats
+                        string url = "http://localhost:" + minerConfig.Api;
 
-                    LinkLabel linkLabel = new LinkLabel();
-                    linkLabel.Text = "Api Stats: " + url;
-                    linkLabel.Dock = DockStyle.Top;
-                    linkLabel.LinkClicked += (sender, e) =>
-                    {
-                        // Open the default web browser with the specified URL
-                        Process.Start(url);
-                    };
-
-                    // Add link
-                    if (minerConfig.Api > 0)
-                        topPanel.Controls.Add(linkLabel);
-
-                    // Try to get pool link 1
-                    string poolDomainName1 = minerConfig.GetPool1DomainName();
-                    string poolLink1 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName1)).Link;
-
-                    LinkLabel poolLinkLabel1 = new LinkLabel();
-                    string poolLinkText = poolLink1;
-                    var poolLinkTextParts = poolLink1.Split('.');
-                    if (poolLinkTextParts.Length > 0 && !string.IsNullOrWhiteSpace(poolLinkTextParts[0]))
-                        poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
-                    poolLinkLabel1.Text = "Pool Link1: " + poolLinkText;
-                    poolLinkLabel1.Dock = DockStyle.Top;
-                    poolLinkLabel1.LinkClicked += (sender, e) =>
-                    {
-                        if (!string.IsNullOrEmpty(poolLink1) && Uri.IsWellFormedUriString(poolLink1, UriKind.Absolute))
+                        LinkLabel linkLabel = new LinkLabel();
+                        linkLabel.Text = "Api Stats: " + url;
+                        linkLabel.Dock = DockStyle.Top;
+                        linkLabel.LinkClicked += (sender, e) =>
                         {
                             // Open the default web browser with the specified URL
-                            Process.Start(AddHttpsIfNeeded(poolLink1));
-                        }
-                    };
+                            Process.Start(url);
+                        };
 
-                    // Try to get pool link 2
-                    string poolDomainName2 = minerConfig.GetPool2DomainName();
-                    string poolLink2 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName2)).Link;
-                    poolLinkText = poolLink2;
-                    poolLinkTextParts = poolLink2.Split('.');
-                    if (poolLinkTextParts.Length > 0)
-                        poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
-                    LinkLabel poolLinkLabel2 = new LinkLabel();
-                    poolLinkLabel2.Text = "Pool Link2: " + poolLinkText;
-                    poolLinkLabel2.Dock = DockStyle.Top;
-                    poolLinkLabel2.LinkClicked += (sender, e) =>
-                    {
-                        if (!string.IsNullOrEmpty(poolLink2) && Uri.IsWellFormedUriString(poolLink2, UriKind.Absolute))
+                        // Add link
+                        if (minerConfig.Api > 0)
+                            topPanel.Controls.Add(linkLabel);
+
+                        // Try to get pool link 1
+                        string poolDomainName1 = minerConfig.GetPool1DomainName();
+                        string poolLink1 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName1)).Link;
+
+                        LinkLabel poolLinkLabel1 = new LinkLabel();
+                        string poolLinkText = poolLink1;
+                        var poolLinkTextParts = poolLink1.Split('.');
+                        if (poolLinkTextParts.Length > 0 && !string.IsNullOrWhiteSpace(poolLinkTextParts[0]))
+                            poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
+                        poolLinkLabel1.Text = "Pool Link1: " + poolLinkText;
+                        poolLinkLabel1.Dock = DockStyle.Top;
+                        poolLinkLabel1.LinkClicked += (sender, e) =>
                         {
-                            // Open the default web browser with the specified URL
-                            Process.Start(AddHttpsIfNeeded(poolLink2));
-                        }
-                    };
+                            if (!string.IsNullOrEmpty(poolLink1) && Uri.IsWellFormedUriString(poolLink1, UriKind.Absolute))
+                            {
+                                // Open the default web browser with the specified URL
+                                Process.Start(AddHttpsIfNeeded(poolLink1));
+                            }
+                        };
 
-                    // Try to get pool link 3
-                    string poolDomainName3 = minerConfig.GetPool3DomainName();
-                    string poolLink3 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName3)).Link;
-                    poolLinkText = poolLink3;
-                    poolLinkTextParts = poolLink3.Split('.');
-                    if (poolLinkTextParts.Length > 0)
-                        poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
-                    LinkLabel poolLinkLabel3 = new LinkLabel();
-                    poolLinkLabel3.Text = "Pool Link3: " + poolLinkText;
-                    poolLinkLabel3.Dock = DockStyle.Top;
-                    poolLinkLabel3.LinkClicked += (sender, e) =>
-                    {
-                        if (!string.IsNullOrEmpty(poolLink3) && Uri.IsWellFormedUriString(poolLink3, UriKind.Absolute))
+                        // Try to get pool link 2
+                        string poolDomainName2 = minerConfig.GetPool2DomainName();
+                        string poolLink2 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName2)).Link;
+                        poolLinkText = poolLink2;
+                        poolLinkTextParts = poolLink2.Split('.');
+                        if (poolLinkTextParts.Length > 0)
+                            poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
+                        LinkLabel poolLinkLabel2 = new LinkLabel();
+                        poolLinkLabel2.Text = "Pool Link2: " + poolLinkText;
+                        poolLinkLabel2.Dock = DockStyle.Top;
+                        poolLinkLabel2.LinkClicked += (sender, e) =>
                         {
-                            // Open the default web browser with the specified URL
-                            Process.Start(AddHttpsIfNeeded(poolLink3));
-                        }
-                    };
+                            if (!string.IsNullOrEmpty(poolLink2) && Uri.IsWellFormedUriString(poolLink2, UriKind.Absolute))
+                            {
+                                // Open the default web browser with the specified URL
+                                Process.Start(AddHttpsIfNeeded(poolLink2));
+                            }
+                        };
 
-                    // Add pool links if they're not empty
-                    if (!string.IsNullOrWhiteSpace(poolLink1))
-                        topPanel.Controls.Add(poolLinkLabel1);
+                        // Try to get pool link 3
+                        string poolDomainName3 = minerConfig.GetPool3DomainName();
+                        string poolLink3 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName3)).Link;
+                        poolLinkText = poolLink3;
+                        poolLinkTextParts = poolLink3.Split('.');
+                        if (poolLinkTextParts.Length > 0)
+                            poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
+                        LinkLabel poolLinkLabel3 = new LinkLabel();
+                        poolLinkLabel3.Text = "Pool Link3: " + poolLinkText;
+                        poolLinkLabel3.Dock = DockStyle.Top;
+                        poolLinkLabel3.LinkClicked += (sender, e) =>
+                        {
+                            if (!string.IsNullOrEmpty(poolLink3) && Uri.IsWellFormedUriString(poolLink3, UriKind.Absolute))
+                            {
+                                // Open the default web browser with the specified URL
+                                Process.Start(AddHttpsIfNeeded(poolLink3));
+                            }
+                        };
 
-                    if (!string.IsNullOrWhiteSpace(poolLink2))
-                        topPanel.Controls.Add(poolLinkLabel2);
+                        // Add pool links if they're not empty
+                        if (!string.IsNullOrWhiteSpace(poolLink1))
+                            topPanel.Controls.Add(poolLinkLabel1);
 
-                    if (!string.IsNullOrWhiteSpace(poolLink3))
-                        topPanel.Controls.Add(poolLinkLabel3);
+                        if (!string.IsNullOrWhiteSpace(poolLink2))
+                            topPanel.Controls.Add(poolLinkLabel2);
 
-                    tabPage.Controls.Add(topPanel);
-                    // End of Top Panel
-                    #endregion
+                        if (!string.IsNullOrWhiteSpace(poolLink3))
+                            topPanel.Controls.Add(poolLinkLabel3);
 
-                    // Console output                    
-                    tabPageRichTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-                    tabPageRichTextBox.Location = new Point(0, topPanel.Height);
-                    tabPageRichTextBox.Size = new Size(tabPage.Width - padding, tabPage.Height - topPanel.Height - padding);
-                    tabPageRichTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
-                    tabPageRichTextBox.ReadOnly = true;
-                    tabPageRichTextBox.ForeColor = Color.White;
-                    tabPageRichTextBox.BackColor = Color.Black;
-                    tabPage.Controls.Add(tabPageRichTextBox);
+                        tabPage.Controls.Add(topPanel);
+                        // End of Top Panel
+                        #endregion
 
-                    tabControl.TabPages.Add(tabPage);
+                        // Console output                    
+                        tabPageRichTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+                        tabPageRichTextBox.Location = new Point(0, topPanel.Height);
+                        tabPageRichTextBox.Size = new Size(tabPage.Width - padding, tabPage.Height - topPanel.Height - padding);
+                        tabPageRichTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
+                        tabPageRichTextBox.ReadOnly = true;
+                        tabPageRichTextBox.ForeColor = Color.White;
+                        tabPageRichTextBox.BackColor = Color.Black;
+                        tabPage.Controls.Add(tabPageRichTextBox);
+
+                        tabControl.TabPages.Add(tabPage);
+                    }
+                    else
+                        tabPageRichTextBox = tabPage.Controls.OfType<RichTextBox>().FirstOrDefault();
 
                     // Start the miner in a separate thread with the miner-specific RichTextBox
                     int processId = await Task.Run(() =>
@@ -416,20 +440,14 @@ namespace Gui_Miner
                 }
             }
 
-            // Add the TabControl
-            if(outputPanel.Controls.Count > 0)
+            // Add the TabControl if there isn't one yet
+            if (!outputPanel.Controls.OfType<TabControl>().Any())
             {
-                outputPanel.Controls.Clear();
-            }
-            if (InvokeRequired)
-            {
-                outputPanel.Invoke(new Action(() => outputPanel.Controls.Add(tabControl)));
-            }
-            else
-            {
-                outputPanel.Controls.Add(tabControl);
-            }
-            
+                if (InvokeRequired)
+                    outputPanel.Invoke(new Action(() => outputPanel.Controls.Add(tabControl)));                
+                else
+                    outputPanel.Controls.Add(tabControl);                
+            }            
         }
         private int StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox, CancellationToken token)
         {
@@ -728,8 +746,14 @@ namespace Gui_Miner
                         {
                             // Kill process
                             Process process = Process.GetProcesses().ToList().Find(p => p.Id.Equals(procId));
-                            if(process != null)
+                            if (process != null)
+                            {
                                 process.Kill();
+
+                                // Use PowerShell to find and kill the associated cmd window
+                                string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {process.Id} }} | ForEach-Object {{ $_.Terminate() }}";
+                                RunPowerShellCommand(command);
+                            }
                         }
                         catch (AggregateException)
                         {
@@ -737,7 +761,10 @@ namespace Gui_Miner
                         }
 
                         // Remove the tab page
-                        RemoveTabPage(matchingConfig.Name);
+                        RemoveTabPage(matchingConfig.Id.ToString());
+
+                        // Remove from runningTasks
+                        runningTasks.Remove(procId);
                     }
 
                 }
@@ -765,7 +792,7 @@ namespace Gui_Miner
                 if (matchingConfig == null) return;
 
                 if (removeTabPage)
-                    RemoveTabPage(matchingConfig.Name);// Remove the tab page                
+                    RemoveTabPage(matchingConfig.Id.ToString());// Remove the tab page                
 
                 // If no more miners running change the play/stop button back to play
                 if (runningTasks.Count == 0)
@@ -849,13 +876,13 @@ namespace Gui_Miner
                 return powershell.ExitCode == 0 && !output.Contains("Error") && !output.Contains("error");
             }
         }
-        private void RemoveTabPage(string tabName)
+        private void RemoveTabPage(string minerId)
         {
             TabControl foundTabControl = outputPanel.Controls.OfType<TabControl>().FirstOrDefault();
 
             if (foundTabControl != null)
             {
-                TabPage tabPageToRemove = foundTabControl.TabPages.OfType<TabPage>().FirstOrDefault(tabPage => tabPage.Name == tabName);
+                TabPage tabPageToRemove = foundTabControl.TabPages.OfType<TabPage>().FirstOrDefault(tabPage => tabPage.Name.Equals(minerId));
 
                 if (tabPageToRemove != null)
                 {
