@@ -33,7 +33,7 @@ Make sure to click Generate .bat file after making any changes and stop then sta
 ![wallets](https://github.com/peavey2787/GuiMiner/assets/11081113/9fa29829-625f-4108-9ebc-7142f9c74330)
 
 # Pools
-![pools](https://github.com/peavey2787/GuiMiner/assets/11081113/e9a60136-65a2-47b3-8ea9-5505f37f59c8)
+![pools](https://github.com/peavey2787/GuiMiner/assets/11081113/df4b6b8b-56d5-4287-872e-004459dd6622)
 
 # Windows Settings
 ![windows-settings](https://github.com/peavey2787/GuiMiner/assets/11081113/311642a5-fb72-4699-8f52-95edafe3bfdd)
