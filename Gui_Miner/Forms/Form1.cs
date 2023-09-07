@@ -253,14 +253,14 @@ namespace Gui_Miner
             string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
             arotatingPanel.Image = GetBgImage(bgImage);
 
-            outputPanel.Controls.Add(arotatingPanel);
+            homeTabPage.Controls.Add(arotatingPanel);
             arotatingPanel.Start();
 
             homeTabPage.Controls.Add(arotatingPanel);
             tabControl.TabPages.Add(homeTabPage);
 
-            var minerConfgs = settingsForm.Settings.MinerSettings;
-            foreach (MinerConfig minerConfig in minerConfgs)
+            var minerConfigs = settingsForm.Settings.MinerSettings;
+            foreach (MinerConfig minerConfig in minerConfigs)
             {
                 if (minerConfig.Active && !shortcutOnly || shortcutOnly && minerConfig.Use_Shortcut_Keys)
                 {
@@ -713,9 +713,6 @@ namespace Gui_Miner
             var tasks = runningTasks;
             if (tasks != null && tasks.Count > 0)
             {
-                // Create a CancellationTokenSource to cancel tasks
-                ctsRunningMiners = new CancellationTokenSource();
-
                 // Kill all configs or only Use Shortcut Keys = true
                 foreach (var taskDictItem in tasks)
                 {
@@ -727,24 +724,20 @@ namespace Gui_Miner
 
                     if (!shortcutOnly || (shortcutOnly && matchingConfig.Use_Shortcut_Keys))
                     {
-                        // Try to cancel the task
                         try
                         {
-                            ctsRunningMiners.Cancel();
-
                             // Kill process
-
                             Process process = Process.GetProcesses().ToList().Find(p => p.Id.Equals(procId));
                             if(process != null)
                                 process.Kill();
-
-                            // Remove the tab page
-                            RemoveTabPage(matchingConfig.Id.ToString());
                         }
                         catch (AggregateException)
                         {
                             // Handle any exceptions if needed
                         }
+
+                        // Remove the tab page
+                        RemoveTabPage(matchingConfig.Name);
                     }
 
                 }
@@ -768,41 +761,30 @@ namespace Gui_Miner
             {
                 var procId = runningTasks[id];
 
+                var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.Equals(id));
+                if (matchingConfig == null) return;
+
                 if (removeTabPage)
-                {
-                    // Remove the tab page
-                    RemoveTabPage(id.ToString());
-                }
+                    RemoveTabPage(matchingConfig.Name);// Remove the tab page                
 
                 // If no more miners running change the play/stop button back to play
                 if (runningTasks.Count == 0)
-                    ClickStopButton();                
+                    ClickStopButton();
 
+                // Kill the process
                 try
                 {
-                    // Kill the process
-                    var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.Equals(id));
-                    if (matchingConfig != null)
-                    {
-                        try
-                        {
-                            var runningProc = Process.GetProcessById(procId);
-                            runningProc.Kill();
+                    var runningProc = Process.GetProcessById(procId);
+                    runningProc.Kill();
 
-                            // Use PowerShell to find and kill the associated cmd window
-                            string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {procId} }} | ForEach-Object {{ $_.Terminate() }}";
-                            RunPowerShellCommand(command);
-                        }
-                        catch { }
-                    }
+                    // Use PowerShell to find and kill the associated cmd window
+                    string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {procId} }} | ForEach-Object {{ $_.Terminate() }}";
+                    RunPowerShellCommand(command);
+                }
+                catch { }
 
-                    // Remove task
-                    runningTasks.Remove(id);
-                }
-                catch (AggregateException)
-                {
-                    // Handle any exceptions if needed
-                }
+                // Remove task
+                runningTasks.Remove(id);
             }
         }
         private async void StartMinerById(int id, RichTextBox richTextBox)
