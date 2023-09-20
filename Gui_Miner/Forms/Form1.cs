@@ -153,7 +153,7 @@ namespace Gui_Miner
             notify_icon.Dispose();
 
             // Close all running miners
-            KillAllRunningMiners();
+            Task.Run(() => KillAllRunningMiners());
 
             // Close settings form
             if (settingsForm.InvokeRequired)
@@ -213,7 +213,7 @@ namespace Gui_Miner
 
             CreateTabControlAndStartMiners(shortcutOnly);
         }
-        internal void ClickStopButton(bool shortcutOnly = false)
+        internal async void ClickStopButton(bool shortcutOnly = false)
         {
             if (InvokeRequired)
             {
@@ -236,7 +236,7 @@ namespace Gui_Miner
             }
 
             // Close all running miners
-            KillAllRunningMiners(shortcutOnly);           
+            await Task.Run(() => KillAllRunningMiners(shortcutOnly));
         }
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
@@ -609,11 +609,9 @@ namespace Gui_Miner
                 if (selectedRichTextBox != null)
                 {
                     // Inform user of the switch
-                    var prevColor = selectedRichTextBox.SelectionColor;
                     selectedRichTextBox.SelectionColor = Color.White;
-                    selectedRichTextBox.AppendText("\n\n----------- SWITCHED MINERS -----------");
-                    selectedRichTextBox.SelectionColor = prevColor;
-
+                    selectedRichTextBox.AppendText("\n\n----------- SWITCHED MINERS...WAITING FOR NEW STATS... -----------");
+                    selectedRichTextBox.ScrollToCaret();
                 }
             }
         }
