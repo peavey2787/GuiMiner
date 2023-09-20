@@ -290,7 +290,7 @@ namespace Gui_Miner
                 // If this config is active and we aren't using shortcut keys or we are using shortcut keys and this config also uses shortcut keys
                 if (minerConfig.Active && !shortcutOnly || shortcutOnly && minerConfig.Use_Shortcut_Keys)
                 {
-                    TabPage tabPage = tabControl.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Name.Equals(minerConfig.Id));
+                    TabPage tabPage = tabControl.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Name.Equals(minerConfig.Name));
 
                     RichTextBox tabPageRichTextBox = new RichTextBox();
 
@@ -908,6 +908,11 @@ namespace Gui_Miner
         }
         private void RemoveTabPage(string minerId)
         {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(() => RemoveTabPage(minerId)));
+                return;
+            }
             TabControl foundTabControl = outputPanel.Controls.OfType<TabControl>().FirstOrDefault();
 
             if (foundTabControl != null)
