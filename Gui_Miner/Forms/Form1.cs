@@ -40,7 +40,7 @@ namespace Gui_Miner
         internal RotatingPanel rotatingPanel;
         Dictionary<int,int> runningTasks = new Dictionary<int, int>();
         CancellationTokenSource ctsRunningMiners = new CancellationTokenSource();
-        private GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook(); 
+        private GlobalKeyboardHook globalKeyboardHook;
         public Form1()
         {
             InitializeComponent();
@@ -61,10 +61,13 @@ namespace Gui_Miner
             // Rotating panel
             CreateRotatingPanel();
 
-            globalKeyboardHook.SetMainForm(this);
+            Task.Run(() => { 
+                GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook();
+                globalKeyboardHook.SetMainForm(this);
 
-            // Listen for short-cut keys
-            UpdateShortcutKeys();
+                // Listen for short-cut keys
+                UpdateShortcutKeys();
+            });
         }
         public void UpdateShortcutKeys()
         {
