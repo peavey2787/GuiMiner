@@ -26,11 +26,20 @@ namespace Gui_Miner
         public GlobalKeyboardHook()
         {
             hookCallback = new HookProc(HookCallbackProcedure);
-            hookId = SetHook(hookCallback);
             
             // Circular buffer to store the last few keys
             lastPressedKeys = new Queue<Keys>(5);          
         }
+        public void Start()
+        {
+            hookId = SetHook(hookCallback);
+        }
+
+        public void Stop()
+        {
+            UnhookWindowsHookEx(hookId);
+        }
+
         public void SetMainForm(Form1 MainForm)
         { this.MainForm = MainForm; }
         public void SetStartKeys(Keys[] keys)
@@ -194,8 +203,4 @@ namespace Gui_Miner
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
     }
-
-
-
-
 }

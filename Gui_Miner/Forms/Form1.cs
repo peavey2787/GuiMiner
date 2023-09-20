@@ -40,7 +40,7 @@ namespace Gui_Miner
         internal RotatingPanel rotatingPanel;
         Dictionary<int,int> runningTasks = new Dictionary<int, int>();
         CancellationTokenSource ctsRunningMiners = new CancellationTokenSource();
-        private GlobalKeyboardHook globalKeyboardHook;
+        private GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook();
         public Form1()
         {
             InitializeComponent();
@@ -61,34 +61,41 @@ namespace Gui_Miner
             // Rotating panel
             CreateRotatingPanel();
 
-            Task.Run(() => { 
-                GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook();
+            // Listen for short-cut keys
+            LoadShortcutKeys();
+        }
+        public void LoadShortcutKeys()
+        {
+            // Run the entire method on a background thread
+            Task.Run(() =>
+            {
                 globalKeyboardHook.SetMainForm(this);
 
-                // Listen for short-cut keys
-                UpdateShortcutKeys();
+                var stopShortKeys = AppSettings.Load<List<Keys>>(SettingsForm.STOPSHORTKEYS);
+                var startShortKeys = AppSettings.Load<List<Keys>>(SettingsForm.STARTSHORTKEYS);
+
+                if (stopShortKeys != null && startShortKeys != null)
+                {
+                    globalKeyboardHook.SetStartKeys(startShortKeys.ToArray());
+                    globalKeyboardHook.SetStopKeys(stopShortKeys.ToArray());
+                }
+                else if (startShortKeys != null)
+                {
+                    globalKeyboardHook.SetStartKeys(startShortKeys.ToArray());
+                }
+                else if (stopShortKeys != null)
+                {
+                    globalKeyboardHook.SetStopKeys(stopShortKeys.ToArray());
+                }
+
+                // Start the keyboard hook on the main thread
+                Invoke((MethodInvoker)delegate
+                {
+                    globalKeyboardHook.Start();
+                });
             });
         }
-        public void UpdateShortcutKeys()
-        {
-            var stopShortKeys = AppSettings.Load<List<Keys>>(SettingsForm.STOPSHORTKEYS);
-            var startShortKeys = AppSettings.Load<List<Keys>>(SettingsForm.STARTSHORTKEYS);
 
-            if (stopShortKeys != null && startShortKeys != null)
-            {
-                globalKeyboardHook.SetStartKeys(startShortKeys.ToArray());
-                globalKeyboardHook.SetStopKeys(stopShortKeys.ToArray());
-            }
-            else if(startShortKeys != null)
-            {
-                globalKeyboardHook.SetStartKeys(startShortKeys.ToArray());
-            }
-            else if(stopShortKeys != null)
-            {
-                globalKeyboardHook.SetStopKeys(stopShortKeys.ToArray());
-            }
-
-        }
 
 
         // Rotate image

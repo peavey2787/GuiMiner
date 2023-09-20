@@ -108,7 +108,7 @@ namespace Gui_Miner
             SaveSettings();
             this.Visible = false;
 
-            MainForm.UpdateShortcutKeys();
+            MainForm.LoadShortcutKeys();
         }
         private void LoadSettings()
         {
