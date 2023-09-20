@@ -262,6 +262,7 @@ namespace Gui_Miner
                 tabControl = new TabControl();
                 tabControl.Name = "outputTabControl";
                 tabControl.Dock = DockStyle.Fill;
+                tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
 
                 // Create the "Home" tab page
                 TabPage homeTabPage = new TabPage();
@@ -595,7 +596,28 @@ namespace Gui_Miner
             }
             richTextBox.ScrollToCaretThreadSafe();
         }
-        
+        private void TabControl_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            TabControl tabControl = (TabControl)sender;
+
+            // Check if there are any tab pages in the control
+            if (tabControl.TabPages.Count > 0)
+            {
+                TabPage selectedTabPage = tabControl.SelectedTab;
+                RichTextBox selectedRichTextBox = selectedTabPage.Controls.OfType<RichTextBox>().FirstOrDefault();
+
+                if (selectedRichTextBox != null)
+                {
+                    // Inform user of the switch
+                    var prevColor = selectedRichTextBox.SelectionColor;
+                    selectedRichTextBox.SelectionColor = Color.White;
+                    selectedRichTextBox.AppendText("\n\n----------- SWITCHED MINERS -----------");
+                    selectedRichTextBox.SelectionColor = prevColor;
+
+                }
+            }
+        }
+
 
         // Helpers
         public bool IsRunningAsAdmin()
