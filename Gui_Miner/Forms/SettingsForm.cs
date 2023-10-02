@@ -176,8 +176,6 @@ namespace Gui_Miner
             }
 
             successLabel.Text = "Version " + GetCurrentVersion();
-
-            bool settingSettings = false;
         }
         #endregion
 
@@ -1290,7 +1288,7 @@ namespace Gui_Miner
 
             if (autoStartWithWinCheckBox.Checked)
             {
-                if (MainForm != null && MainForm.IsRunningAsAdmin())
+                if (MainForm != null && Form1.GetTaskManager().IsRunningAsAdmin())
                 {
                     string assemblyPath = Assembly.GetEntryAssembly().Location;
                     if (CreateSchedulerTask("GuiMiner", assemblyPath))
@@ -1483,7 +1481,7 @@ namespace Gui_Miner
             }
             catch (Exception ex)
             {
-                if (MainForm.IsRunningAsAdmin())
+                if (Form1.GetTaskManager().IsRunningAsAdmin())
                     MessageBox.Show($"Failed to add auto start task to windows task scheduler: {ex.Message}");
 
                 return false;

@@ -1,4 +1,5 @@
 ﻿using Gui_Miner.Classes;
+using Microsoft.Win32.TaskScheduler;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
@@ -27,8 +28,10 @@ using System.Xml.Linq;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.AxHost;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolTip;
+using Action = System.Action;
 using Application = System.Windows.Forms.Application;
 using Image = System.Drawing.Image;
+using Task = System.Threading.Tasks.Task;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Gui_Miner
@@ -38,14 +41,15 @@ namespace Gui_Miner
         NotifyIcon notify_icon;
         SettingsForm settingsForm = new SettingsForm();
         internal RotatingPanel rotatingPanel;
-        Dictionary<int,int> runningTasks = new Dictionary<int, int>();
         CancellationTokenSource ctsRunningMiners = new CancellationTokenSource();
         private GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook();
+        private TaskManager taskManager;
+        public TaskManager GetTaskManager() { return taskManager; }
         public Form1()
         {
             InitializeComponent();
 
-            KillAllRunningMiners();
+            taskManager = new TaskManager(this);            
 
             // Create notify icon
             CreateNotifyIcon();
@@ -140,20 +144,17 @@ namespace Gui_Miner
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Close all running miners
-            KillAllRunningMiners();
-
             // Save window location
             AppSettings.Save<Point>("windowLocation", this.Location);
         }
-        internal void CloseApp()
+        internal async void CloseApp()
         {
             // Hide main form and remove notify icon
             this.Visible = false;
             notify_icon.Dispose();
 
             // Close all running miners
-            Task.Run(() => KillAllRunningMiners());
+            await Task.Run(() => taskManager.ToggleAllTasks(false));
 
             // Close settings form
             if (settingsForm.InvokeRequired)
@@ -213,7 +214,7 @@ namespace Gui_Miner
 
             CreateTabControlAndStartMiners(shortcutOnly);
         }
-        internal async void ClickStopButton(bool shortcutOnly = false)
+        internal void ClickStopButton(bool shortcutOnly = false)
         {
             if (InvokeRequired)
             {
@@ -231,12 +232,12 @@ namespace Gui_Miner
                 CreateRotatingPanel();
 
                 // Reset restart counter
-                restartsLabel.Text = $"Restarts 0";
-                restartsLabel.Hide();
+                restartsLabel.SetTextThreadSafe($"Restarts 0");
+                restartsLabel.HideThreadSafe();
             }
 
             // Close all running miners
-            await Task.Run(() => KillAllRunningMiners(shortcutOnly));
+            Task.Run(() => KillAllRunningMiners(shortcutOnly));
         }
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
@@ -246,7 +247,7 @@ namespace Gui_Miner
 
 
         // Start Active Miners
-        private async void CreateTabControlAndStartMiners(bool shortcutOnly = false)
+        private void CreateTabControlAndStartMiners(bool shortcutOnly = false)
         {
             if (InvokeRequired)
             {
@@ -322,7 +323,7 @@ namespace Gui_Miner
                             PictureBox button = (PictureBox)sender;
                             if ((string)button.Tag == "Stop")
                             {
-                                KillMinerById(minerConfig.Id);
+                                taskManager.StopTask(minerConfig.Id.ToString());
                                 tabPageRichTextBox.SetTextThreadSafe("");
 
                                 button.Tag = "Start";
@@ -330,7 +331,7 @@ namespace Gui_Miner
                             }
                             else if ((string)button.Tag == "Start")
                             {
-                                StartMinerById(minerConfig.Id, tabPageRichTextBox);
+                                taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString(), tabPageRichTextBox);
                                 button.Tag = "Stop";
                                 stopButton.BackgroundImage = Properties.Resources.stop_button;
                             }
@@ -440,14 +441,8 @@ namespace Gui_Miner
                     else
                         tabPageRichTextBox = tabPage.Controls.OfType<RichTextBox>().FirstOrDefault();
 
-                    // Start the miner in a separate thread with the miner-specific RichTextBox
-                    int processId = await Task.Run(() =>
-                    {
-                        return StartMiner(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, tabPageRichTextBox, ctsRunningMiners.Token);
-                    });
-
-                    if (!runningTasks.ContainsKey(minerConfig.Id))
-                        runningTasks.Add(minerConfig.Id, processId);
+                    // Start the miner 
+                    taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString(), tabPageRichTextBox);                       
                 }
             }
 
@@ -459,143 +454,7 @@ namespace Gui_Miner
                 else
                     outputPanel.Controls.Add(tabControl);                
             }            
-        }
-        private int StartMiner(string filePath, string arguments, bool runAsAdmin, RichTextBox richTextBox, CancellationToken token)
-        {
-            int procId = -1;
-            if (InvokeRequired)
-            {
-                return (int)Invoke(new Func<int>(() => StartMiner(filePath, arguments, runAsAdmin, richTextBox, token)));
-            }
-
-            if (!File.Exists(filePath))
-            {
-                MessageBox.Show($"Unable to locate miner at {filePath}");
-                return procId;
-            }
-
-            richTextBox.AppendTextThreadSafe("\nSTARTING MINER...");
-            richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
-
-            // Create a new process
-            Process process = new Process();
-
-            string verb = "";
-            if (runAsAdmin)
-            {
-                verb = "runas";
-
-                IsRunningAsAdmin();
-            }
-
-            // Set the process start information
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = filePath,
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                Verb = verb
-            };
-            process.StartInfo = startInfo;
-
-            // Subscribe to the OutputDataReceived event
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data) && !token.IsCancellationRequested)
-                {
-                     UpdateOutputConsole(e.Data, richTextBox);
-                };
-            };
-
-            try
-            {
-                // Start the process
-                process.Start();
-                procId = process.Id;
-
-                Task.Run(() =>
-                {
-                    // Begin asynchronously reading the output
-                    process.BeginOutputReadLine();
-
-                    // Asynchronously wait for the process to exit
-                    process.WaitForExit();
-
-                    // Close the standard output stream
-                    process.Close();
-                    process.Dispose();
-                });
-            }
-            catch (Exception ex)
-            {
-                richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
-            }
-
-            return procId;
-        }
-        private void UpdateOutputConsole(string output, RichTextBox richTextBox)
-        {
-            if (output.ToLower().Contains("failed") || output.ToLower().Contains("error") || output.ToLower().Contains("miner terminated"))
-            {
-                richTextBox.SelectionStartThreadSafe(richTextBox.TextLengthGetThreadSafe());
-                richTextBox.SelectionLengthThreadSafe(0);
-                richTextBox.SelectionColorThreadSafe(Color.Red);
-                richTextBox.AppendTextThreadSafe(Environment.NewLine + output);
-                richTextBox.SelectionColorThreadSafe(richTextBox.ForeColorGetThreadSafe()); // Reset to the default color                                    
-
-                // Errors
-                if (output.ToLower().Contains("error on gpu"))
-                {
-                    // Restart miner
-                    richTextBox.AppendTextThreadSafe("Gpu failed. Restarting...");
-                    ClickStopButton();
-                    Thread.Sleep(3500);
-                    ClickStartButton();
-
-                    // Extract the number from the restarts label text
-                    int restarts;
-                    if (int.TryParse(Regex.Match(restartsLabel.Text, @"\d+").Value, out restarts))
-                    {
-                        restarts++;
-
-                        // Update the label text with the new number
-                        restartsLabel.TextThreadSafe($"Restarts {restarts}");
-                        restartsLabel.ForeColorThreadSafe(Color.Red);
-                        restartsLabel.ShowThreadSafe();
-                    }
-                }
-            }
-            else if (output.ToLower().Contains("accepted"))
-            {
-                richTextBox.SelectionStartThreadSafe(richTextBox.TextLengthGetThreadSafe());
-                richTextBox.SelectionLengthThreadSafe(0);
-                richTextBox.SelectionColorThreadSafe(Color.ForestGreen);
-                richTextBox.AppendTextThreadSafe(Environment.NewLine + output);
-                richTextBox.SelectionColorThreadSafe(richTextBox.ForeColorGetThreadSafe()); // Reset to the default color  
-            }
-            else
-            {
-
-                richTextBox.SelectionStartThreadSafe(richTextBox.TextLengthGetThreadSafe());
-                richTextBox.SelectionLengthThreadSafe(0);
-
-                // Check if output starts with a number
-                if (output.Length > 0 && char.IsDigit(output[0]))
-                {
-                    richTextBox.SelectionColorThreadSafe(Color.Yellow);
-                }
-                else
-                {
-                    richTextBox.SelectionColorThreadSafe(richTextBox.ForeColorGetThreadSafe()); // Reset to the default color
-                }
-
-                richTextBox.AppendTextThreadSafe(Environment.NewLine + output);
-
-            }
-            richTextBox.ScrollToCaretThreadSafe();
-        }
+        }       
         private void TabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
             TabControl tabControl = (TabControl)sender;
@@ -618,45 +477,6 @@ namespace Gui_Miner
 
 
         // Helpers
-        public bool IsRunningAsAdmin()
-        {
-            WindowsIdentity identity = WindowsIdentity.GetCurrent();
-            WindowsPrincipal principal = new WindowsPrincipal(identity);
-
-            bool isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
-
-            if (!isAdmin)
-            {
-                DialogResult result = MessageBox.Show("This miner setting requires admin privliges. Do you want to restart the app as admin?", "Restart App as Admin?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-                // Check the user's response
-                if (result == DialogResult.Yes)
-                {
-                    string version = "0.0";
-                    string updateProjectPath = settingsForm.GetUpdateAppPath();
-                    string command = "runas";
-
-                    // Create a process start info
-                    ProcessStartInfo restartInfo = new ProcessStartInfo(updateProjectPath);
-                    restartInfo.Verb = "runas";
-                    restartInfo.Arguments = $"-{command} -{version} -{true}";
-
-                    // Start the "update" project as a separate process
-                    try
-                    {
-                        Process.Start(restartInfo);
-
-                        CloseApp();
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Error restarting app as admin " + ex.Message);
-                    }
-                }
-            }
-
-            return isAdmin;
-        }
         internal Image GetBgImage(string bgImage)
         {
             Image image = null;
@@ -758,153 +578,34 @@ namespace Gui_Miner
         // Kill Active Miners
         private void KillAllRunningMiners(bool shortcutOnly = false)
         {
-            var tasks = runningTasks;
+            var tasks = taskManager.GetRunningTasks().ToList();
             if (tasks != null && tasks.Count > 0)
             {
                 // Kill all configs or only Use Shortcut Keys = true
                 foreach (var taskDictItem in tasks)
                 {
-                    int procId = taskDictItem.Value;
-                    int minerId = taskDictItem.Key;
+                    string minerId = taskDictItem.Key;
 
-                    var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.Equals(minerId));
+                    var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.ToString().Equals(minerId));
                     if (matchingConfig == null) return;
 
                     if (!shortcutOnly || (shortcutOnly && matchingConfig.Use_Shortcut_Keys))
                     {
-                        try
-                        {
-                            // Kill process
-                            Process process = Process.GetProcesses().ToList().Find(p => p.Id.Equals(procId));
-                            if (process != null)
-                            {
-                                process.Kill();
-
-                                // Use PowerShell to find and kill the associated cmd window
-                                string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {process.Id} }} | ForEach-Object {{ $_.Terminate() }}";
-                                RunPowerShellCommand(command);
-                            }
-                        }
-                        catch (AggregateException)
-                        {
-                            // Handle any exceptions if needed
-                        }
+                        // Stop the miner
+                        taskManager.StopTask(matchingConfig.Id.ToString());
 
                         // Remove the tab page
                         RemoveTabPage(matchingConfig.Id.ToString());
-
-                        // Remove from runningTasks
-                        runningTasks.Remove(procId);
-                    }
-
-                }
-            }
-            // Kill all known miners
-            if (!shortcutOnly && settingsForm.Settings.MinerSettings != null)
-            {
-                var minerConfigs = new List<MinerConfig>(settingsForm.Settings.MinerSettings);
-                foreach (MinerConfig minerConfig in minerConfigs)
-                {
-                    if (!string.IsNullOrWhiteSpace(minerConfig.Miner_File_Path))
-                    {
-                        KillProcessByName(Path.GetFileNameWithoutExtension(minerConfig.Miner_File_Path));
                     }
                 }
             }
         }
-        private void KillMinerById(int id, bool removeTabPage = false)
+        private void killAllMinersButtonPictureBox_Click(object sender, EventArgs e)
         {
-            if (runningTasks.ContainsKey(id))
-            {
-                var procId = runningTasks[id];
+            Task.Run(() => KillAllRunningMiners());
 
-                var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.Equals(id));
-                if (matchingConfig == null) return;
-
-                if (removeTabPage)
-                    RemoveTabPage(matchingConfig.Id.ToString());// Remove the tab page                
-
-                // If no more miners running change the play/stop button back to play
-                if (runningTasks.Count == 0)
-                    ClickStopButton();
-
-                // Kill the process
-                try
-                {
-                    var runningProc = Process.GetProcessById(procId);
-                    runningProc.Kill();
-
-                    // Use PowerShell to find and kill the associated cmd window
-                    string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {procId} }} | ForEach-Object {{ $_.Terminate() }}";
-                    RunPowerShellCommand(command);
-                }
-                catch { }
-
-                // Remove task
-                runningTasks.Remove(id);
-            }
-        }
-        private async void StartMinerById(int id, RichTextBox richTextBox)
-        {
-            // If running task already exists, kill it
-            KillMinerById(id);
-
-            MinerConfig minerConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.Equals(id));
-            if (minerConfig == null) return;
-
-            // Create a CancellationTokenSource to cancel tasks
-            ctsRunningMiners = new CancellationTokenSource();
-
-            // Start the miner in a separate thread with the miner-specific RichTextBox
-            int processId = await Task.Run(() =>
-            {
-                return StartMiner(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, richTextBox, ctsRunningMiners.Token);
-            });
-
-            if (!runningTasks.ContainsKey(minerConfig.Id))
-                runningTasks.Add(minerConfig.Id, processId);
-        }
-        private void KillProcessByName(string name)
-        {
-            Process[] processes = Process.GetProcesses();
-            foreach (Process process in processes)
-            {
-                try
-                {
-                    if (process.ProcessName == Path.GetFileNameWithoutExtension(name)
-                        || process.ProcessName == "miner")
-                    {
-                        // Kill the process
-                        process.Kill();
-
-                        // Use PowerShell to find and kill the associated cmd window
-                        string command = $"Get-WmiObject Win32_Process | Where-Object {{ $_.ParentProcessId -eq {process.Id} }} | ForEach-Object {{ $_.Terminate() }}";
-                        RunPowerShellCommand(command);
-                    }
-                }
-                catch { }
-            }
-        }
-        static bool RunPowerShellCommand(string command)
-        {
-            ProcessStartInfo psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-ExecutionPolicy ByPass -Command {command}",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-            };
-
-            using (Process powershell = new Process())
-            {
-                powershell.StartInfo = psi;
-                powershell.Start();
-                string output = powershell.StandardOutput.ReadToEnd();
-                powershell.WaitForExit();
-
-                return powershell.ExitCode == 0 && !output.Contains("Error") && !output.Contains("error");
-            }
+            // Kill any miners that might have been started but never stopped from a crash/etc.
+            taskManager.KillAllMiners(); 
         }
         private void RemoveTabPage(string minerId)
         {
@@ -925,6 +626,7 @@ namespace Gui_Miner
                 }
             }
         }
+
         #endregion
 
 

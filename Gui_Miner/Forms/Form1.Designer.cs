@@ -29,13 +29,38 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
+            this.restartsLabel = new System.Windows.Forms.Label();
+            this.killAllMinersButtonPictureBox = new System.Windows.Forms.PictureBox();
             this.settingsButtonPictureBox = new System.Windows.Forms.PictureBox();
             this.startButtonPictureBox = new System.Windows.Forms.PictureBox();
             this.outputPanel = new System.Windows.Forms.Panel();
-            this.restartsLabel = new System.Windows.Forms.Label();
+            ((System.ComponentModel.ISupportInitialize)(this.killAllMinersButtonPictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.settingsButtonPictureBox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.startButtonPictureBox)).BeginInit();
             this.SuspendLayout();
+            // 
+            // restartsLabel
+            // 
+            this.restartsLabel.AutoSize = true;
+            this.restartsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.25F);
+            this.restartsLabel.ForeColor = System.Drawing.SystemColors.Control;
+            this.restartsLabel.Location = new System.Drawing.Point(159, 21);
+            this.restartsLabel.Name = "restartsLabel";
+            this.restartsLabel.Size = new System.Drawing.Size(73, 17);
+            this.restartsLabel.TabIndex = 8;
+            this.restartsLabel.Text = "Restarts 0";
+            // 
+            // killAllMinersButtonPictureBox
+            // 
+            this.killAllMinersButtonPictureBox.BackgroundImage = global::Gui_Miner.Properties.Resources.panic_attack;
+            this.killAllMinersButtonPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.killAllMinersButtonPictureBox.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.killAllMinersButtonPictureBox.Location = new System.Drawing.Point(116, 12);
+            this.killAllMinersButtonPictureBox.Name = "killAllMinersButtonPictureBox";
+            this.killAllMinersButtonPictureBox.Size = new System.Drawing.Size(37, 34);
+            this.killAllMinersButtonPictureBox.TabIndex = 9;
+            this.killAllMinersButtonPictureBox.TabStop = false;
+            this.killAllMinersButtonPictureBox.Click += new System.EventHandler(this.killAllMinersButtonPictureBox_Click);
             // 
             // settingsButtonPictureBox
             // 
@@ -74,24 +99,13 @@
             this.outputPanel.Size = new System.Drawing.Size(413, 415);
             this.outputPanel.TabIndex = 4;
             // 
-            // restartsLabel
-            // 
-            this.restartsLabel.AutoSize = true;
-            this.restartsLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 10.25F);
-            this.restartsLabel.ForeColor = System.Drawing.SystemColors.Control;
-            this.restartsLabel.Location = new System.Drawing.Point(159, 21);
-            this.restartsLabel.Name = "restartsLabel";
-            this.restartsLabel.Size = new System.Drawing.Size(73, 17);
-            this.restartsLabel.TabIndex = 8;
-            this.restartsLabel.Text = "Restarts 0";
-            this.restartsLabel.Visible = false;
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
             this.ClientSize = new System.Drawing.Size(415, 471);
+            this.Controls.Add(this.killAllMinersButtonPictureBox);
             this.Controls.Add(this.restartsLabel);
             this.Controls.Add(this.settingsButtonPictureBox);
             this.Controls.Add(this.startButtonPictureBox);
@@ -102,6 +116,7 @@
             this.Text = "Gui Miner";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
+            ((System.ComponentModel.ISupportInitialize)(this.killAllMinersButtonPictureBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.settingsButtonPictureBox)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.startButtonPictureBox)).EndInit();
             this.ResumeLayout(false);
@@ -114,6 +129,7 @@
         private System.Windows.Forms.PictureBox startButtonPictureBox;
         private System.Windows.Forms.PictureBox settingsButtonPictureBox;
         private System.Windows.Forms.Label restartsLabel;
+        private System.Windows.Forms.PictureBox killAllMinersButtonPictureBox;
     }
 }
 

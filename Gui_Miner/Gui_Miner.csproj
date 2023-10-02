@@ -87,6 +87,7 @@
     <Compile Include="Classes\RotatingPanel.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Classes\TaskManager.cs" />
     <Compile Include="Forms\Form1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -129,6 +130,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <None Include="Images\panic-attack.png" />
     <None Include="Images\pinging.png" />
     <None Include="Images\ping.png" />
     <None Include="Images\check-for-updates.png" />

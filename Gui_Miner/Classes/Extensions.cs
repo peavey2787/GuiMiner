@@ -35,6 +35,17 @@ namespace Gui_Miner.Classes
                 richTextBox.Text = text;
             }
         }
+        public static string GetTextThreadSafe(this RichTextBox richTextBox)
+        {
+            if (richTextBox.InvokeRequired)
+            {
+                return (string)richTextBox.Invoke(new Func<string>(() => richTextBox.Text));
+            }
+            else
+            {
+                return richTextBox.Text;
+            }
+        }
         public static void ForeColorSetThreadSafe(this RichTextBox richTextBox, Color color)
         {
             if (richTextBox.InvokeRequired)
@@ -130,7 +141,7 @@ namespace Gui_Miner.Classes
 
     public static class LabelExtensions
     {
-        public static void TextThreadSafe(this Label label, string text)
+        public static void SetTextThreadSafe(this Label label, string text)
         {
             if (label.InvokeRequired)
             {
@@ -141,7 +152,17 @@ namespace Gui_Miner.Classes
                 label.Text = text;
             }
         }
-
+        public static string GetTextThreadSafe(this Label label)
+        {
+            if (label.InvokeRequired)
+            {
+                return (string)label.Invoke(new Func<string>(() => label.Text));
+            }
+            else
+            {
+                return label.Text;
+            }
+        }
         public static void ForeColorThreadSafe(this Label label, Color color)
         {
             if (label.InvokeRequired)
