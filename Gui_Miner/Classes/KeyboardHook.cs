@@ -115,7 +115,7 @@ namespace Gui_Miner
 
                     // Store the pressed key in the circular buffer
                     lastPressedKeys.Enqueue((Keys)vkCode);
-                    if (StopKeys != null && lastPressedKeys.Count > StopKeys.Length)
+                    if (StopKeys != null && lastPressedKeys.Count > StopKeys.Count())
                     {
                         lastPressedKeys.Dequeue(); // Remove the oldest key if the buffer exceeds length
                     }
