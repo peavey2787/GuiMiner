@@ -94,6 +94,13 @@ namespace Gui_Miner.Classes
                     UpdateOutputConsole(e.Data, richTextBox);
             };
 
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
+                if (richTextBox != null)
+                    UpdateOutputConsole(e.Data, richTextBox);
+            };
+
             if (richTextBox != null)
             {
                 richTextBox.AppendTextThreadSafe("\nSTARTING MINER...");
@@ -110,6 +117,7 @@ namespace Gui_Miner.Classes
                 {
                     // Begin asynchronously reading the output
                     process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
 
                     // Wait for the process to exit
                     process.WaitForExit();
@@ -200,6 +208,7 @@ namespace Gui_Miner.Classes
         public void KillAllMiners()
         {
             KillAllProcessesContainingName("miner");
+            KillAllProcessesContainingName("Miner");
         }
 
 
