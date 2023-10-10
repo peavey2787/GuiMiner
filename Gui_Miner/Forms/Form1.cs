@@ -370,8 +370,10 @@ namespace Gui_Miner
                             if (!string.IsNullOrEmpty(poolLink1) && Uri.IsWellFormedUriString(poolLink1, UriKind.Absolute))
                             {
                                 // Open the default web browser with the specified URL
+                                Process.Start(poolLink1);
+                            } 
+                            else if(!string.IsNullOrEmpty(poolLink1))
                                 Process.Start(AddHttpsIfNeeded(poolLink1));
-                            }
                         };
 
                         // Try to get pool link 2
@@ -389,8 +391,10 @@ namespace Gui_Miner
                             if (!string.IsNullOrEmpty(poolLink2) && Uri.IsWellFormedUriString(poolLink2, UriKind.Absolute))
                             {
                                 // Open the default web browser with the specified URL
-                                Process.Start(AddHttpsIfNeeded(poolLink2));
+                                Process.Start(poolLink2);
                             }
+                            else if (!string.IsNullOrEmpty(poolLink2))
+                                Process.Start(AddHttpsIfNeeded(poolLink2));
                         };
 
                         // Try to get pool link 3
@@ -408,8 +412,10 @@ namespace Gui_Miner
                             if (!string.IsNullOrEmpty(poolLink3) && Uri.IsWellFormedUriString(poolLink3, UriKind.Absolute))
                             {
                                 // Open the default web browser with the specified URL
-                                Process.Start(AddHttpsIfNeeded(poolLink3));
+                                Process.Start(poolLink3);
                             }
+                            else if (!string.IsNullOrEmpty(poolLink3))
+                                Process.Start(AddHttpsIfNeeded(poolLink3));
                         };
 
                         // Add pool links if they're not empty
