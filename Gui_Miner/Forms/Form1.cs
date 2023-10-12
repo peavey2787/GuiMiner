@@ -34,7 +34,7 @@ using Application = System.Windows.Forms.Application;
 using Image = System.Drawing.Image;
 using Task = System.Threading.Tasks.Task;
 using Timer = System.Windows.Forms.Timer;
-
+using System.Runtime.InteropServices;
 namespace Gui_Miner
 {
     public partial class Form1 : Form
@@ -94,10 +94,14 @@ namespace Gui_Miner
                 }
 
                 // Start the keyboard hook on the main thread
-                Invoke((MethodInvoker)delegate
+                try
                 {
-                    globalKeyboardHook.Start();
-                });
+                    Invoke((MethodInvoker)delegate
+                    {
+                        globalKeyboardHook.Start();
+                    });
+                }
+                catch { }
             });
         }
 
@@ -118,8 +122,18 @@ namespace Gui_Miner
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Save window location
-            AppSettings.Save<Point>("windowLocation", this.Location);
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                this.Hide();
+                this.ShowInTaskbar = false;
+                this.WindowState = FormWindowState.Minimized;
+            }
+            else
+            {
+                // Save window location
+                AppSettings.Save<Point>("windowLocation", this.Location);
+            }
         }
         internal async void CloseApp()
         {
@@ -443,6 +457,18 @@ namespace Gui_Miner
             notify_icon.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             notify_icon.Text = "Gui Miner"; // Set the tooltip text
             notify_icon.Visible = true;
+
+            notify_icon.MouseDoubleClick += (sender, e) =>
+            {
+                if (this.WindowState == FormWindowState.Minimized)
+                {
+                    this.WindowState = FormWindowState.Normal;
+                    this.Show();
+                    this.ShowInTaskbar = true;
+                }
+                else if (this.WindowState != FormWindowState.Minimized)
+                    this.WindowState = FormWindowState.Minimized;                
+            };
 
             // Add a context menu to the notify icon
             ContextMenuStrip contextMenu = new ContextMenuStrip();
