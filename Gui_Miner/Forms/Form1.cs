@@ -368,6 +368,8 @@ namespace Gui_Miner
                         tabPageRichTextBox.BackColor = Color.Black;
                         tabPage.Controls.Add(tabPageRichTextBox);
 
+                        tabPageRichTextBox.Text = "Starting miner, it may take up to 5 minutes before you see any updated depending on which miner you use.";
+
                         tabControl.TabPages.Add(tabPage);
                     }
                     else
