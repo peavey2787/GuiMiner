@@ -27,6 +27,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.AxHost;
+using static System.Windows.Forms.LinkLabel;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolTip;
 using Action = System.Action;
 using Application = System.Windows.Forms.Application;
@@ -329,77 +330,29 @@ namespace Gui_Miner
 
                         // Try to get pool link 1
                         string poolDomainName1 = minerConfig.GetPool1DomainName();
-                        string poolLink1 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName1)).Link;
-
-                        LinkLabel poolLinkLabel1 = new LinkLabel();
-                        string poolLinkText = poolLink1;
-                        var poolLinkTextParts = poolLink1.Split('.');
-                        if (poolLinkTextParts.Length > 0 && !string.IsNullOrWhiteSpace(poolLinkTextParts[0]))
-                            poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
-                        poolLinkLabel1.Text = "Pool Link1: " + poolLinkText;
-                        poolLinkLabel1.Dock = DockStyle.Top;
-                        poolLinkLabel1.LinkClicked += (sender, e) =>
+                        if (!string.IsNullOrWhiteSpace(poolDomainName1))
                         {
-                            if (!string.IsNullOrEmpty(poolLink1) && Uri.IsWellFormedUriString(poolLink1, UriKind.Absolute))
-                            {
-                                // Open the default web browser with the specified URL
-                                Process.Start(poolLink1);
-                            } 
-                            else if(!string.IsNullOrEmpty(poolLink1))
-                                Process.Start(AddHttpsIfNeeded(poolLink1));
-                        };
+                            Pool pool = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName1));
+                            topPanel.Controls.Add(CreatePoolLinkLabel(pool));                            
+                        }
 
                         // Try to get pool link 2
-                        string poolDomainName2 = minerConfig.GetPool2DomainName();
-                        string poolLink2 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName2)).Link;
-                        poolLinkText = poolLink2;
-                        poolLinkTextParts = poolLink2.Split('.');
-                        if (poolLinkTextParts.Length > 0)
-                            poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
-                        LinkLabel poolLinkLabel2 = new LinkLabel();
-                        poolLinkLabel2.Text = "Pool Link2: " + poolLinkText;
-                        poolLinkLabel2.Dock = DockStyle.Top;
-                        poolLinkLabel2.LinkClicked += (sender, e) =>
+                        string poolDomainName2 = minerConfig.GetPool1DomainName();
+                        if (!string.IsNullOrWhiteSpace(poolDomainName2))
                         {
-                            if (!string.IsNullOrEmpty(poolLink2) && Uri.IsWellFormedUriString(poolLink2, UriKind.Absolute))
-                            {
-                                // Open the default web browser with the specified URL
-                                Process.Start(poolLink2);
-                            }
-                            else if (!string.IsNullOrEmpty(poolLink2))
-                                Process.Start(AddHttpsIfNeeded(poolLink2));
-                        };
+                            Pool pool = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName2));
+                            CreatePoolLinkLabel(pool);
+                            topPanel.Controls.Add(CreatePoolLinkLabel(pool));
+                        }
 
                         // Try to get pool link 3
-                        string poolDomainName3 = minerConfig.GetPool3DomainName();
-                        string poolLink3 = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName3)).Link;
-                        poolLinkText = poolLink3;
-                        poolLinkTextParts = poolLink3.Split('.');
-                        if (poolLinkTextParts.Length > 0)
-                            poolLinkText = poolLinkTextParts[0] + '.' + poolLinkTextParts[1];
-                        LinkLabel poolLinkLabel3 = new LinkLabel();
-                        poolLinkLabel3.Text = "Pool Link3: " + poolLinkText;
-                        poolLinkLabel3.Dock = DockStyle.Top;
-                        poolLinkLabel3.LinkClicked += (sender, e) =>
+                        string poolDomainName3 = minerConfig.GetPool1DomainName();
+                        if (!string.IsNullOrWhiteSpace(poolDomainName3))
                         {
-                            if (!string.IsNullOrEmpty(poolLink3) && Uri.IsWellFormedUriString(poolLink3, UriKind.Absolute))
-                            {
-                                // Open the default web browser with the specified URL
-                                Process.Start(poolLink3);
-                            }
-                            else if (!string.IsNullOrEmpty(poolLink3))
-                                Process.Start(AddHttpsIfNeeded(poolLink3));
-                        };
-
-                        // Add pool links if they're not empty
-                        if (!string.IsNullOrWhiteSpace(poolLink1))
-                            topPanel.Controls.Add(poolLinkLabel1);
-
-                        if (!string.IsNullOrWhiteSpace(poolLink2))
-                            topPanel.Controls.Add(poolLinkLabel2);
-
-                        if (!string.IsNullOrWhiteSpace(poolLink3))
-                            topPanel.Controls.Add(poolLinkLabel3);
+                            Pool pool = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName3));
+                            CreatePoolLinkLabel(pool);
+                            topPanel.Controls.Add(CreatePoolLinkLabel(pool));
+                        }
 
                         tabPage.Controls.Add(topPanel);
                         // End of Top Panel
@@ -433,7 +386,31 @@ namespace Gui_Miner
                 else
                     outputPanel.Controls.Add(tabControl);                
             }            
-        }       
+        }
+
+        private LinkLabel CreatePoolLinkLabel(Pool pool)
+        {
+            LinkLabel linkLabel = new LinkLabel();
+
+            var parts = pool.Link.Split('.');
+            if (parts.Length > 0 && !string.IsNullOrWhiteSpace(parts[0]))
+                linkLabel.Text = parts[0] + '.' + parts[1];
+
+            linkLabel.Text = "Pool Link1: " + linkLabel.Text;
+            linkLabel.Dock = DockStyle.Top;
+            linkLabel.LinkClicked += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(pool.Link) && Uri.IsWellFormedUriString(pool.Link, UriKind.Absolute))
+                {
+                    // Open the default web browser with the specified URL
+                    Process.Start(pool.Link);
+                }
+                else if (!string.IsNullOrEmpty(pool.Link))
+                    Process.Start(AddHttpsIfNeeded(pool.Link));
+            };
+
+            return linkLabel;
+        }
         private void TabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
             TabControl tabControl = (TabControl)sender;

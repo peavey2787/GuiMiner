@@ -219,7 +219,8 @@ namespace Gui_Miner.Classes
             Process[] processes = Process.GetProcesses();
             foreach (Process process in processes)
             {
-                if (process.ProcessName.Contains(name))
+                string thisApp = Process.GetCurrentProcess().ProcessName;
+                if (process.ProcessName.Contains(name) && process.ProcessName != thisApp)
                 {
                     KillProcess(process);
                 }
