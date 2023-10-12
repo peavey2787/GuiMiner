@@ -101,33 +101,6 @@ namespace Gui_Miner
         }
 
 
-
-        // Rotate image
-        private void CreateRotatingPanel()
-        {
-            outputPanel.Controls.Clear();
-
-            rotatingPanel = RotatingPanel.Create();
-
-            // Add image
-            string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
-            rotatingPanel.Image = GetBgImage(bgImage);
-
-            outputPanel.Controls.Add(rotatingPanel);
-
-            rotatingPanel.Start();
-        }
-        private void RemoveRotatingPanel()
-        {
-            if (rotatingPanel != null)
-            {
-                rotatingPanel.Dispose(); // Dispose of the rotating panel
-                outputPanel.Controls.Remove(rotatingPanel); // Remove it from the outputPanel
-                rotatingPanel = null; // Set the reference to null
-            }
-        }
-
-
         // Load/Close Form
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -475,44 +448,10 @@ namespace Gui_Miner
                 {
                     // Inform user of the switch
                     selectedRichTextBox.SelectionColor = Color.White;
-                    selectedRichTextBox.AppendText("\n\n----------- SWITCHED MINERS...WAITING FOR NEW STATS... -----------");
+                    selectedRichTextBox.AppendText("\n\n----------- SWITCHED PAGE --- WAITING FOR NEW STATS -----------");
                     selectedRichTextBox.ScrollToCaret();
                 }
             }
-        }
-
-
-        // Helpers
-        internal Image GetBgImage(string bgImage)
-        {
-            Image image = null;
-
-            if (bgImage == "Kas - Globe")
-                image = Properties.Resources.kas_world;
-            else if (bgImage == "Kaspa")
-                image = Properties.Resources.kaspa;
-            else if (bgImage == "Ergo")
-                image = Properties.Resources.ergo;
-            else if (bgImage == "Bitcoin")
-                image = Properties.Resources.bitcoin;
-            else if (bgImage == "Zilliqa")
-                image = Properties.Resources.zilliqa;
-            else
-                image = Properties.Resources.bitcoin;
-
-            return image;
-        }
-        static string AddHttpsIfNeeded(string url)
-        {
-            // Check if the URL starts with "https://" or "http://"
-            if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
-                !url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-            {
-                // If not, add "https://"
-                url = "https://" + url;
-            }
-
-            return url;
         }
 
 
@@ -635,6 +574,66 @@ namespace Gui_Miner
 
         #endregion
 
+
+        #region Helpers
+        // Helpers
+        internal Image GetBgImage(string bgImage)
+        {
+            Image image = null;
+
+            if (bgImage == "Kas - Globe")
+                image = Properties.Resources.kas_world;
+            else if (bgImage == "Kaspa")
+                image = Properties.Resources.kaspa;
+            else if (bgImage == "Ergo")
+                image = Properties.Resources.ergo;
+            else if (bgImage == "Bitcoin")
+                image = Properties.Resources.bitcoin;
+            else if (bgImage == "Zilliqa")
+                image = Properties.Resources.zilliqa;
+            else
+                image = Properties.Resources.bitcoin;
+
+            return image;
+        }
+        static string AddHttpsIfNeeded(string url)
+        {
+            // Check if the URL starts with "https://" or "http://"
+            if (!url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                !url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                // If not, add "https://"
+                url = "https://" + url;
+            }
+
+            return url;
+        }
+
+        // Rotating image
+        private void CreateRotatingPanel()
+        {
+            outputPanel.Controls.Clear();
+
+            rotatingPanel = RotatingPanel.Create();
+
+            // Add image
+            string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
+            rotatingPanel.Image = GetBgImage(bgImage);
+
+            outputPanel.Controls.Add(rotatingPanel);
+
+            rotatingPanel.Start();
+        }
+        private void RemoveRotatingPanel()
+        {
+            if (rotatingPanel != null)
+            {
+                rotatingPanel.Dispose(); // Dispose of the rotating panel
+                outputPanel.Controls.Remove(rotatingPanel); // Remove it from the outputPanel
+                rotatingPanel = null; // Set the reference to null
+            }
+        }
+        #endregion
 
     }
 
