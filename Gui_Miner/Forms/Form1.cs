@@ -338,7 +338,7 @@ namespace Gui_Miner
                             Process.Start(url);
                         };
 
-                        // Add link
+                        // Add api link
                         if (minerConfig.Api > 0)
                             topPanel.Controls.Add(linkLabel);
 
@@ -351,7 +351,7 @@ namespace Gui_Miner
                         }
 
                         // Try to get pool link 2
-                        string poolDomainName2 = minerConfig.GetPool1DomainName();
+                        string poolDomainName2 = minerConfig.GetPool2DomainName();
                         if (!string.IsNullOrWhiteSpace(poolDomainName2))
                         {
                             Pool pool = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName2));
@@ -360,7 +360,7 @@ namespace Gui_Miner
                         }
 
                         // Try to get pool link 3
-                        string poolDomainName3 = minerConfig.GetPool1DomainName();
+                        string poolDomainName3 = minerConfig.GetPool3DomainName();
                         if (!string.IsNullOrWhiteSpace(poolDomainName3))
                         {
                             Pool pool = settingsForm.Settings.Pools.Find(p => p.Address.Contains(poolDomainName3));
@@ -403,7 +403,6 @@ namespace Gui_Miner
                     outputPanel.Controls.Add(tabControl);                
             }            
         }
-
         private LinkLabel CreatePoolLinkLabel(Pool pool)
         {
             LinkLabel linkLabel = new LinkLabel();
@@ -412,7 +411,7 @@ namespace Gui_Miner
             if (parts.Length > 0 && !string.IsNullOrWhiteSpace(parts[0]))
                 linkLabel.Text = parts[0] + '.' + parts[1];
 
-            linkLabel.Text = "Pool Link1: " + linkLabel.Text;
+            linkLabel.Text = "Pool Link: " + linkLabel.Text;
             linkLabel.Dock = DockStyle.Top;
             linkLabel.LinkClicked += (sender, e) =>
             {
