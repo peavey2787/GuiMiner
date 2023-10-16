@@ -382,7 +382,7 @@ namespace Gui_Miner
                         tabPageRichTextBox.BackColor = Color.Black;
                         tabPage.Controls.Add(tabPageRichTextBox);
 
-                        tabPageRichTextBox.Text = "Starting miner. It may take up to 5 minutes before you see any updates, depending on which miner you use.";
+                        tabPageRichTextBox.Text = "Starting miner. It may take up to 5 minutes before you see any updates, depending on which miner you use. If you don't have Redirect_Console_Output check marked in miner settings then you wont see any updates here.";
 
                         tabControl.TabPages.Add(tabPage);
                     }
