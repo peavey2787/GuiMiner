@@ -390,7 +390,10 @@ namespace Gui_Miner
                         tabPageRichTextBox = tabPage.Controls.OfType<RichTextBox>().FirstOrDefault();
 
                     // Start the miner 
-                    taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString(), tabPageRichTextBox);                       
+                    if(minerConfig.Redirect_Console_Output)
+                        taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString(), tabPageRichTextBox);                       
+                    else
+                        taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString());
                 }
             }
 

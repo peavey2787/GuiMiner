@@ -2073,6 +2073,7 @@ namespace Gui_Miner
         public bool Active { get; set; }
         public bool Run_As_Admin { get; set; }
         public bool Use_Shortcut_Keys { get; set; }
+        public bool Redirect_Console_Output { get; set; }
         public string Bat_File_Arguments
         {
             get

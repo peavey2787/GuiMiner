@@ -68,18 +68,41 @@ namespace Gui_Miner.Classes
                 return false;
             }
 
-            Process process = new Process
+            bool redirectOutput = false;
+            Process process;
+            if (richTextBox != null)
             {
-                StartInfo = new ProcessStartInfo
+                redirectOutput = true;
+                process = new Process
                 {
-                    FileName = filePath,
-                    Arguments = arguments,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        Arguments = arguments,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+            }
+            else
+            {
+                redirectOutput = false;
+                process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        Arguments = arguments,
+                        RedirectStandardOutput = false,
+                        RedirectStandardError = false,
+                        UseShellExecute = false,
+                        CreateNoWindow = false
+                    }
+                };
+            }
+
 
             if (runAsAdmin)
             {
@@ -101,37 +124,57 @@ namespace Gui_Miner.Classes
                     UpdateOutputConsole(e.Data, richTextBox);
             };
 
-            if (richTextBox != null)
+            if (redirectOutput)
             {
                 richTextBox.AppendTextThreadSafe("\nSTARTING MINER...");
                 richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
-            }
 
-            try
-            {
-                process.Start();
-
-                runningTasks[taskId] = process;
-
-                Task.Run( () =>
+                try
                 {
-                    // Begin asynchronously reading the output
-                    process.BeginOutputReadLine();
-                    process.BeginErrorReadLine();
+                    process.Start();
 
-                    // Wait for the process to exit
-                    process.WaitForExit();
+                    runningTasks[taskId] = process;
 
-                    // Close the standard output stream
-                    process.Close();
-                    process.Dispose();
-                });
-            }
-            catch (Exception ex)
-            {
-                if (richTextBox != null)
+                    Task.Run(() =>
+                    {
+                        // Begin asynchronously reading the output
+                        process.BeginOutputReadLine();
+                        process.BeginErrorReadLine();
+
+                        // Wait for the process to exit
+                        process.WaitForExit();
+
+                        // Close the standard output stream
+                        process.Close();
+                        process.Dispose();
+                    });
+                }
+                catch (Exception ex)
+                {
                     richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
-                return false;
+                    return false;
+                }
+            }
+            else
+            {
+                try
+                {
+                    process.Start();
+                    runningTasks[taskId] = process;
+                    Task.Run(() =>
+                    {
+                        // Wait for the process to exit
+                        process.WaitForExit();
+
+                        // Close the standard output stream
+                        process.Close();
+                        process.Dispose();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    return false;
+                }
             }
 
             return true;
