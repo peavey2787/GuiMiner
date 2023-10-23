@@ -52,6 +52,9 @@ namespace Gui_Miner
         public const string STARTSHORTKEYS = "StartShortKeys";
         public const string BGIMAGE = "BackgroundImage";
         const string APPVERSION = "AppVersion";
+        const double AppVersion = 1.5;
+        const double VersionIncrement = 0.1;
+        double NextAppVersion = AppVersion + VersionIncrement;
         public Settings Settings { get { return _settings; } }
         public Form1 Form1 { get; set; }
         public void SetSettings(Settings settings) { _settings = settings; }
@@ -175,7 +178,7 @@ namespace Gui_Miner
                     startShortKeysTextBox.Text = startShortKeysTextBox.Text.Substring(0, startShortKeysTextBox.Text.Length - 3);
             }
 
-            successLabel.Text = "Version " + GetCurrentVersion();
+            versionLabel.Text = "V " + AppVersion;
         }
         #endregion
 
@@ -1239,7 +1242,7 @@ namespace Gui_Miner
         {
             HideAllPanels();
             CreateRotatingPanel();
-            successLabel.Text = "Version " + GetCurrentVersion();
+            successLabel.Text = "";
             generalPanel.Show();
             generalPanel.BringToFront();
         }
@@ -1909,22 +1912,16 @@ namespace Gui_Miner
         }
         public void CheckForUpdates()
         {
-            string nextVersion = GetNextVersion();
-            if (UpdatesAvailable(nextVersion))
+            if (UpdatesAvailable())
             {
                 // Updates found
                 DialogResult result = MessageBox.Show("Update Found! Close the app and update?", "Update Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
                 if (result == DialogResult.Yes)
                 {
-                    // Update app settings version
-                    AppSettings.Save<string>(APPVERSION, nextVersion);
-                    successLabel.Text = "Version " + nextVersion;
-
                     // Check if we need to run as admin
                     bool runAs = AppIsRunningAsAdmin();
                     UpdateApp(runAs);
-                    MainForm.CloseApp();
                 }
             }
             else
@@ -1948,13 +1945,13 @@ namespace Gui_Miner
 
             return "";
         }
-        private bool UpdatesAvailable(string nextVersion)
+        private bool UpdatesAvailable()
         {
             string updateProjectPath = GetUpdateAppPath();            
 
             // Create a process start info
             ProcessStartInfo startInfo = new ProcessStartInfo(updateProjectPath);
-            startInfo.Arguments = $"-checkupdate -{nextVersion} -false";
+            startInfo.Arguments = $"-checkupdate -{NextAppVersion} -false";
 
             // Start the "update" project as a separate process
             try
@@ -1980,7 +1977,6 @@ namespace Gui_Miner
         }
         private void UpdateApp(bool runAsAdmin)
         {
-            string nextVersion = GetNextVersion();
             string updateProjectPath = GetUpdateAppPath();
             string command = "update";            
 
@@ -1988,52 +1984,19 @@ namespace Gui_Miner
             ProcessStartInfo startInfo = new ProcessStartInfo(updateProjectPath);
             if(runAsAdmin)
                 startInfo.Verb = "runas";
-            startInfo.Arguments = $"-{command} -{nextVersion} {runAsAdmin}";
+            startInfo.Arguments = $"-{command} -{NextAppVersion} {runAsAdmin}";
 
             // Start the "update" project as a separate process
             try
             {
                 Process.Start(startInfo);
+                MainForm.CloseApp();
             }
             catch (Exception ex)
             {
-                string prevVersion = GetPrevVersion();
-                AppSettings.Save<string>(APPVERSION, prevVersion);
-
-                MessageBox.Show("Error updating " + ex.Message);
+                MessageBox.Show("Error updating to version " + NextAppVersion + " -> " + ex.Message);
             }
         }
-        private string GetCurrentVersion()
-        {
-            string version = AppSettings.Load<string>(APPVERSION);
-
-            if (string.IsNullOrWhiteSpace(version))
-                version = "1.2";
-
-            return version;
-        }
-        private string GetNextVersion()
-        {
-            string version = GetCurrentVersion();
-            var parts = version.Split('.');
-
-            int major = int.Parse(parts[0]);
-            int minor = int.Parse(parts[1]) + 1;
-            version = $"{major}.{minor}";
-            return version;
-        }
-        private string GetPrevVersion()
-        {
-            string version = GetCurrentVersion();
-            var parts = version.Split('.');
-
-            int major = int.Parse(parts[0]);
-            int minor = int.Parse(parts[1]) - 1;
-            version = $"{major}.{minor}";
-            return version;
-        }
-
-
         #endregion
 
 

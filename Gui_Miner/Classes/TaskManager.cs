@@ -171,7 +171,7 @@ namespace Gui_Miner.Classes
                         process.Dispose();
                     });
                 }
-                catch (Exception ex)
+                catch
                 {
                     return false;
                 }

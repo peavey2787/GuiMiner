@@ -43,7 +43,13 @@
             this.statusLabel = new System.Windows.Forms.Label();
             this.manageConfigPanel = new System.Windows.Forms.Panel();
             this.importBatButton = new System.Windows.Forms.Button();
+            this.getAllGpusButton = new System.Windows.Forms.Button();
+            this.generateButton = new System.Windows.Forms.Button();
             this.topPanel = new System.Windows.Forms.Panel();
+            this.managePoolsButton = new System.Windows.Forms.Button();
+            this.manageWalletsButton = new System.Windows.Forms.Button();
+            this.manageMinerConfigsButton = new System.Windows.Forms.Button();
+            this.generalButton = new System.Windows.Forms.Button();
             this.generalPanel = new System.Windows.Forms.Panel();
             this.checkUpdatesButton = new System.Windows.Forms.Button();
             this.bgImagePanel = new System.Windows.Forms.Panel();
@@ -67,6 +73,8 @@
             this.walletAddressTextBox = new System.Windows.Forms.TextBox();
             this.walletsListBox = new System.Windows.Forms.ListBox();
             this.poolsPanel = new System.Windows.Forms.Panel();
+            this.pingLabel = new System.Windows.Forms.Label();
+            this.pingPictureBox = new System.Windows.Forms.PictureBox();
             this.poolPanel = new System.Windows.Forms.Panel();
             this.poolSsslCheckBox = new System.Windows.Forms.CheckBox();
             this.label12 = new System.Windows.Forms.Label();
@@ -82,22 +90,15 @@
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.tipsLinkLabel = new System.Windows.Forms.LinkLabel();
             this.copiedLabel = new System.Windows.Forms.Label();
-            this.pingLabel = new System.Windows.Forms.Label();
-            this.pingPictureBox = new System.Windows.Forms.PictureBox();
-            this.getAllGpusButton = new System.Windows.Forms.Button();
-            this.generateButton = new System.Windows.Forms.Button();
-            this.managePoolsButton = new System.Windows.Forms.Button();
-            this.manageWalletsButton = new System.Windows.Forms.Button();
-            this.manageMinerConfigsButton = new System.Windows.Forms.Button();
-            this.generalButton = new System.Windows.Forms.Button();
+            this.versionLabel = new System.Windows.Forms.Label();
             this.manageConfigPanel.SuspendLayout();
             this.topPanel.SuspendLayout();
             this.generalPanel.SuspendLayout();
             this.walletsPanel.SuspendLayout();
             this.walletPanel.SuspendLayout();
             this.poolsPanel.SuspendLayout();
-            this.poolPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pingPictureBox)).BeginInit();
+            this.poolPanel.SuspendLayout();
             this.SuspendLayout();
             // 
             // minerSettingsPanel
@@ -250,6 +251,33 @@
             this.importBatButton.UseVisualStyleBackColor = false;
             this.importBatButton.Click += new System.EventHandler(this.importBatButton_Click);
             // 
+            // getAllGpusButton
+            // 
+            this.getAllGpusButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.getAllGpusButton.BackgroundImage = global::Gui_Miner.Properties.Resources.find_gpus;
+            this.getAllGpusButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.getAllGpusButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.getAllGpusButton.Location = new System.Drawing.Point(600, 393);
+            this.getAllGpusButton.Name = "getAllGpusButton";
+            this.getAllGpusButton.Size = new System.Drawing.Size(94, 66);
+            this.getAllGpusButton.TabIndex = 7;
+            this.getAllGpusButton.UseVisualStyleBackColor = false;
+            this.getAllGpusButton.Click += new System.EventHandler(this.getAllGpusButton_Click);
+            // 
+            // generateButton
+            // 
+            this.generateButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.generateButton.BackgroundImage = global::Gui_Miner.Properties.Resources.generate;
+            this.generateButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.generateButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.generateButton.Location = new System.Drawing.Point(10, 446);
+            this.generateButton.Name = "generateButton";
+            this.generateButton.Size = new System.Drawing.Size(62, 52);
+            this.generateButton.TabIndex = 8;
+            this.generateButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
+            this.generateButton.UseVisualStyleBackColor = false;
+            this.generateButton.Click += new System.EventHandler(this.generateButton_Click);
+            // 
             // topPanel
             // 
             this.topPanel.Controls.Add(this.managePoolsButton);
@@ -261,6 +289,54 @@
             this.topPanel.Name = "topPanel";
             this.topPanel.Size = new System.Drawing.Size(1712, 54);
             this.topPanel.TabIndex = 15;
+            // 
+            // managePoolsButton
+            // 
+            this.managePoolsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.pools;
+            this.managePoolsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.managePoolsButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.managePoolsButton.Location = new System.Drawing.Point(631, 2);
+            this.managePoolsButton.Name = "managePoolsButton";
+            this.managePoolsButton.Size = new System.Drawing.Size(65, 49);
+            this.managePoolsButton.TabIndex = 3;
+            this.managePoolsButton.UseVisualStyleBackColor = true;
+            this.managePoolsButton.Click += new System.EventHandler(this.managePoolsButton_Click);
+            // 
+            // manageWalletsButton
+            // 
+            this.manageWalletsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.wallets;
+            this.manageWalletsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.manageWalletsButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.manageWalletsButton.Location = new System.Drawing.Point(433, 2);
+            this.manageWalletsButton.Name = "manageWalletsButton";
+            this.manageWalletsButton.Size = new System.Drawing.Size(65, 51);
+            this.manageWalletsButton.TabIndex = 2;
+            this.manageWalletsButton.UseVisualStyleBackColor = true;
+            this.manageWalletsButton.Click += new System.EventHandler(this.manageWalletsButton_Click);
+            // 
+            // manageMinerConfigsButton
+            // 
+            this.manageMinerConfigsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.miner_settings;
+            this.manageMinerConfigsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.manageMinerConfigsButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.manageMinerConfigsButton.Location = new System.Drawing.Point(214, 2);
+            this.manageMinerConfigsButton.Name = "manageMinerConfigsButton";
+            this.manageMinerConfigsButton.Size = new System.Drawing.Size(60, 51);
+            this.manageMinerConfigsButton.TabIndex = 1;
+            this.manageMinerConfigsButton.UseVisualStyleBackColor = true;
+            this.manageMinerConfigsButton.Click += new System.EventHandler(this.manageMinerConfigsButton_Click);
+            // 
+            // generalButton
+            // 
+            this.generalButton.BackgroundImage = global::Gui_Miner.Properties.Resources.windows_settings;
+            this.generalButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.generalButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.generalButton.Location = new System.Drawing.Point(30, 2);
+            this.generalButton.Name = "generalButton";
+            this.generalButton.Size = new System.Drawing.Size(56, 51);
+            this.generalButton.TabIndex = 0;
+            this.generalButton.UseVisualStyleBackColor = true;
+            this.generalButton.Click += new System.EventHandler(this.generalButton_Click);
             // 
             // generalPanel
             // 
@@ -521,6 +597,28 @@
             this.poolsPanel.Size = new System.Drawing.Size(720, 600);
             this.poolsPanel.TabIndex = 18;
             // 
+            // pingLabel
+            // 
+            this.pingLabel.AutoSize = true;
+            this.pingLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
+            this.pingLabel.Location = new System.Drawing.Point(446, 250);
+            this.pingLabel.Name = "pingLabel";
+            this.pingLabel.Size = new System.Drawing.Size(43, 20);
+            this.pingLabel.TabIndex = 7;
+            this.pingLabel.Text = "0 ms";
+            // 
+            // pingPictureBox
+            // 
+            this.pingPictureBox.BackgroundImage = global::Gui_Miner.Properties.Resources.ping;
+            this.pingPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.pingPictureBox.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.pingPictureBox.Location = new System.Drawing.Point(296, 216);
+            this.pingPictureBox.Name = "pingPictureBox";
+            this.pingPictureBox.Size = new System.Drawing.Size(112, 78);
+            this.pingPictureBox.TabIndex = 6;
+            this.pingPictureBox.TabStop = false;
+            this.pingPictureBox.Click += new System.EventHandler(this.pingPictureBox_Click);
+            // 
             // poolPanel
             // 
             this.poolPanel.Controls.Add(this.poolSsslCheckBox);
@@ -682,102 +780,15 @@
             this.copiedLabel.Text = "Address Copied, Thanks!";
             this.copiedLabel.Visible = false;
             // 
-            // pingLabel
+            // versionLabel
             // 
-            this.pingLabel.AutoSize = true;
-            this.pingLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
-            this.pingLabel.Location = new System.Drawing.Point(446, 250);
-            this.pingLabel.Name = "pingLabel";
-            this.pingLabel.Size = new System.Drawing.Size(43, 20);
-            this.pingLabel.TabIndex = 7;
-            this.pingLabel.Text = "0 ms";
-            // 
-            // pingPictureBox
-            // 
-            this.pingPictureBox.BackgroundImage = global::Gui_Miner.Properties.Resources.ping;
-            this.pingPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.pingPictureBox.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.pingPictureBox.Location = new System.Drawing.Point(296, 216);
-            this.pingPictureBox.Name = "pingPictureBox";
-            this.pingPictureBox.Size = new System.Drawing.Size(112, 78);
-            this.pingPictureBox.TabIndex = 6;
-            this.pingPictureBox.TabStop = false;
-            this.pingPictureBox.Click += new System.EventHandler(this.pingPictureBox_Click);
-            // 
-            // getAllGpusButton
-            // 
-            this.getAllGpusButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
-            this.getAllGpusButton.BackgroundImage = global::Gui_Miner.Properties.Resources.find_gpus;
-            this.getAllGpusButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.getAllGpusButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.getAllGpusButton.Location = new System.Drawing.Point(600, 393);
-            this.getAllGpusButton.Name = "getAllGpusButton";
-            this.getAllGpusButton.Size = new System.Drawing.Size(94, 66);
-            this.getAllGpusButton.TabIndex = 7;
-            this.getAllGpusButton.UseVisualStyleBackColor = false;
-            this.getAllGpusButton.Click += new System.EventHandler(this.getAllGpusButton_Click);
-            // 
-            // generateButton
-            // 
-            this.generateButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
-            this.generateButton.BackgroundImage = global::Gui_Miner.Properties.Resources.generate;
-            this.generateButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.generateButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.generateButton.Location = new System.Drawing.Point(10, 446);
-            this.generateButton.Name = "generateButton";
-            this.generateButton.Size = new System.Drawing.Size(62, 52);
-            this.generateButton.TabIndex = 8;
-            this.generateButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
-            this.generateButton.UseVisualStyleBackColor = false;
-            this.generateButton.Click += new System.EventHandler(this.generateButton_Click);
-            // 
-            // managePoolsButton
-            // 
-            this.managePoolsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.pools;
-            this.managePoolsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.managePoolsButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.managePoolsButton.Location = new System.Drawing.Point(631, 2);
-            this.managePoolsButton.Name = "managePoolsButton";
-            this.managePoolsButton.Size = new System.Drawing.Size(65, 49);
-            this.managePoolsButton.TabIndex = 3;
-            this.managePoolsButton.UseVisualStyleBackColor = true;
-            this.managePoolsButton.Click += new System.EventHandler(this.managePoolsButton_Click);
-            // 
-            // manageWalletsButton
-            // 
-            this.manageWalletsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.wallets;
-            this.manageWalletsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.manageWalletsButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.manageWalletsButton.Location = new System.Drawing.Point(433, 2);
-            this.manageWalletsButton.Name = "manageWalletsButton";
-            this.manageWalletsButton.Size = new System.Drawing.Size(65, 51);
-            this.manageWalletsButton.TabIndex = 2;
-            this.manageWalletsButton.UseVisualStyleBackColor = true;
-            this.manageWalletsButton.Click += new System.EventHandler(this.manageWalletsButton_Click);
-            // 
-            // manageMinerConfigsButton
-            // 
-            this.manageMinerConfigsButton.BackgroundImage = global::Gui_Miner.Properties.Resources.miner_settings;
-            this.manageMinerConfigsButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.manageMinerConfigsButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.manageMinerConfigsButton.Location = new System.Drawing.Point(214, 2);
-            this.manageMinerConfigsButton.Name = "manageMinerConfigsButton";
-            this.manageMinerConfigsButton.Size = new System.Drawing.Size(60, 51);
-            this.manageMinerConfigsButton.TabIndex = 1;
-            this.manageMinerConfigsButton.UseVisualStyleBackColor = true;
-            this.manageMinerConfigsButton.Click += new System.EventHandler(this.manageMinerConfigsButton_Click);
-            // 
-            // generalButton
-            // 
-            this.generalButton.BackgroundImage = global::Gui_Miner.Properties.Resources.windows_settings;
-            this.generalButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-            this.generalButton.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.generalButton.Location = new System.Drawing.Point(30, 2);
-            this.generalButton.Name = "generalButton";
-            this.generalButton.Size = new System.Drawing.Size(56, 51);
-            this.generalButton.TabIndex = 0;
-            this.generalButton.UseVisualStyleBackColor = true;
-            this.generalButton.Click += new System.EventHandler(this.generalButton_Click);
+            this.versionLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.versionLabel.AutoSize = true;
+            this.versionLabel.Location = new System.Drawing.Point(680, 1039);
+            this.versionLabel.Name = "versionLabel";
+            this.versionLabel.Size = new System.Drawing.Size(32, 13);
+            this.versionLabel.TabIndex = 22;
+            this.versionLabel.Text = "V 0.0";
             // 
             // SettingsForm
             // 
@@ -785,6 +796,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
             this.ClientSize = new System.Drawing.Size(1712, 1061);
+            this.Controls.Add(this.versionLabel);
             this.Controls.Add(this.poolsPanel);
             this.Controls.Add(this.copiedLabel);
             this.Controls.Add(this.tipsLinkLabel);
@@ -811,9 +823,9 @@
             this.walletPanel.PerformLayout();
             this.poolsPanel.ResumeLayout(false);
             this.poolsPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pingPictureBox)).EndInit();
             this.poolPanel.ResumeLayout(false);
             this.poolPanel.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pingPictureBox)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -881,5 +893,6 @@
         private System.Windows.Forms.Button checkUpdatesButton;
         private System.Windows.Forms.PictureBox pingPictureBox;
         private System.Windows.Forms.Label pingLabel;
+        private System.Windows.Forms.Label versionLabel;
     }
 }

@@ -34,7 +34,7 @@ using Application = System.Windows.Forms.Application;
 using Image = System.Drawing.Image;
 using Task = System.Threading.Tasks.Task;
 using Timer = System.Windows.Forms.Timer;
-using System.Runtime.InteropServices;
+
 namespace Gui_Miner
 {
     public partial class Form1 : Form
