@@ -486,6 +486,7 @@ namespace Gui_Miner
                         checkBox.CheckedChanged += (sender, e) =>
                         {
                             property.SetValue(minerSetting, checkBox.Checked);
+                            SaveSettings();
                         };
 
                         inputControl = checkBox;
