@@ -192,8 +192,7 @@ class Program
     }
     static bool AreUpdatesAvailable(string version, out string url)
     {
-        url = $"https://github.com/peavey2787/GuiMiner/archive/refs/tags/V{version}.zip";
-        //https://github.com/peavey2787/GuiMiner/archive/refs/tags/V1.2.zip
+        url = $"http://thebox.loseyourip.com:8080/updates/{Path.GetFileNameWithoutExtension(_appName)}V{version}.zip";
 
         if (IsValidUrl(url))
             return true;
@@ -261,7 +260,7 @@ class Program
         ProcessStartInfo psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = $"-ExecutionPolicy ByPass -Command {command}",
+            Arguments = $"-ExecutionPolicy ByPass -Command \"{command}\"",
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
