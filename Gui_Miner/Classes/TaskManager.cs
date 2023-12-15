@@ -64,6 +64,19 @@ namespace Gui_Miner.Classes
                 {
                     richTextBox.AppendTextThreadSafe($"\nUnable to locate miner at {filePath}");
                     richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
+
+                    richTextBox.TextChanged += (sender, e) =>
+                    {
+                        int maxLength = 34560;
+
+                        if (richTextBox.Text.Length > maxLength)
+                        {
+                            richTextBox.Text = richTextBox.Text.Substring(0, maxLength);
+                            richTextBox.SelectionStart = richTextBox.Text.Length;
+                            richTextBox.ScrollToCaret();
+                        }
+                    };
+
                 }
                 return false;
             }

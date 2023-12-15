@@ -319,7 +319,11 @@ namespace Gui_Miner
                             }
                             else if ((string)button.Tag == "Start")
                             {
-                                taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString(), tabPageRichTextBox);
+                                if (minerConfig.Redirect_Console_Output)
+                                    taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString(), tabPageRichTextBox);
+                                else
+                                    taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString());
+
                                 button.Tag = "Stop";
                                 stopButton.BackgroundImage = Properties.Resources.stop_button;
                             }
