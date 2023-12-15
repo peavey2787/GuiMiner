@@ -1,4 +1,5 @@
 ﻿using Gui_Miner.Classes;
+using Gui_Miner.Properties;
 using Microsoft.Win32.TaskScheduler;
 using Newtonsoft.Json.Linq;
 using System;
@@ -355,12 +356,26 @@ namespace Gui_Miner
                             quickChangeSettings.Items.Add(config);
                         quickChangeSettings.SelectedItem = minerConfig;
 
+                        quickChangeSettings.GotFocus += async (sender, e) =>
+                        {
+                            MinerConfig selectedConfig = (MinerConfig)quickChangeSettings.SelectedItem;
+
+                            var settingsLoaded = await AppSettings.LoadAsync<Settings>(SettingsForm.SETTINGSNAME);
+                            if (settingsLoaded.Success)
+                            {
+                                quickChangeSettings.Items.Clear();
+                                var configs = settingsLoaded.Result.MinerSettings;
+                                foreach (MinerConfig config in configs)
+                                    quickChangeSettings.Items.Add(config);
+                                quickChangeSettings.SelectedItem = selectedConfig;
+                            }
+                        };
+
                         quickChangeSettings.SelectedIndexChanged += async (sender, e) =>
                         {
                             MinerConfig selectedConfig = (MinerConfig)quickChangeSettings.SelectedItem;
 
                             // Get the current setting from Master settings list and update its active state
-
                             var settings = new Settings();
                             var settingsLoaded = await AppSettings.LoadAsync<Settings>(SettingsForm.SETTINGSNAME);
                             if (settingsLoaded.Success)

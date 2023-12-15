@@ -276,6 +276,9 @@ namespace Gui_Miner
                 poolsListBox.Items.Add(pool);
             }
 
+            // Add default pools
+            AddDefaultPools();
+
             if (_settings.Pools.Count >= 1)
             {
                 // Select last item if out of bounds
@@ -293,6 +296,107 @@ namespace Gui_Miner
                 poolSsslCheckBox.Checked = false;
             }
 
+        }
+
+        private void AddDefaultPools()
+        {
+            Pool pool = new Pool();
+
+            // UnMineable SSL
+            pool.Port = 443;
+            pool.SSL = true;
+
+            pool.Name = "UnMineable - Nexa";                        
+            pool.Address = "nexapow.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Octopus";
+            pool.Address = "octopus.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Karlsen";
+            pool.Address = "karlsenhash.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - IronFish";
+            pool.Address = "ironfish.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Alephium";
+            pool.Address = "blake3.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Firo";
+            pool.Address = "firopow.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Ergo";
+            pool.Address = "autolykos.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Kawpow";
+            pool.Address = "kp.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Etc";
+            pool.Address = "etchash.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Ethash";
+            pool.Address = "ethash.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Xmr (cpu)";
+            pool.Address = "rx.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            // Non-SSL
+            pool.Port = 3333;
+            pool.SSL = false;
+
+            pool.Name = "UnMineable - Nexa";
+            pool.Address = "nexapow.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Octopus";
+            pool.Address = "octopus.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Karlsen";
+            pool.Address = "karlsenhash.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - IronFish";
+            pool.Address = "ironfish.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Alephium";
+            pool.Address = "blake3.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Firo";
+            pool.Address = "firopow.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Ergo";
+            pool.Address = "autolykos.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Kawpow";
+            pool.Address = "kp.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Etc";
+            pool.Address = "etchash.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Ethash";
+            pool.Address = "ethash.unmineable.com";
+            poolsListBox.Items.Add(pool);
+
+            pool.Name = "UnMineable - Xmr (cpu)";
+            pool.Address = "rx.unmineable.com";
+            poolsListBox.Items.Add(pool);
         }
 
 
