@@ -32,7 +32,7 @@
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-
+             
             if (this.Image == null) return;
 
             // Rotate the image and draw it on the panel

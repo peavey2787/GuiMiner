@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
@@ -59,7 +60,6 @@ namespace Gui_Miner
             settingsForm.Show();
             settingsForm.MainForm = this;
             settingsForm.Visible = false;
-            settingsForm.Form1 = this;
 
             outputPanel.BackgroundImage = null;
 
@@ -69,15 +69,23 @@ namespace Gui_Miner
             // Listen for short-cut keys
             LoadShortcutKeys();
         }
-        public void LoadShortcutKeys()
+        public async void LoadShortcutKeys()
         {
             // Run the entire method on a background thread
-            Task.Run(() =>
+            await Task.Run(async () =>
             {
                 globalKeyboardHook.SetMainForm(this);
 
-                var stopShortKeys = AppSettings.Load<List<Keys>>(SettingsForm.STOPSHORTKEYS);
-                var startShortKeys = AppSettings.Load<List<Keys>>(SettingsForm.STARTSHORTKEYS);
+                var startShortKeys = new List<Keys>();
+                var stopShortKeys = new List<Keys>();
+                
+                var keysLoaded = await AppSettings.LoadAsync<List<Keys>>(SettingsForm.STARTSHORTKEYS);
+                if (keysLoaded.Success)
+                    startShortKeys = keysLoaded.Result;
+
+                keysLoaded = await AppSettings.LoadAsync<List<Keys>>(SettingsForm.STOPSHORTKEYS);
+                if (keysLoaded.Success)
+                    stopShortKeys = keysLoaded.Result;
 
                 if (stopShortKeys != null && startShortKeys != null)
                 {
@@ -107,33 +115,36 @@ namespace Gui_Miner
 
 
         // Load/Close Form
-        private void Form1_Load(object sender, EventArgs e)
+        private async void Form1_Load(object sender, EventArgs e)
         {
             // Load last window location
-            var lastLocation = AppSettings.Load<Point>("windowLocation");
-            if (lastLocation != null)
-                this.Location = lastLocation;
+            var lastLocationLoaded = await AppSettings.LoadAsync<Point>("windowLocation");
+            if (lastLocationLoaded.Success)
+                this.Location = lastLocationLoaded.Result;
 
-            startButtonPictureBox.Tag = "play";
+            startButtonPictureBox.SetTagThreadSafe("play");
 
             // Auto start
-            bool autoStart = bool.TryParse(AppSettings.Load<string>(SettingsForm.AUTOSTARTMINING), out bool result) ? result : false;
+            bool autoStart = false;
+            var stringLoaded = await AppSettings.LoadAsync<string>(SettingsForm.AUTOSTARTMINING);
+            if(stringLoaded.Success)
+                autoStart = bool.TryParse(stringLoaded.Result, out bool result) ? result : false;
+            
             if (autoStart) ClickStartButton();
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            e.Cancel = true;
+            CloseApp();
+            // Minimize to tray instead
+            /*
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 e.Cancel = true;
                 this.Hide();
                 this.ShowInTaskbar = false;
                 this.WindowState = FormWindowState.Minimized;
-            }
-            else
-            {
-                // Save window location
-                AppSettings.Save<Point>("windowLocation", this.Location);
-            }
+            }*/
         }
         internal async void CloseApp()
         {
@@ -146,9 +157,9 @@ namespace Gui_Miner
 
             // Close settings form
             if (settingsForm.InvokeRequired)
-                settingsForm.Invoke(new Action(() => this.Close()));            
+                settingsForm.Invoke(new Action(() => this.Close()));
             else
-                settingsForm.Close();            
+                settingsForm.Close();
 
             // Close the main form
             this.Close();
@@ -158,11 +169,12 @@ namespace Gui_Miner
             Environment.Exit(0);
             Application.Exit();
             Application.ExitThread();
+
         }
 
 
         // Start/Stop/Settings Buttons
-        private void startButtonPictureBox_Click(object sender, EventArgs e)
+        private async void startButtonPictureBox_Click(object sender, EventArgs e)
         {
             // Disable the button immediately
             startButtonPictureBox.Enabled = false;
@@ -173,23 +185,17 @@ namespace Gui_Miner
             }
             else if ((string)startButtonPictureBox.Tag == "stop")
             {
-                ClickStopButton();
+                await ClickStopButton();
             }
             startButtonPictureBox.Enabled = true;
         }
         internal void ClickStartButton(bool shortcutOnly = false)
         {
-            if (InvokeRequired)
-            {
-                Invoke(new Action(() => ClickStartButton(shortcutOnly)));
-                return;
-            }
-
             if (!shortcutOnly)
             {
                 // Play button pushed
-                startButtonPictureBox.BackgroundImage = Properties.Resources.stop_button;
-                startButtonPictureBox.Tag = "stop";
+                startButtonPictureBox.SetBackgroundImageThreadSafe(Properties.Resources.stop_button);
+                startButtonPictureBox.SetTagThreadSafe("stop");
 
                 // Remove background
                 RemoveRotatingPanel();
@@ -202,20 +208,10 @@ namespace Gui_Miner
 
             CreateTabControlAndStartMiners(shortcutOnly);
         }
-        internal void ClickStopButton(bool shortcutOnly = false)
+        internal async Task<bool> ClickStopButton(bool shortcutOnly = false)
         {
-            if (InvokeRequired)
-            {
-                Invoke(new Action(() => ClickStopButton(shortcutOnly)));
-                return;
-            }
-
             if (!shortcutOnly)
             {
-                // Stop button pushed
-                startButtonPictureBox.BackgroundImage = Properties.Resources.play_button;
-                startButtonPictureBox.Tag = "play";
-
                 // Replace background
                 CreateRotatingPanel();
 
@@ -225,7 +221,13 @@ namespace Gui_Miner
             }
 
             // Close all running miners
-            Task.Run(() => KillAllRunningMiners(shortcutOnly));
+            bool response = await Task<bool>.Run(() => KillAllRunningMiners(shortcutOnly));
+
+            // Stop button pushed
+            startButtonPictureBox.SetBackgroundImageThreadSafe(Properties.Resources.play_button);
+            startButtonPictureBox.SetTagThreadSafe("play");
+
+            return response;
         }
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
@@ -235,7 +237,7 @@ namespace Gui_Miner
 
 
         // Start Active Miners
-        private void CreateTabControlAndStartMiners(bool shortcutOnly = false)
+        private async void CreateTabControlAndStartMiners(bool shortcutOnly = false)
         {
             if (InvokeRequired)
             {
@@ -261,8 +263,11 @@ namespace Gui_Miner
                 var arotatingPanel = RotatingPanel.Create();
 
                 // Add image
-                string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
-                arotatingPanel.Image = GetBgImage(bgImage);
+                var stringLoaded = await AppSettings.LoadAsync<string>(SettingsForm.BGIMAGE);
+                if(stringLoaded.Success)
+                    arotatingPanel.Image = GetBgImage(stringLoaded.Result);
+                else
+                    rotatingPanel.Image = GetBgImage("Kas - Globe");
 
                 homeTabPage.Controls.Add(arotatingPanel);
                 arotatingPanel.Start();
@@ -273,7 +278,8 @@ namespace Gui_Miner
 
             // Get all miner configs
             var minerConfigs = settingsForm.Settings.MinerSettings;
-
+            if (minerConfigs == null) return;
+            
             foreach (MinerConfig minerConfig in minerConfigs)
             {
                 // If this config is active and we aren't using shortcut keys or we are using shortcut keys and this config also uses shortcut keys
@@ -297,7 +303,15 @@ namespace Gui_Miner
                         topPanel.Dock = DockStyle.Top;
                         int padding = 10;
                         topPanel.Size = new Size(outputPanel.Width, restartsLabel.Height * 4 + padding);
-                        topPanel.Padding = new Padding(padding, padding, 0, 0);                        
+                        topPanel.Padding = new Padding(padding, padding, 0, 0);
+
+                        Label quickChangeLabel = new Label();
+                        ComboBox quickChangeSettings = new ComboBox();
+                        Label selectedSettingId = new Label();
+
+                        selectedSettingId.Visible = false;
+                        selectedSettingId.Text = minerConfig.Id.ToString();
+                        topPanel.Controls.Add(selectedSettingId);
 
                         // Add stop button
                         PictureBox stopButton = new PictureBox();
@@ -308,27 +322,85 @@ namespace Gui_Miner
                         stopButton.BackgroundImageLayout = ImageLayout.Zoom;
                         stopButton.Click += (sender, e) =>
                         {
-                            PictureBox button = (PictureBox)sender;
-                            if ((string)button.Tag == "Stop")
+                            MinerConfig selectedConfig = (MinerConfig)quickChangeSettings.SelectedItem;
+                            if ((string)stopButton.Tag == "Stop")
                             {
-                                taskManager.StopTask(minerConfig.Id.ToString());
-                                tabPageRichTextBox.SetTextThreadSafe("");
+                                taskManager.StopTask(selectedSettingId.Text);
+                                tabPageRichTextBox.AppendTextThreadSafe("\n\n\n\n\n\nStopping Miner...");
 
-                                button.Tag = "Start";
+                                stopButton.Tag = "Start";
                                 stopButton.BackgroundImage = Properties.Resources.play_button;
                             }
-                            else if ((string)button.Tag == "Start")
+                            else if ((string)stopButton.Tag == "Start")
                             {
-                                if (minerConfig.Redirect_Console_Output)
-                                    taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString(), tabPageRichTextBox);
+                                if (selectedConfig.Redirect_Console_Output)
+                                    taskManager.StartTask(selectedConfig.Miner_File_Path, selectedConfig.Bat_File_Arguments, selectedConfig.Run_As_Admin, selectedConfig.Id.ToString(), tabPageRichTextBox);
                                 else
-                                    taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString());
+                                    taskManager.StartTask(selectedConfig.Miner_File_Path, selectedConfig.Bat_File_Arguments, selectedConfig.Run_As_Admin, selectedConfig.Id.ToString());
 
-                                button.Tag = "Stop";
+                                stopButton.Tag = "Stop";
                                 stopButton.BackgroundImage = Properties.Resources.stop_button;
                             }
                         };
                         topPanel.Controls.Add(stopButton);
+
+
+                        // Quick change settings
+                        quickChangeLabel.Location = new Point(0, 10);
+                        quickChangeLabel.Text = "Active Setting";
+                        topPanel.Controls.Add(quickChangeLabel);
+
+                        quickChangeSettings.Location = new Point(quickChangeLabel.Location.X + quickChangeLabel.Width, quickChangeLabel.Location.Y - 3);
+                        foreach (MinerConfig config in minerConfigs)
+                            quickChangeSettings.Items.Add(config);
+                        quickChangeSettings.SelectedItem = minerConfig;
+
+                        quickChangeSettings.SelectedIndexChanged += async (sender, e) =>
+                        {
+                            MinerConfig selectedConfig = (MinerConfig)quickChangeSettings.SelectedItem;
+
+                            // Get the current setting from Master settings list and update its active state
+
+                            var settings = new Settings();
+                            var settingsLoaded = await AppSettings.LoadAsync<Settings>(SettingsForm.SETTINGSNAME);
+                            if (settingsLoaded.Success)
+                                settings = settingsLoaded.Result;
+
+                            for (int x = 0; x < settings.MinerSettings.Count; x++)
+                            {
+                                // Deactivate the old, activate the new
+                                if (settings.MinerSettings[x].Id == minerConfig.Id)
+                                    settings.MinerSettings[x].Active = false;
+                                else if (settings.MinerSettings[x].Id == selectedConfig.Id)
+                                    settings.MinerSettings[x].Active = true;
+                            }
+                            await AppSettings.SaveAsync<Settings>(SettingsForm.SETTINGSNAME, settings);
+
+                            // Stop this miner setting
+                            if ((string)stopButton.Tag == "Stop")
+                            {
+                                taskManager.StopTask(selectedSettingId.Text);
+                                tabPageRichTextBox.AppendTextThreadSafe("\n\n\n\n\n\nStopping Miner...");
+
+                                stopButton.Tag = "Start";
+                                stopButton.BackgroundImage = Properties.Resources.play_button;
+                            }
+
+                            // Start the new miner setting
+                            if (selectedConfig.Redirect_Console_Output)
+                                taskManager.StartTask(selectedConfig.Miner_File_Path, selectedConfig.Bat_File_Arguments, selectedConfig.Run_As_Admin, selectedConfig.Id.ToString(), tabPageRichTextBox);
+                            else
+                                taskManager.StartTask(selectedConfig.Miner_File_Path, selectedConfig.Bat_File_Arguments, selectedConfig.Run_As_Admin, selectedConfig.Id.ToString());
+
+                            stopButton.Tag = "Stop";
+                            stopButton.BackgroundImage = Properties.Resources.stop_button;
+
+                            // Update selectedSettingId
+                            selectedSettingId.Text = selectedConfig.Id.ToString();
+                        };
+
+                        topPanel.Controls.Add(quickChangeSettings);
+
 
                         // Set link to api stats
                         string url = "http://localhost:" + minerConfig.Api;
@@ -504,9 +576,9 @@ namespace Gui_Miner
         {
             CloseApp();
         }
-        private void OnStopMining(object sender, EventArgs e)
+        private async void OnStopMining(object sender, EventArgs e)
         {
-            ClickStopButton();
+            await ClickStopButton();
         }
         private void OnStartMining(object sender, EventArgs e)
         {
@@ -532,7 +604,7 @@ namespace Gui_Miner
 
         #region Kill Miners
         // Kill Active Miners
-        private void KillAllRunningMiners(bool shortcutOnly = false)
+        private bool KillAllRunningMiners(bool shortcutOnly = false)
         {
             var tasks = taskManager.GetRunningTasks().ToList();
             if (tasks != null && tasks.Count > 0)
@@ -543,7 +615,7 @@ namespace Gui_Miner
                     string minerId = taskDictItem.Key;
 
                     var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.ToString().Equals(minerId));
-                    if (matchingConfig == null) return;
+                    if (matchingConfig == null) return false;
 
                     if (!shortcutOnly || (shortcutOnly && matchingConfig.Use_Shortcut_Keys))
                     {
@@ -553,8 +625,9 @@ namespace Gui_Miner
                         // Remove the tab page
                         RemoveTabPage(matchingConfig.Id.ToString());
                     }
-                }
+                }                
             }
+            return true;
         }
         private void killAllMinersButtonPictureBox_Click(object sender, EventArgs e)
         {
@@ -621,15 +694,18 @@ namespace Gui_Miner
         }
 
         // Rotating image
-        private void CreateRotatingPanel()
+        private async void CreateRotatingPanel()
         {
             outputPanel.Controls.Clear();
 
             rotatingPanel = RotatingPanel.Create();
 
             // Add image
-            string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
-            rotatingPanel.Image = GetBgImage(bgImage);
+            var stringLoaded = await AppSettings.LoadAsync<string>(SettingsForm.BGIMAGE);
+            if (stringLoaded.Success)
+                rotatingPanel.Image = GetBgImage(stringLoaded.Result);
+            else
+                rotatingPanel.Image = GetBgImage("Kas - Globe");
 
             outputPanel.Controls.Add(rotatingPanel);
 

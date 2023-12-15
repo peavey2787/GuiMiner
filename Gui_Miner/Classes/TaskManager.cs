@@ -127,14 +127,20 @@ namespace Gui_Miner.Classes
             {
                 OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
                 if (richTextBox != null)
-                    UpdateOutputConsole(e.Data, richTextBox);
+                {
+                    try { UpdateOutputConsole(e.Data, richTextBox); }
+                    catch { }
+                }
             };
 
             process.ErrorDataReceived += (sender, e) =>
             {
                 OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
                 if (richTextBox != null)
-                    UpdateOutputConsole(e.Data, richTextBox);
+                {
+                    try { UpdateOutputConsole(e.Data, richTextBox); }
+                    catch { }
+                }
             };
 
             if (redirectOutput)
@@ -202,21 +208,24 @@ namespace Gui_Miner.Classes
             }
         }
 
-        public void ToggleAllTasks(bool startTasks)
+        public bool ToggleAllTasks(bool startTasks)
         {
             if (startTasks)
             {
                 foreach (var task in runningTasks)
                 {
-                    task.Value.Start();
+                    task.Value.Start();                    
                 }
+                return true;
             }
             else
             {
                 foreach (var task in runningTasks)
                 {
-                    KillProcess(task.Value);
+
+                    KillProcess(task.Value);                    
                 }
+                return true;
             }
         }
         
@@ -322,7 +331,7 @@ namespace Gui_Miner.Classes
             }
         }
 
-        private void UpdateOutputConsole(string output, RichTextBox richTextBox)
+        private async void UpdateOutputConsole(string output, RichTextBox richTextBox)
         {
             if (output == null) return;
 
@@ -339,8 +348,9 @@ namespace Gui_Miner.Classes
                 {
                     // Restart miner
                     richTextBox.AppendTextThreadSafe("Gpu failed. Restarting...");
-                    form1.ClickStopButton();
-                    Thread.Sleep(3500);
+
+                    await form1.ClickStopButton();
+                    Thread.Sleep(5000);
                     form1.ClickStartButton();
 
                     // Assuming you have a reference to the Form1 instance named form1

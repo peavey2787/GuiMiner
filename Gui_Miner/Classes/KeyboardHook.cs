@@ -122,7 +122,7 @@ namespace Gui_Miner
 
                     var lastKeysPressed = lastPressedKeys.ToList();
 
-                    if (StopKeys != null && lastKeysPressed.Count >= StopKeys.Count())
+                    if (StopKeys != null && StopKeys.Count() > 0 && lastKeysPressed.Count >= StopKeys.Count())
                     {
                         if(WereShortCutKeysPressed(StopKeys))
                         {
@@ -130,7 +130,7 @@ namespace Gui_Miner
                             MainForm.ClickStopButton(true);
                         }
                     }
-                    if (StartKeys != null && lastKeysPressed.Count >= StartKeys.Count())
+                    if (StartKeys != null && StartKeys.Count() > 0 && lastKeysPressed.Count >= StartKeys.Count())
                     {
                         if (WereShortCutKeysPressed(StartKeys))
                         {

@@ -20,11 +20,13 @@ using System.Runtime.CompilerServices;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static Gui_Miner.Form1;
 using static Gui_Miner.MinerConfig;
 using static Gui_Miner.SettingsForm;
+using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolBar;
@@ -43,7 +45,7 @@ namespace Gui_Miner
         Settings _settings = new Settings();
         public Form1 MainForm { get; set; }
         internal RotatingPanel rotatingPanel;
-        const string SETTINGSNAME = "Settings";
+        public const string SETTINGSNAME = "Settings";
         const string MINERSETTINGSPANELNAME = "tableLayoutPanel";
         const string GPUSETTINGSPANELNAME = "gpuTableLayoutPanel";
         public const string AUTOSTARTMINING = "AutoStartMining";
@@ -52,24 +54,22 @@ namespace Gui_Miner
         public const string STARTSHORTKEYS = "StartShortKeys";
         public const string BGIMAGE = "BackgroundImage";
         const string APPVERSION = "AppVersion";
-        const double AppVersion = 1.5;
+        const double AppVersion = 1.6;
         const double VersionIncrement = 0.1;
         double NextAppVersion = AppVersion + VersionIncrement;
         public Settings Settings { get { return _settings; } }
-        public Form1 Form1 { get; set; }
-        public void SetSettings(Settings settings) { _settings = settings; }
 
         public SettingsForm()
         {
             InitializeComponent();
-            LoadSettings();
         }
         #endregion
 
         #region Load/Close
         // Start/Stop Load/Save
-        private void SettingsForm_Load(object sender, EventArgs e)
+        private async void SettingsForm_Load(object sender, EventArgs e)
         {
+            await LoadSettings();
             if (_settings == null) return;
 
             UpdateMinerSettingsListBox();
@@ -104,6 +104,7 @@ namespace Gui_Miner
             toolTip.SetToolTip(addGpuSettingsButton, "Add all active GPU settings. Be sure to click generate .bat file after.");
             toolTip.SetToolTip(clearGpuSettingsButton, "Remove all GPU specific settings from the miner settings.");
             toolTip.SetToolTip(generateButton, "Use all miner settings above to generate the .bat file. Be sure to restart the miner to use the latest settings.");
+
         }
         private void SettingsForm_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -113,15 +114,16 @@ namespace Gui_Miner
 
             MainForm.LoadShortcutKeys();
         }
-        private void LoadSettings()
+        private async Task<bool> LoadSettings()
         {
-            _settings = AppSettings.Load<Settings>(SETTINGSNAME);
-            if (_settings == null)
-            {
+            var loadResult = await AppSettings.LoadAsync<Settings>(SETTINGSNAME);
+            if (loadResult.Success)
+                _settings = loadResult.Result;
+            else
                 _settings = new Settings();
-            }
+            return true;
         }
-        public void SaveSettings()
+        public async void SaveSettings()
         {
             var uiMinerSetting = GetMinerSettingsFromUI();
             if (_settings.MinerSettings != null && _settings.MinerSettings.Count > 0)
@@ -147,35 +149,53 @@ namespace Gui_Miner
             else if (uiGpuSetting != null && !uiGpuSetting.isEquals(new Gpu()))
                 _settings.Gpus = new List<Gpu> { uiGpuSetting };
 
-            AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+            await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
         }
         bool settingSettings = true; // Change auto start checkbox w/o deleting scheduled task
-        private void LoadGeneralSettings()
+        private async void LoadGeneralSettings()
         {
-            autoStartMiningCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(AUTOSTARTMINING), out bool result) ? result : false;
-            autoStartWithWinCheckBox.Checked = bool.TryParse(AppSettings.Load<string>(AUTOSTARTWITHWIN), out bool winResult) ? winResult : false;
-            bgComboBox.Text = AppSettings.Load<string>(BGIMAGE);
+            var stringLoaded = await AppSettings.LoadAsync<string>(AUTOSTARTMINING);
+            if (stringLoaded.Success)
+                autoStartMiningCheckBox.Checked = bool.TryParse(stringLoaded.Result, out bool result) ? result : false;
+            
+            stringLoaded = await AppSettings.LoadAsync<string>(AUTOSTARTWITHWIN);
+            if (stringLoaded.Success)
+                autoStartWithWinCheckBox.Checked = bool.TryParse(stringLoaded.Result, out bool winResult) ? winResult : false;
+            
+            stringLoaded = await AppSettings.LoadAsync<string>(BGIMAGE);
+            if (stringLoaded.Success)
+                bgComboBox.Text = stringLoaded.Result;
+            else
+                bgComboBox.Text = "Kas - Globe";
 
-            var keys = AppSettings.Load<List<Keys>>(STOPSHORTKEYS);
-            if (keys != null)
+            var keysLoaded = await AppSettings.LoadAsync<List<Keys>>(STOPSHORTKEYS);
+            if (stringLoaded.Success)
             {
-                foreach (Keys key in keys)
-                    stopShortKeysTextBox.Text += key.ToString() + " + ";
+                List<Keys> keys = keysLoaded.Result;
+                if (keys != null)
+                {
+                    foreach (Keys key in keys)
+                        stopShortKeysTextBox.Text += key.ToString() + " + ";
 
-                // Remove the trailing " + "
-                if (stopShortKeysTextBox.Text.EndsWith(" + "))
-                    stopShortKeysTextBox.Text = stopShortKeysTextBox.Text.Substring(0, stopShortKeysTextBox.Text.Length - 3);
+                    // Remove the trailing " + "
+                    if (stopShortKeysTextBox.Text.EndsWith(" + "))
+                        stopShortKeysTextBox.Text = stopShortKeysTextBox.Text.Substring(0, stopShortKeysTextBox.Text.Length - 3);
+                }
             }
 
-            keys = AppSettings.Load<List<Keys>>(STARTSHORTKEYS);
-            if (keys != null)
+            keysLoaded = await AppSettings.LoadAsync<List<Keys>>(STARTSHORTKEYS);
+            if (stringLoaded.Success)
             {
-                foreach (Keys key in keys)
-                    startShortKeysTextBox.Text += key.ToString() + " + ";
+                List<Keys> keys = keysLoaded.Result;
+                if (keys != null)
+                {
+                    foreach (Keys key in keys)
+                        startShortKeysTextBox.Text += key.ToString() + " + ";
 
-                // Remove the trailing " + "
-                if (startShortKeysTextBox.Text.EndsWith(" + "))
-                    startShortKeysTextBox.Text = startShortKeysTextBox.Text.Substring(0, startShortKeysTextBox.Text.Length - 3);
+                    // Remove the trailing " + "
+                    if (startShortKeysTextBox.Text.EndsWith(" + "))
+                        startShortKeysTextBox.Text = startShortKeysTextBox.Text.Substring(0, startShortKeysTextBox.Text.Length - 3);
+                }
             }
 
             versionLabel.Text = "V " + AppVersion;
@@ -253,7 +273,7 @@ namespace Gui_Miner
 
             foreach (Pool pool in _settings.Pools)
             {
-                poolsListBox.Items.Add(pool.Name + " / " + pool.Id);
+                poolsListBox.Items.Add(pool);
             }
 
             if (_settings.Pools.Count >= 1)
@@ -1282,17 +1302,17 @@ namespace Gui_Miner
 
         #region General Settings
         // General Settings
-        private void autoStartMiningCheckBox_CheckedChanged(object sender, EventArgs e)
+        private async void autoStartMiningCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            AppSettings.Save<string>(AUTOSTARTMINING, autoStartMiningCheckBox.Checked.ToString());
+            await AppSettings.SaveAsync<string>(AUTOSTARTMINING, autoStartMiningCheckBox.Checked.ToString());
         }
-        private void autoStartWithWinCheckBox_CheckedChanged(object sender, EventArgs e)
+        private async void autoStartWithWinCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            AppSettings.Save<string>(AUTOSTARTWITHWIN, autoStartWithWinCheckBox.Checked.ToString());
+            await AppSettings.SaveAsync<string>(AUTOSTARTWITHWIN, autoStartWithWinCheckBox.Checked.ToString());
 
             if (autoStartWithWinCheckBox.Checked)
             {
-                if (MainForm != null && Form1.GetTaskManager().IsRunningAsAdmin())
+                if (MainForm != null && MainForm.GetTaskManager().IsRunningAsAdmin())
                 {
                     string assemblyPath = Assembly.GetEntryAssembly().Location;
                     if (CreateSchedulerTask("GuiMiner", assemblyPath))
@@ -1311,7 +1331,7 @@ namespace Gui_Miner
             }
         }
         List<Keys> keysPressed = new List<Keys>();
-        private void startShortKeysTextBox_KeyDown(object sender, KeyEventArgs e)
+        private async void startShortKeysTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             // Check if it has focus
             if (startShortKeysTextBox.Focused)
@@ -1336,13 +1356,12 @@ namespace Gui_Miner
                     keysPressed.Add(e.KeyCode);
                 }
 
-                AppSettings.Save<List<Keys>>(STARTSHORTKEYS, keysPressed);
-
+                await AppSettings.SaveAsync<List<Keys>>(STARTSHORTKEYS, keysPressed);
 
                 e.SuppressKeyPress = true; // Prevent the key press from being entered into textBox
             }
         }
-        private void stopShortKeysTextBox_KeyDown(object sender, KeyEventArgs e)
+        private async void stopShortKeysTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             // Check if it has focus
             if (stopShortKeysTextBox.Focused)
@@ -1367,7 +1386,7 @@ namespace Gui_Miner
                     keysPressed.Add(e.KeyCode);
                 }
 
-                AppSettings.Save<List<Keys>>(STOPSHORTKEYS, keysPressed);
+                await AppSettings.SaveAsync<List<Keys>>(STOPSHORTKEYS, keysPressed);
 
 
                 e.SuppressKeyPress = true; // Prevent the key press from being entered into textBox
@@ -1383,9 +1402,9 @@ namespace Gui_Miner
         }
 
         // Change rotating image
-        private void bgComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private async void bgComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            AppSettings.Save<string>(BGIMAGE, bgComboBox.Text);
+            await AppSettings.SaveAsync<string>(BGIMAGE, bgComboBox.Text);
             if (MainForm != null)
             {
                 if (MainForm.rotatingPanel != null)
@@ -1422,20 +1441,24 @@ namespace Gui_Miner
         // Tip link
         private void tipLinkLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Clipboard.SetText("kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug");
+            try { Clipboard.SetText("kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug"); }
+            catch { }
             copiedLabel.ShowTextForDuration("", 3000);
         }
 
         // Rotate image
-        private void CreateRotatingPanel()
+        private async void CreateRotatingPanel()
         {
             bgImagePanel.Controls.Clear();
 
             rotatingPanel = RotatingPanel.Create();
 
             // Add image
-            string bgImage = AppSettings.Load<string>(SettingsForm.BGIMAGE);
-            rotatingPanel.Image = MainForm.GetBgImage(bgImage);
+            var stringLoaded = await AppSettings.LoadAsync<string>(SettingsForm.BGIMAGE);
+            if(stringLoaded.Success)
+                rotatingPanel.Image = MainForm.GetBgImage(stringLoaded.Result);
+            else
+                rotatingPanel.Image = MainForm.GetBgImage("Kas - Globe");
 
             bgImagePanel.Controls.Add(rotatingPanel);
 
@@ -1485,7 +1508,7 @@ namespace Gui_Miner
             }
             catch (Exception ex)
             {
-                if (Form1.GetTaskManager().IsRunningAsAdmin())
+                if (MainForm.GetTaskManager().IsRunningAsAdmin())
                     MessageBox.Show($"Failed to add auto start task to windows task scheduler: {ex.Message}");
 
                 return false;
@@ -1587,7 +1610,7 @@ namespace Gui_Miner
 
             return _settings.Wallets.Find(w => w.Id.Equals(id));
         }
-        private void SaveWallets(int lastSelectedWalletIndex = -1)
+        private async void SaveWallets(int lastSelectedWalletIndex = -1)
         {
             var updatedWallet = GetWalletFromUI();
             var savedWallet = GetSelectedWallet(lastSelectedWalletIndex);
@@ -1598,7 +1621,7 @@ namespace Gui_Miner
                 savedWallet.Coin = updatedWallet.Coin;
             }
 
-            AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+            await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
             
             unsavedWalletChanges = false;
             walletsListBox.Tag = -1;
@@ -1630,7 +1653,7 @@ namespace Gui_Miner
             }
             unsavedWalletChanges = true;
         }
-        private void walletsListBox_KeyDown(object sender, KeyEventArgs e)
+        private async void walletsListBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Delete)
             {
@@ -1644,7 +1667,7 @@ namespace Gui_Miner
                 {
                     // User clicked "Yes"
                     _settings.Wallets.Remove(selectedWallet);
-                    AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+                    await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
 
                     UpdateWalletsListBox(walletsListBox.Items.Count);
                     DisplayMinerSettings();
@@ -1730,7 +1753,7 @@ namespace Gui_Miner
 
             return pool;
         }
-        private void SavePools(int lastSelectedPoolIndex = -1)
+        private async void SavePools(int lastSelectedPoolIndex = -1)
         {
             var updatedPool = GetPoolFromUI();
             var savedPool = GetSelectedPool(lastSelectedPoolIndex);
@@ -1743,7 +1766,7 @@ namespace Gui_Miner
                 savedPool.Link = updatedPool.Link;
             }
 
-            AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+            await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
 
             unsavedPoolChanges = false;
             poolsListBox.Tag = -1;
@@ -1787,7 +1810,7 @@ namespace Gui_Miner
         {
             SavePools();
         }
-        private void poolsListBox_KeyDown(object sender, KeyEventArgs e)
+        private async void poolsListBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Delete)
             {
@@ -1802,7 +1825,7 @@ namespace Gui_Miner
                 {
                     // User clicked "Yes"
                     _settings.Pools.Remove(selectedPool);
-                    AppSettings.Save<Settings>(SETTINGSNAME, _settings);
+                    await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
 
                     UpdatePoolsListBox(poolsListBox.Items.Count);
                     DisplayMinerSettings();
@@ -2083,6 +2106,10 @@ namespace Gui_Miner
         public virtual List<float> Dual_Intensity { get; set; }
         public virtual string Extra_Args { get; set; }
 
+        public override string ToString()
+        {
+            return Name;
+        }
 
         public MinerConfig()
         {
@@ -2638,6 +2665,10 @@ namespace Gui_Miner
             
             return false;
         }
+        public override string ToString()
+        {
+            return Name;
+        }
     }
     public class Wallet
     {
@@ -2652,6 +2683,10 @@ namespace Gui_Miner
             Name = "";
             Address = "";
             Coin = "";
+        }
+        public override string ToString()
+        {
+            return Name;
         }
     }
     public class Pool
@@ -2672,49 +2707,118 @@ namespace Gui_Miner
             Link = "";
             SSL = false;
         }
+        public override string ToString()
+        {
+            return Name;
+        }
     }
     #endregion
 
-    public static class AppSettings
+    internal static class AppSettings
     {
-        public static void Save<T>(string key, T value)
+        private static readonly string SettingsFilePath = "AppSettings.json";
+        private static readonly SemaphoreSlim FileLock = new SemaphoreSlim(1, 1);
+
+        public static async Task<bool> SaveAsync<T>(string key, T value)
         {
-            string serializedValue = JsonConvert.SerializeObject(value);
-            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-            // Check if the key already exists in AppSettings
-            KeyValueConfigurationElement key_config = config.AppSettings.Settings[key];
-
-            // If the key is not found, add it to AppSettings
-            if (key_config == null)
+            for (int attempt = 1; attempt <= 3; attempt++)
             {
-                config.AppSettings.Settings.Add(key, serializedValue);
-            }
-            else
-            {
-                key_config.Value = serializedValue;
+                if (await TrySaveAsync(key, value))
+                {
+                    return true;
+                }
+
+                // Wait for a short delay before retrying
+                //await Task.Delay(500);
             }
 
-            config.Save(ConfigurationSaveMode.Modified);
+            return false;
         }
 
-        public static T Load<T>(string key)
+        public static async Task<(bool Success, T Result)> LoadAsync<T>(string key)
         {
-            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-            // Check if the key exists in AppSettings
-            KeyValueConfigurationElement key_config = config.AppSettings.Settings[key];
-
-            if (key_config == null)
+            for (int attempt = 1; attempt <= 3; attempt++)
             {
-                return default(T);
+                var result = await TryLoadAsync<T>(key);
+                if (result.Success)
+                {
+                    return result;
+                }
+
+                // Wait for a short delay before retrying
+                //await Task.Delay(500);
+            }
+
+            return (false, default);
+        }
+
+        private static async Task<bool> TrySaveAsync<T>(string key, T value)
+        {
+            await FileLock.WaitAsync();
+            try
+            {
+                var settings = await LoadSettingsAsync();
+                settings[key] = JsonConvert.SerializeObject(value);
+                await SaveSettingsAsync(settings);
+
+                return true;
+            }
+            finally
+            {
+                FileLock.Release();
+            }
+        }
+
+        private static async Task<(bool Success, T Result)> TryLoadAsync<T>(string key)
+        {
+            await FileLock.WaitAsync();
+            try
+            {
+                var settings = await LoadSettingsAsync();
+                if (settings.ContainsKey(key))
+                {
+                    string serializedValue = settings[key];
+                    T result = JsonConvert.DeserializeObject<T>(serializedValue);
+                    return (true, result);
+                }
+
+                return (false, default);
+            }
+            finally
+            {
+                FileLock.Release();
+            }
+        }
+
+        private static async Task SaveSettingsAsync(Dictionary<string, string> settings)
+        {
+            using (var fileStream = new FileStream(SettingsFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
+            using (var writer = new StreamWriter(fileStream))
+            {
+                string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
+                await writer.WriteAsync(json);
+            }
+        }
+
+        private static async Task<Dictionary<string, string>> LoadSettingsAsync()
+        {
+            if (File.Exists(SettingsFilePath))
+            {
+                using (var fileStream = new FileStream(SettingsFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
+                using (var reader = new StreamReader(fileStream))
+                {
+                    string json = await reader.ReadToEndAsync();
+                    return JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+                }
             }
             else
             {
-                string serializedValue = key_config.Value;
-                var deserialized = JsonConvert.DeserializeObject<T>(serializedValue);
-                return deserialized;
+                return new Dictionary<string, string>();
             }
         }
     }
+
+
+
+
 }

@@ -17,44 +17,55 @@ namespace Gui_Miner.Classes
         {
             if (richTextBox.InvokeRequired)
             {
-                richTextBox.Invoke(new Action(() => richTextBox.AppendText(text)));
+                try { richTextBox.Invoke(new Action(() => richTextBox.AppendText(text))); }
+                catch { }
             }
             else
             {
-                richTextBox.AppendText(text);
+                try { richTextBox.AppendText(text); }
+                catch { }
             }
         }
         public static void SetTextThreadSafe(this RichTextBox richTextBox, string text)
         {
             if (richTextBox.InvokeRequired)
             {
-                richTextBox.Invoke(new Action(() => richTextBox.Text = text));
+                try { richTextBox.Invoke(new Action(() => richTextBox.Text = text)); }
+                catch { }
             }
             else
             {
-                richTextBox.Text = text;
+                try { richTextBox.Text = text; }
+                catch { }
             }
         }
         public static string GetTextThreadSafe(this RichTextBox richTextBox)
         {
+            string s = "";
             if (richTextBox.InvokeRequired)
             {
-                return (string)richTextBox.Invoke(new Func<string>(() => richTextBox.Text));
+                try { s = (string)richTextBox.Invoke(new Func<string>(() => richTextBox.Text)); }
+                catch { }
+                return s;
             }
             else
             {
-                return richTextBox.Text;
+                try { s = richTextBox.Text; }
+                catch { } 
+                return s;
             }
         }
         public static void ForeColorSetThreadSafe(this RichTextBox richTextBox, Color color)
         {
             if (richTextBox.InvokeRequired)
             {
-                richTextBox.Invoke(new Action(() => richTextBox.ForeColor = color));
+                try { richTextBox.Invoke(new Action(() => richTextBox.ForeColor = color)); }
+                catch { }
             }
             else
             {
-                richTextBox.ForeColor = color;
+                try { richTextBox.ForeColor = color; }
+                catch { }
             }
         }
         public static Color ForeColorGetThreadSafe(this RichTextBox richTextBox)
@@ -63,11 +74,13 @@ namespace Gui_Miner.Classes
 
             if (richTextBox.InvokeRequired)
             {
-                richTextBox.Invoke(new Action(() => foreColor = richTextBox.ForeColor));
+                try { richTextBox.Invoke(new Action(() => foreColor = richTextBox.ForeColor)); }
+                catch { }
             }
             else
             {
-                foreColor = richTextBox.ForeColor;
+                try { foreColor = richTextBox.ForeColor; }
+                catch { }
             }
 
             return foreColor;
@@ -76,12 +89,14 @@ namespace Gui_Miner.Classes
         {
             if (richTextBox.InvokeRequired)
             {
-                richTextBox.Invoke(new Action(() => richTextBox.SelectionStart = start));
+                try { richTextBox.Invoke(new Action(() => richTextBox.SelectionStart = start)); }
+                catch { }
                 
             }
             else
             {
-                richTextBox.SelectionStart = start;
+                try { richTextBox.SelectionStart = start; }
+                catch { }
             }
         }
 
@@ -89,11 +104,13 @@ namespace Gui_Miner.Classes
         {
             if (richTextBox.InvokeRequired)
             {
-                richTextBox.Invoke(new Action(() => richTextBox.SelectionLength = length));
+                try { richTextBox.Invoke(new Action(() => richTextBox.SelectionLength = length)); }
+                catch { }
             }
             else
             {
-                richTextBox.SelectionLength = length;
+                try { richTextBox.SelectionLength = length; }
+                catch { }
             }
         }
         public static int TextLengthGetThreadSafe(this RichTextBox richTextBox)
@@ -103,15 +120,21 @@ namespace Gui_Miner.Classes
                 throw new ArgumentNullException(nameof(richTextBox));
             }
 
+            int i = 0;
+
             if (richTextBox.InvokeRequired)
             {
                 // If called from a different thread, invoke the method on the UI thread
-                return (int)richTextBox.Invoke(new Func<int>(() => richTextBox.TextLength));
+                try { i = (int)richTextBox.Invoke(new Func<int>(() => richTextBox.TextLength)); }
+                catch { }
+                return i;
             }
             else
             {
                 // If called from the UI thread, access the TextLength property directly
-                return richTextBox.TextLength;
+                try { i = richTextBox.TextLength; }
+                catch { }
+                return i;
             }
         }
 
@@ -119,22 +142,26 @@ namespace Gui_Miner.Classes
         {
             if (richTextBox.InvokeRequired)
             {
-                richTextBox.Invoke(new Action(() => richTextBox.SelectionColor = color));
+                try { richTextBox.Invoke(new Action(() => richTextBox.SelectionColor = color)); }
+                catch { }
             }
             else
             {
-                richTextBox.SelectionColor = color;
+                try { richTextBox.SelectionColor = color; }
+                catch { }
             }
         }
         public static void ScrollToCaretThreadSafe(this RichTextBox richTextBox)
         {
             if (richTextBox.InvokeRequired)
             {
-                richTextBox.Invoke(new Action(() => richTextBox.ScrollToCaret()));
+                try { richTextBox.Invoke(new Action(() => richTextBox.ScrollToCaret())); }
+                catch { }
             }
             else
             {
-                richTextBox.ScrollToCaret();
+                try { richTextBox.ScrollToCaret(); }
+                catch { }
             }
         }
     }
@@ -227,6 +254,58 @@ namespace Gui_Miner.Classes
                     label.Visible = false;
                 }
             });
+        }
+    }
+
+    public static class PictureBoxExtensions
+    {
+        public static void SetTagThreadSafe(this PictureBox pictureBox, object value)
+        {
+            if (pictureBox == null)
+            {
+                throw new ArgumentNullException(nameof(pictureBox));
+            }
+
+            if (pictureBox.InvokeRequired)
+            {
+                pictureBox.Invoke(new Action(() => pictureBox.Tag = value));
+            }
+            else
+            {
+                pictureBox.Tag = value;
+            }
+        }
+        public static void SetBackgroundImageThreadSafe(this PictureBox pictureBox, Image image)
+        {
+            if (pictureBox == null)
+            {
+                throw new ArgumentNullException(nameof(pictureBox));
+            }
+
+            if (pictureBox.InvokeRequired)
+            {
+                pictureBox.Invoke(new Action(() => pictureBox.BackgroundImage = image));
+            }
+            else
+            {
+                pictureBox.BackgroundImage = image;
+            }
+        }
+        public static void SetBackgroundColorThreadSafe(this PictureBox pictureBox, Color color)
+        {
+            if (pictureBox == null)
+            {
+                throw new ArgumentNullException(nameof(pictureBox));
+            }
+
+            if (pictureBox.InvokeRequired)
+            {
+                pictureBox.Invoke(new Action(() => pictureBox.BackColor = color));
+            }
+            else
+            {
+                pictureBox.BackColor = color;
+            }
         }
     }
 }
