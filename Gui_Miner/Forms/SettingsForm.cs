@@ -54,7 +54,7 @@ namespace Gui_Miner
         public const string STARTSHORTKEYS = "StartShortKeys";
         public const string BGIMAGE = "BackgroundImage";
         const string APPVERSION = "AppVersion";
-        const double AppVersion = 1.6;
+        const double AppVersion = 1.7;
         const double VersionIncrement = 0.1;
         double NextAppVersion = AppVersion + VersionIncrement;
         public Settings Settings { get { return _settings; } }
