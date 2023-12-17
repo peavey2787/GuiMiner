@@ -70,7 +70,8 @@ namespace Gui_Miner
         private async void SettingsForm_Load(object sender, EventArgs e)
         {
             await LoadSettings();
-            if (_settings == null) return;
+            if (_settings == null) 
+                _settings = new Settings();
 
             UpdateMinerSettingsListBox();
             UpdateGpusListBox();
@@ -206,7 +207,8 @@ namespace Gui_Miner
         // Update listboxes
         private void UpdateMinerSettingsListBox(int selectedIndex = 1)
         {
-            if (_settings.MinerSettings == null) return;
+            if (_settings.MinerSettings == null)
+                _settings.MinerSettings = new List<MinerConfig>();
 
             minerSettingsListBox.Items.Clear();
             minerSettingsListBox.Items.Add("Add Miner Settings");
@@ -215,11 +217,14 @@ namespace Gui_Miner
             {
                 minerSettingsListBox.Items.Add(minerSetting.Name + " / " + minerSetting.Id);
             }
+            if (minerSettingsListBox.Items.Count == selectedIndex)
+                selectedIndex--;
             minerSettingsListBox.SelectedIndex = selectedIndex;
         }
         private void UpdateGpusListBox(int selectedIndex = 1)
         {
-            if (_settings.Gpus == null) return;
+            if (_settings.Gpus == null)
+                _settings.Gpus = new List<Gpu>();
 
             if (InvokeRequired)
             {
@@ -239,7 +244,8 @@ namespace Gui_Miner
         }
         private void UpdateWalletsListBox(int selectedIndex = 1)
         {
-            if (_settings.Wallets == null) return;
+            if (_settings.Wallets == null)
+                _settings.Wallets = new List<Wallet>();
 
             walletsListBox.Items.Clear();
             walletsListBox.Items.Add("Add Wallet");
@@ -266,18 +272,20 @@ namespace Gui_Miner
         }
         private void UpdatePoolsListBox(int selectedIndex = 1)
         {
-            if (_settings.Pools == null) return;
+            if (_settings.Pools == null)
+            {
+                _settings.Pools = new List<Pool>();
+            }
 
             poolsListBox.Items.Clear();
             poolsListBox.Items.Add("Add Pool");
 
             foreach (Pool pool in _settings.Pools)
-            {
                 poolsListBox.Items.Add(pool);
-            }
 
-            // Add default pools
-            AddDefaultPools();
+            var defaultPools = AddDefaultPools();
+            foreach (Pool defaultPool in defaultPools)
+                poolsListBox.Items.Add(defaultPool);
 
             if (_settings.Pools.Count >= 1)
             {
@@ -298,105 +306,167 @@ namespace Gui_Miner
 
         }
 
-        private void AddDefaultPools()
+        private List<Pool> AddDefaultPools()
         {
-            Pool pool = new Pool();
+            var pools = new List<Pool>();
 
             // UnMineable SSL
+            Pool pool = new Pool();
             pool.Port = 443;
             pool.SSL = true;
-
-            pool.Name = "UnMineable - Nexa";                        
+            pool.Name = "*UnMineable - Nexa SSL";                        
             pool.Address = "nexapow.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Octopus";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Octopus SSL";
             pool.Address = "octopus.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Karlsen";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Karlsen SSL";
             pool.Address = "karlsenhash.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - IronFish";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - IronFish SSL";
             pool.Address = "ironfish.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Alephium";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Alephium SSL";
             pool.Address = "blake3.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Firo";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Firo SSL";
             pool.Address = "firopow.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Ergo";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Ergo SSL";
             pool.Address = "autolykos.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Kawpow";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Kawpow SSL";
             pool.Address = "kp.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Etc";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Etc SSL";
             pool.Address = "etchash.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Ethash";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Ethash SSL";
             pool.Address = "ethash.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Xmr (cpu)";
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Xmr (cpu) SSL";
             pool.Address = "rx.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
             // Non-SSL
+            pool = new Pool();
             pool.Port = 3333;
             pool.SSL = false;
-
-            pool.Name = "UnMineable - Nexa";
+            pool.Name = "*UnMineable - Nexa";
             pool.Address = "nexapow.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Octopus";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Octopus";
             pool.Address = "octopus.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Karlsen";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Karlsen";
             pool.Address = "karlsenhash.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - IronFish";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - IronFish";
             pool.Address = "ironfish.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Alephium";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Alephium";
             pool.Address = "blake3.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Firo";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Firo";
             pool.Address = "firopow.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Ergo";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Ergo";
             pool.Address = "autolykos.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Kawpow";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Kawpow";
             pool.Address = "kp.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Etc";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Etc";
             pool.Address = "etchash.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Ethash";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Ethash";
             pool.Address = "ethash.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
 
-            pool.Name = "UnMineable - Xmr (cpu)";
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Xmr (cpu)";
             pool.Address = "rx.unmineable.com";
-            poolsListBox.Items.Add(pool);
+            pools.Add(pool);
+
+            return pools;
         }
 
 
@@ -1816,7 +1886,7 @@ namespace Gui_Miner
             // Show panel
             poolPanel.Visible = true;
 
-            Pool selectedPool = GetSelectedPool(lastSelectedPoolIndex);
+            Pool selectedPool = GetSelectedPool();
             if (selectedPool == null) return;
 
             poolNameTextBox.Text = selectedPool.Name;
@@ -1840,43 +1910,34 @@ namespace Gui_Miner
 
             return pool;
         }
-        private Pool GetSelectedPool(int lastSelectedPoolIndex = -1)
+        private Pool GetSelectedPool()
         {
             if (poolsListBox.SelectedIndex <= -1) return null;
 
-            int id = -1;
+            var selectedPool = poolsListBox.SelectedItem as Pool;
 
-            if (lastSelectedPoolIndex > -1)
-                id = int.Parse(poolsListBox.Items[lastSelectedPoolIndex].ToString().Split('/')[1]);
-            else if (poolsListBox.Tag != null && poolsListBox.Tag.ToString() != "-1")
-                id = (int)poolsListBox.Tag;            
-            else
-                id = int.Parse(poolsListBox.Text.Split('/')[1]);            
-
-            Pool pool = _settings.Pools.Find(w => w.Id.Equals(id));
-
-            return pool;
+            return selectedPool;
         }
         private async void SavePools(int lastSelectedPoolIndex = -1)
         {
             var updatedPool = GetPoolFromUI();
-            var savedPool = GetSelectedPool(lastSelectedPoolIndex);
-            if (savedPool != null)
+            var savedPool = GetSelectedPool();
+            if (savedPool != null && !savedPool.Name.StartsWith("*"))
             {
                 savedPool.Name = updatedPool.Name;
                 savedPool.Address = updatedPool.Address;
                 savedPool.Port = updatedPool.Port;
                 savedPool.SSL = updatedPool.SSL;
                 savedPool.Link = updatedPool.Link;
+                await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
+                
+                poolsListBox.Tag = -1;
+
+                poolsListBox.Items[poolsListBox.SelectedIndex] = updatedPool;
+                poolsListBox.Refresh();
             }
 
-            await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
-
             unsavedPoolChanges = false;
-            poolsListBox.Tag = -1;
-
-            UpdatePoolsListBox(poolsListBox.SelectedIndex);
-            DisplayMinerSettings();
         }
         private void poolNameTextBox_KeyDown(object sender, KeyEventArgs e)
         {
