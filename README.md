@@ -3,8 +3,7 @@
 # GuiMiner
 Manage CLI miners with a GUI and manage all .bat files in one place along with gpu settings, wallets, and pools.
 
-![main](https://github.com/peavey2787/GuiMiner/assets/11081113/4bb1a642-7a8c-405f-83fa-8e9078cffb13)
-
+![screenshot](https://github.com/peavey2787/GuiMiner/assets/11081113/85c4b90c-fbe6-480e-a676-266787db3613)
 
 Tips: kaspa:qpfsh8feaq5evaum5auq9c29fvjnun0mrzj5ht6sz3sz09ptcdaj6qjx9fkug
 
