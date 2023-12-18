@@ -308,4 +308,20 @@ namespace Gui_Miner.Classes
             }
         }
     }
+
+
+    public static class PanelExtensions
+    {
+        public static void AddControlThreadSafe(this Panel panel, Control control)
+        {
+            if (panel.InvokeRequired)
+            {
+                panel.Invoke(new Action(() => panel.Controls.Add(control)));
+            }
+            else
+            {
+                panel.Controls.Add(control);
+            }
+        }
+    }
 }

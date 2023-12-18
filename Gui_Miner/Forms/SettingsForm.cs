@@ -54,7 +54,7 @@ namespace Gui_Miner
         public const string STARTSHORTKEYS = "StartShortKeys";
         public const string BGIMAGE = "BackgroundImage";
         const string APPVERSION = "AppVersion";
-        const double AppVersion = 1.7;
+        const double AppVersion = 1.8;
         const double VersionIncrement = 0.1;
         double NextAppVersion = AppVersion + VersionIncrement;
         public Settings Settings { get { return _settings; } }
@@ -131,6 +131,7 @@ namespace Gui_Miner
             {
                 for (int i = 0; i < _settings.MinerSettings.Count; i++)
                 {
+                    // Update with the new miner setting
                     if (_settings.MinerSettings[i].Id == uiMinerSetting.Id)
                         _settings.MinerSettings[i] = uiMinerSetting;
                 }
@@ -1434,34 +1435,47 @@ namespace Gui_Miner
         // Navigation buttons
         private void generalButton_Click(object sender, EventArgs e)
         {
+            SuspendLayout();
             HideAllPanels();
             CreateRotatingPanel();
             successLabel.Text = "";
             generalPanel.Show();
             generalPanel.BringToFront();
+            ResumeLayout();
+            Refresh();
         }
         private void manageMinerConfigsButton_Click(object sender, EventArgs e)
         {
+            SuspendLayout();
             HideAllPanels();
             manageConfigPanel.Show();
             manageConfigPanel.BringToFront();
+            ResumeLayout();
+            Refresh();
         }
         private void manageWalletsButton_Click(object sender, EventArgs e)
         {
+            SuspendLayout();
             HideAllPanels();
             walletsPanel.Show();
             walletsPanel.BringToFront();
 
             // Load saved wallets
             UpdateWalletsListBox();
+
+            ResumeLayout();
+            Refresh();
         }
         private void managePoolsButton_Click(object sender, EventArgs e)
         {
+            SuspendLayout();
             HideAllPanels();
             poolsPanel.Show();
             poolsPanel.BringToFront();
 
             UpdatePoolsListBox();
+            ResumeLayout();
+            Refresh();
         }
         private void HideAllPanels()
         {

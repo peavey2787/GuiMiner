@@ -49,153 +49,159 @@ namespace Gui_Miner.Classes
 
         public bool StartTask(string filePath, string arguments = "", bool runAsAdmin = false, string taskId = null, RichTextBox richTextBox = null)
         {
-            if (!string.IsNullOrEmpty(taskId) && runningTasks.ContainsKey(taskId) && !runningTasks[taskId].HasExited)
+            if (form1.InvokeRequired)
             {
-                return true; // Task is already running
+                form1.BeginInvoke(new Action(() => StartTask(filePath, arguments, runAsAdmin, taskId, richTextBox)));
             }
-            else if (string.IsNullOrEmpty(taskId))
+            else
             {
-                taskId = randomId.Next(1000, 40001).ToString();
-            }
+                if (!string.IsNullOrEmpty(taskId) && runningTasks.ContainsKey(taskId) && !runningTasks[taskId].HasExited)
+                {
+                    return true; // Task is already running
+                }
+                else if (string.IsNullOrEmpty(taskId))
+                {
+                    taskId = randomId.Next(1000, 40001).ToString();
+                }
 
-            if (!File.Exists(filePath))
-            {
+                if (!File.Exists(filePath))
+                {
+                    if (richTextBox != null)
+                    {
+                        richTextBox.AppendTextThreadSafe($"\nUnable to locate miner at {filePath}");
+                        richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
+
+                        richTextBox.TextChanged += (sender, e) =>
+                        {
+                            int maxLength = 34560;
+
+                            if (richTextBox.Text.Length > maxLength)
+                            {
+                                richTextBox.Text = richTextBox.Text.Substring(0, maxLength);
+                                richTextBox.SelectionStart = richTextBox.Text.Length;
+                                richTextBox.ScrollToCaret();
+                            }
+                        };
+
+                    }
+                    return false;
+                }
+
+                bool redirectOutput = false;
+                Process process;
                 if (richTextBox != null)
                 {
-                    richTextBox.AppendTextThreadSafe($"\nUnable to locate miner at {filePath}");
-                    richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
-
-                    richTextBox.TextChanged += (sender, e) =>
+                    redirectOutput = true;
+                    process = new Process
                     {
-                        int maxLength = 34560;
-
-                        if (richTextBox.Text.Length > maxLength)
+                        StartInfo = new ProcessStartInfo
                         {
-                            richTextBox.Text = richTextBox.Text.Substring(0, maxLength);
-                            richTextBox.SelectionStart = richTextBox.Text.Length;
-                            richTextBox.ScrollToCaret();
+                            FileName = filePath,
+                            Arguments = arguments,
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
                         }
                     };
-
                 }
-                return false;
-            }
-
-            bool redirectOutput = false;
-            Process process;
-            if (richTextBox != null)
-            {
-                redirectOutput = true;
-                process = new Process
+                else
                 {
-                    StartInfo = new ProcessStartInfo
+                    redirectOutput = false;
+                    process = new Process
                     {
-                        FileName = filePath,
-                        Arguments = arguments,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = filePath,
+                            Arguments = arguments,
+                            RedirectStandardOutput = false,
+                            RedirectStandardError = false,
+                            UseShellExecute = false,
+                            CreateNoWindow = false
+                        }
+                    };
+                }
+
+
+                if (runAsAdmin)
+                {
+                    // Start the process as an administrator
+                    process.StartInfo.Verb = "runas";
+                }
+
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
+                    if (richTextBox != null)
+                    {
+                        try { UpdateOutputConsole(e.Data, richTextBox); }
+                        catch { }
                     }
                 };
-            }
-            else
-            {
-                redirectOutput = false;
-                process = new Process
+
+                process.ErrorDataReceived += (sender, e) =>
                 {
-                    StartInfo = new ProcessStartInfo
+                    OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
+                    if (richTextBox != null)
                     {
-                        FileName = filePath,
-                        Arguments = arguments,
-                        RedirectStandardOutput = false,
-                        RedirectStandardError = false,
-                        UseShellExecute = false,
-                        CreateNoWindow = false
+                        try { UpdateOutputConsole(e.Data, richTextBox); }
+                        catch { }
                     }
                 };
-            }
 
-
-            if (runAsAdmin)
-            {
-                // Start the process as an administrator
-                process.StartInfo.Verb = "runas";
-            }
-
-            process.OutputDataReceived += (sender, e) =>
-            {
-                OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
-                if (richTextBox != null)
+                if (redirectOutput)
                 {
-                    try { UpdateOutputConsole(e.Data, richTextBox); }
-                    catch { }
-                }
-            };
+                    richTextBox.AppendTextThreadSafe("\nSTARTING MINER...");
+                    richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
 
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
-                if (richTextBox != null)
-                {
-                    try { UpdateOutputConsole(e.Data, richTextBox); }
-                    catch { }
-                }
-            };
-
-            if (redirectOutput)
-            {
-                richTextBox.AppendTextThreadSafe("\nSTARTING MINER...");
-                richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
-
-                try
-                {
-                    process.Start();
-
-                    runningTasks[taskId] = process;
-
-                    Task.Run(() =>
+                    try
                     {
-                        // Begin asynchronously reading the output
-                        process.BeginOutputReadLine();
-                        process.BeginErrorReadLine();
+                        process.Start();
 
-                        // Wait for the process to exit
-                        process.WaitForExit();
+                        runningTasks[taskId] = process;
 
-                        // Close the standard output stream
-                        process.Close();
-                        process.Dispose();
-                    });
-                }
-                catch (Exception ex)
-                {
-                    richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
-                    return false;
-                }
-            }
-            else
-            {
-                try
-                {
-                    process.Start();
-                    runningTasks[taskId] = process;
-                    Task.Run(() =>
+                        Task.Run(() =>
+                        {
+                            // Begin asynchronously reading the output
+                            process.BeginOutputReadLine();
+                            process.BeginErrorReadLine();
+
+                            // Wait for the process to exit
+                            process.WaitForExit();
+
+                            // Close the standard output stream
+                            process.Close();
+                            process.Dispose();
+                        });
+                    }
+                    catch (Exception ex)
                     {
-                        // Wait for the process to exit
-                        process.WaitForExit();
-
-                        // Close the standard output stream
-                        process.Close();
-                        process.Dispose();
-                    });
+                        richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
+                        return false;
+                    }
                 }
-                catch
+                else
                 {
-                    return false;
+                    try
+                    {
+                        process.Start();
+                        runningTasks[taskId] = process;
+                        Task.Run(() =>
+                        {
+                            // Wait for the process to exit
+                            process.WaitForExit();
+
+                            // Close the standard output stream
+                            process.Close();
+                            process.Dispose();
+                        });
+                    }
+                    catch
+                    {
+                        return false;
+                    }
                 }
             }
-
             return true;
         }
 
