@@ -48,6 +48,7 @@ namespace Gui_Miner
         CancellationTokenSource ctsRunningMiners = new CancellationTokenSource();
         private GlobalKeyboardHook globalKeyboardHook = new GlobalKeyboardHook();
         private TaskManager taskManager;
+        bool switchingMinerSettings = false;
         public TaskManager GetTaskManager() { return taskManager; }
         public Dictionary<string, Process> GetRunningMiners() { return taskManager.GetRunningTasks(); }
         public Form1()
@@ -72,9 +73,12 @@ namespace Gui_Miner
             // Listen for short-cut keys
             LoadShortcutKeys();
 
-            NServer nServer = new NServer();
-            nServer.Form1 = this;
-            nServer.Start();
+            Task.Run(() =>
+            {
+                NServer nServer = new NServer();
+                nServer.Form1 = this;
+                nServer.Start();
+            });
         }
         public async void LoadShortcutKeys()
         {
@@ -199,12 +203,16 @@ namespace Gui_Miner
         }
         private void settingsButtonPictureBox_Click(object sender, EventArgs e)
         {
-            settingsForm.Visible = true;
-            settingsForm.Focus();
-            settingsForm.Refresh();
+            settingsForm.ShowForm();
         }
         internal void ClickStartButton(bool shortcutOnly = false)
         {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => ClickStartButton(shortcutOnly)));
+                return;
+            }
+
             if (!shortcutOnly)
             {
                 // Play button pushed
@@ -215,8 +223,8 @@ namespace Gui_Miner
                 RemoveRotatingPanel();
 
                 // Reset restart counter
-                restartsLabel.Text = $"Restarts 0";
-                restartsLabel.ForeColor = Color.White;
+                restartsLabel.SetTextThreadSafe("Restarts 0");
+                restartsLabel.ForeColorThreadSafe(Color.White);
                 restartsLabel.Show();
             }
 
@@ -227,7 +235,7 @@ namespace Gui_Miner
             if (!shortcutOnly)
             {
                 // Replace background
-                CreateRotatingPanel();
+                await Task.Run(() => CreateRotatingPanel());
 
                 // Reset restart counter
                 restartsLabel.SetTextThreadSafe($"Restarts 0");
@@ -247,38 +255,48 @@ namespace Gui_Miner
 
         #region Remote Actions
         // Remote Actions
-        public Settings GetSettings()
+        public async Task<Settings> GetSettings()
         {
-            return settingsForm.Settings;
-        }
-        public async void SaveSettings(Settings settings)
-        {
-            await AppSettings.SaveAsync<Settings>(SettingsForm.SETTINGSNAME, settings);
-        }
-        public async void SwitchActiveMinerSetting(string oldMinerSettingsId, string newMinerSettingsId)
-        {
-            // Get tab page with given miner settings id
-            TabPage tabPage = outputPanel.Controls.OfType<TabControl>().SelectMany(tc => tc.TabPages.Cast<TabPage>()).FirstOrDefault(tp => tp.Name.Equals(oldMinerSettingsId));
-            if (tabPage == null) return;
-
-            RichTextBox textBox = tabPage?.Controls.OfType<RichTextBox>().FirstOrDefault();
-            textBox.AppendTextThreadSafe("Switching Active Miner Settings...");
-
-            // Get the start button and click it if it is in the stop state
-            PictureBox toggleButton = tabPage.Controls.OfType<PictureBox>().FirstOrDefault(pb => (string)pb.Tag == "toggleButton");
-
-            // Access the ComboBox named "quickChangeSettings" within the TabPage
-            ComboBox quickChangeSettings = tabPage?.Controls.OfType<ComboBox>().FirstOrDefault(c => c.Name == "quickChangeSettings");
-
-            // Access the Label named "selectedSettingId" within the TabPage
-            Label selectedSettingIdLabel = tabPage?.Controls.OfType<Label>().FirstOrDefault(label => label.Name == "selectedSettingId");
-
-
-            // Get the current setting from Master settings list and update its active state
             var settings = new Settings();
             var settingsLoaded = await AppSettings.LoadAsync<Settings>(SettingsForm.SETTINGSNAME);
             if (settingsLoaded.Success)
                 settings = settingsLoaded.Result;
+            return settings;
+        }
+        public Task SaveSettings(Settings settings)
+        {
+            return AppSettings.SaveAsync<Settings>(SettingsForm.SETTINGSNAME, settings);
+        }
+        public async void SwitchActiveMinerSetting(string oldMinerSettingsId, string newMinerSettingsId)
+        {
+            if (switchingMinerSettings) return;
+            
+            switchingMinerSettings = true;
+            
+            TabPage tabPage = outputPanel.Controls.OfType<TabControl>().SelectMany(tc => tc.TabPages.Cast<TabPage>()).FirstOrDefault(tp => tp.Name.Equals(oldMinerSettingsId));
+
+            if (tabPage == null)
+                return;
+
+            Panel panel = tabPage.Controls.OfType<Panel>().FirstOrDefault();
+
+            if (panel == null)
+                return;
+
+            RichTextBox textBox = tabPage.Controls.OfType<RichTextBox>().FirstOrDefault();
+            textBox.AppendTextThreadSafe("Switching Active Miner Settings...");
+
+            // Get the start button and click it if it is in the stop state
+            PictureBox toggleButton = panel.Controls.OfType<PictureBox>().FirstOrDefault(pb => (string)pb.Name == "toggleButton");
+
+            // Access the ComboBox named "quickChangeSettings" within the TabPage
+            ComboBox quickChangeSettings = panel.Controls.OfType<ComboBox>().FirstOrDefault(c => c.Name == "quickChangeSettings");
+
+            // Access the Label named "selectedSettingId" within the TabPage
+            Label selectedSettingIdLabel = panel.Controls.OfType<Label>().FirstOrDefault(label => label.Name == "selectedSettingId");
+
+            // Get the current setting from Master settings list and update its active state
+            var settings = await GetSettings();
 
             var newMinerSettings = new MinerConfig();
             int check = 0;
@@ -295,6 +313,9 @@ namespace Gui_Miner
                     settings.MinerSettings[x].Active = true;
                     newMinerSettings = settings.MinerSettings[x];
                     check++;
+
+                    // Update quick change dropdown
+                    quickChangeSettings.SetTextThreadSafe(newMinerSettings.Name);
                 }
             }
 
@@ -303,7 +324,7 @@ namespace Gui_Miner
             await AppSettings.SaveAsync<Settings>(SettingsForm.SETTINGSNAME, settings);
 
             // Stop this miner if it is running
-            if (toggleButton != null && (string)toggleButton.Tag == "Start")
+            if (toggleButton != null && (string)toggleButton.GetTagThreadSafe() == "Stop")
             {
                 // Simulate a click on the stop button
                 toggleMinerButton_Click(toggleButton, EventArgs.Empty);
@@ -313,27 +334,38 @@ namespace Gui_Miner
             toggleMinerButton_Click(toggleButton, EventArgs.Empty);
 
             // Update selectedSettingId
-            selectedSettingIdLabel.Text = newMinerSettingsId;
+            selectedSettingIdLabel.SetTextThreadSafe(newMinerSettingsId);
 
             // Update tabpage
-            tabPage.Name = newMinerSettingsId;
-            tabPage.Text = newMinerSettings.Name;
+            tabPage.SetNameThreadSafe(newMinerSettingsId);
+            tabPage.SetTextThreadSafe(newMinerSettings.Name);
+
+            switchingMinerSettings = false;
         }
         public void ClickStartButton(string minerSettingsId)
         {
             // Get tab page with given miner settings id
             TabPage tabPage = outputPanel.Controls.OfType<TabControl>().SelectMany(tc => tc.TabPages.Cast<TabPage>()).FirstOrDefault(tp => tp.Name.Equals(minerSettingsId));
 
-            if (tabPage != null)
+            if (tabPage == null)
             {
-                // Get the start button and click it if it is in the stop state
-                PictureBox toggleButton = tabPage.Controls.OfType<PictureBox>().FirstOrDefault(pb => (string)pb.Tag == "toggleButton");
+                // New Miner starting
 
-                if (toggleButton != null && (string)toggleButton.Tag == "Start")
-                {
-                    // Simulate a click on the stop button
-                    toggleMinerButton_Click(toggleButton, EventArgs.Empty);
-                }
+                return;
+            }
+
+            Panel panel = tabPage.Controls.OfType<Panel>().FirstOrDefault();
+
+            if (panel == null)
+                return;
+
+            // Get the stop button and click it if it is in the play state
+            PictureBox toggleButton = panel.Controls.OfType<PictureBox>().FirstOrDefault(pb => (string)pb.Name == "toggleButton");
+
+            if (toggleButton != null && (string)toggleButton.Tag == "Start")
+            {
+                // Simulate a click on the stop button
+                toggleMinerButton_Click(toggleButton, EventArgs.Empty);
             }
         }
         public void ClickStopButton(string minerSettingsId)
@@ -341,24 +373,53 @@ namespace Gui_Miner
             // Get tab page with given miner settings id
             TabPage tabPage = outputPanel.Controls.OfType<TabControl>().SelectMany(tc => tc.TabPages.Cast<TabPage>()).FirstOrDefault(tp => tp.Name.Equals(minerSettingsId));
 
-            if (tabPage != null)
-            {
-                // Get the stop button and click it if it is in the play state
-                PictureBox toggleButton = tabPage.Controls.OfType<PictureBox>().FirstOrDefault(pb => (string)pb.Name == "toggleButton");
+            if (tabPage == null)
+                return;
 
-                if (toggleButton != null && (string)toggleButton.Tag == "Stop")
+            Panel panel = tabPage.Controls.OfType<Panel>().FirstOrDefault();
+
+            if (panel == null)
+                return;
+
+            // Get the stop button and click it if it is in the play state
+            PictureBox toggleButton = panel.Controls.OfType<PictureBox>().FirstOrDefault(pb => (string)pb.Name == "toggleButton");
+
+            if (toggleButton != null && (string)toggleButton.Tag == "Stop")
+            {
+                // Simulate a click on the stop button
+                toggleMinerButton_Click(toggleButton, EventArgs.Empty);
+            }
+        }
+        public async void StartInactiveMiner(string minerSettingsId)
+        {
+            // Get the current setting from Master settings list and update its active state
+            var settings = await GetSettings();
+
+            for (int x = 0; x < settings.MinerSettings.Count; x++)
+            {
+                // Activate the setting
+                if (settings.MinerSettings[x].Id.ToString() == minerSettingsId)
                 {
-                    // Simulate a click on the stop button
-                    toggleMinerButton_Click(toggleButton, EventArgs.Empty);
+                    settings.MinerSettings[x].Active = true;
+                    await SaveSettings(settings);
+
+                    CreateTabControlAndStartMiners(false);
                 }
             }
         }
+        
         #endregion
 
 
         // Individual miner actions
         private async void toggleMinerButton_Click(object sender, EventArgs e)
         {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => toggleMinerButton_Click(sender, e)));
+                return;
+            }
+
             // Assuming sender is the stop button clicked
             PictureBox stopButton = (PictureBox)sender;
 
@@ -369,13 +430,13 @@ namespace Gui_Miner
             TabPage tabPage = (TabPage)topPanel.Parent;
 
             // Access the RichTextBox within the TabPage
-            RichTextBox textBox = tabPage?.Controls.OfType<RichTextBox>().FirstOrDefault();
+            RichTextBox textBox = tabPage.Controls.OfType<RichTextBox>().FirstOrDefault();
 
             // Access the ComboBox named "quickChangeSettings" within the TabPage
-            ComboBox quickChangeSettings = tabPage?.Controls.OfType<ComboBox>().FirstOrDefault(c => c.Name == "quickChangeSettings");
+            ComboBox quickChangeSettings = topPanel?.Controls.OfType<ComboBox>().FirstOrDefault(c => c.Name == "quickChangeSettings");
 
             // Access the Label named "selectedSettingId" within the TabPage
-            Label selectedSettingIdLabel = tabPage?.Controls.OfType<Label>().FirstOrDefault(label => label.Name == "selectedSettingId");
+            Label selectedSettingIdLabel = topPanel?.Controls.OfType<Label>().FirstOrDefault(label => label.Name == "selectedSettingId");
             string selectedSettingId = selectedSettingIdLabel.Text;
 
             MinerConfig selectedConfig = (MinerConfig)quickChangeSettings.SelectedItem;
@@ -450,7 +511,8 @@ namespace Gui_Miner
             }
 
             // Get all miner configs
-            var minerConfigs = settingsForm.Settings.MinerSettings;
+            var settings = await GetSettings();
+            var minerConfigs = settings.MinerSettings;
             if (minerConfigs == null) return;
                         
             foreach (MinerConfig minerConfig in minerConfigs)
@@ -458,7 +520,7 @@ namespace Gui_Miner
                 // If this config is active and we aren't using shortcut keys or we are using shortcut keys and this config also uses shortcut keys
                 if (minerConfig.Active && !shortcutOnly || shortcutOnly && minerConfig.Use_Shortcut_Keys)
                 {
-                    TabPage tabPage = tabControl.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Name.Equals(minerConfig.Name));
+                    TabPage tabPage = tabControl.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Text.Equals(minerConfig.Name));
 
                     RichTextBox tabPageRichTextBox = new RichTextBox();
 
@@ -481,6 +543,7 @@ namespace Gui_Miner
                         Label quickChangeLabel = new Label();
                         ComboBox quickChangeSettings = new ComboBox();
                         quickChangeSettings.Name = "quickChangeSettings";
+
                         Label selectedSettingId = new Label();
                         selectedSettingId.Name = "selectedSettingId";
                         selectedSettingId.Visible = false;
@@ -514,11 +577,11 @@ namespace Gui_Miner
                             MinerConfig selectedConfig = (MinerConfig)quickChangeSettings.SelectedItem;
 
                             // Ensure most up-to-date list is loaded for user to pick from
-                            var settingsLoaded = await AppSettings.LoadAsync<Settings>(SettingsForm.SETTINGSNAME);
-                            if (settingsLoaded.Success)
+                            var loadedSettings = await AppSettings.LoadAsync<Settings>(SettingsForm.SETTINGSNAME);
+                            if (loadedSettings.Success)
                             {
                                 quickChangeSettings.Items.Clear();
-                                var configs = settingsLoaded.Result.MinerSettings;
+                                var configs = loadedSettings.Result.MinerSettings;
                                 foreach (MinerConfig config in configs)
                                     quickChangeSettings.Items.Add(config);
                                 quickChangeSettings.SelectedItem = selectedConfig;
@@ -598,17 +661,8 @@ namespace Gui_Miner
                         tabControl.TabPages.Add(tabPage);
                     }
                     else
-                    {
-                        if(tabPage.InvokeRequired)
-                        {
-                            tabPage.Invoke(new Action(() =>
-                            {
-                                tabPageRichTextBox = tabPage.Controls.OfType<RichTextBox>().FirstOrDefault();
-                            }));
-                        }
-                        else
-                            tabPageRichTextBox = tabPage.Controls.OfType<RichTextBox>().FirstOrDefault();
-                    }
+                        continue;
+                    
 
                     // Start the miner 
                    if(!await StartAMiner(minerConfig, tabPageRichTextBox))
@@ -763,16 +817,18 @@ namespace Gui_Miner
                     var matchingConfig = settingsForm.Settings.MinerSettings.Find(m => m.Id.ToString().Equals(minerId));
                     if (matchingConfig == null) return false;
 
-                    if (!shortcutOnly || (shortcutOnly && matchingConfig.Use_Shortcut_Keys))
-                    {
-                        // Stop the miner
-                        taskManager.StopTask(matchingConfig.Id.ToString());
+                    // Stop the miner
+                    taskManager.StopTask(matchingConfig.Id.ToString());
 
-                        // Remove the tab page
-                        RemoveTabPage(matchingConfig.Id.ToString());
-                    }
-                }                
+                    // Remove the tab page
+                    RemoveTabPage(matchingConfig.Id.ToString());
+
+                    // Kill all tasks with this miner name incase app crashed and didn't get closed
+                    taskManager.KillAllProcessesContainingName(Path.GetFileNameWithoutExtension(matchingConfig.Miner_File_Path));
+                }
             }
+
+            
             return true;
         }
         private void killAllMinersButtonPictureBox_Click(object sender, EventArgs e)
@@ -842,6 +898,12 @@ namespace Gui_Miner
         // Rotating image
         private async void CreateRotatingPanel()
         {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => CreateRotatingPanel()));
+                return;
+            }
+
             outputPanel.Controls.Clear();
 
             rotatingPanel = RotatingPanel.Create();

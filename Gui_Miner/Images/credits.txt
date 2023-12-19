@@ -13,3 +13,5 @@ check-for-updates = <a href="https://www.flaticon.com/free-icons/rotate" title="
 ping = <a href="https://www.flaticon.com/free-icons/ping" title="ping icons">Ping icons created by Darius Dan - Flaticon</a>
 pinging = <a href="https://www.flaticon.com/free-icons/internet" title="internet icons">Internet icons created by catkuro - Flaticon</a>
 panic = <a href="https://www.flaticon.com/free-icons/panic" title="panic icons">Panic icons created by Flat Icons - Flaticon</a>
+remove = <a href="https://www.flaticon.com/free-icons/delete" title="delete icons">Delete icons created by Pixel perfect - Flaticon</a>
+check = <a href="https://www.flaticon.com/free-icons/correct" title="correct icons">Correct icons created by Pixel perfect - Flaticon</a>

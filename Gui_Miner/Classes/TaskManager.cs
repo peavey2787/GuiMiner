@@ -280,11 +280,12 @@ namespace Gui_Miner.Classes
         {
             KillAllProcessesContainingName("miner");
             KillAllProcessesContainingName("Miner");
+            KillAllProcessesContainingName("xmrig");
         }
 
 
         // Helpers
-        private void KillAllProcessesContainingName(string name)
+        public void KillAllProcessesContainingName(string name)
         {
             name = Path.GetFileNameWithoutExtension(name);
             Process[] processes = Process.GetProcesses();

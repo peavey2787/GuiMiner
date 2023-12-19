@@ -15,6 +15,8 @@ namespace Gui_Miner.Classes
     {
         public static void AppendTextThreadSafe(this RichTextBox richTextBox, string text)
         {
+            if (richTextBox == null) return;
+            
             if (richTextBox.InvokeRequired)
             {
                 try { richTextBox.Invoke(new Action(() => richTextBox.AppendText(text))); }
@@ -259,6 +261,17 @@ namespace Gui_Miner.Classes
 
     public static class PictureBoxExtensions
     {
+        public static object GetTagThreadSafe(this PictureBox pictureBox)
+        {
+            if (pictureBox.InvokeRequired)
+            {
+                return pictureBox.Invoke(new Func<object>(() => pictureBox.Tag));
+            }
+            else
+            {
+                return pictureBox.Tag;
+            }
+        }
         public static void SetTagThreadSafe(this PictureBox pictureBox, object value)
         {
             if (pictureBox == null)
@@ -321,6 +334,48 @@ namespace Gui_Miner.Classes
             else
             {
                 panel.Controls.Add(control);
+            }
+        }
+    }
+
+    public static class TabPageExtensions
+    {
+        public static void SetNameThreadSafe(this TabPage tabPage, string name)
+        {
+            if (tabPage.InvokeRequired)
+            {
+                tabPage.Invoke(new Action(() => tabPage.Name = name));
+            }
+            else
+            {
+                tabPage.Name = name;
+            }
+        }
+
+        public static void SetTextThreadSafe(this TabPage tabPage, string text)
+        {
+            if (tabPage.InvokeRequired)
+            {
+                tabPage.Invoke(new Action(() => tabPage.Text = text));
+            }
+            else
+            {
+                tabPage.Text = text;
+            }
+        }
+    }
+
+    public static class ComboBoxExtensions
+    {
+        public static void SetTextThreadSafe(this ComboBox comboBox, string text)
+        {
+            if (comboBox.InvokeRequired)
+            {
+                comboBox.Invoke(new Action(() => comboBox.Text = text));
+            }
+            else
+            {
+                comboBox.Text = text;
             }
         }
     }

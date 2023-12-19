@@ -53,7 +53,6 @@ namespace Gui_Miner
         public const string STOPSHORTKEYS = "StopShortKeys";
         public const string STARTSHORTKEYS = "StartShortKeys";
         public const string BGIMAGE = "BackgroundImage";
-        const string APPVERSION = "AppVersion";
         const double AppVersion = 1.8;
         const double VersionIncrement = 0.1;
         double NextAppVersion = AppVersion + VersionIncrement;
@@ -110,6 +109,19 @@ namespace Gui_Miner
         private void SettingsForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             e.Cancel = true;
+            HideForm();
+        }
+        public async void ShowForm()
+        {
+            await LoadSettings();
+
+            manageMinerConfigsButton.PerformClick();
+
+            Visible = true;
+            Focus();
+        }
+        public void HideForm()
+        {
             SaveSettings();
             this.Visible = false;
 
@@ -307,168 +319,7 @@ namespace Gui_Miner
 
         }
 
-        private List<Pool> AddDefaultPools()
-        {
-            var pools = new List<Pool>();
 
-            // UnMineable SSL
-            Pool pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Nexa SSL";                        
-            pool.Address = "nexapow.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Octopus SSL";
-            pool.Address = "octopus.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Karlsen SSL";
-            pool.Address = "karlsenhash.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - IronFish SSL";
-            pool.Address = "ironfish.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Alephium SSL";
-            pool.Address = "blake3.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Firo SSL";
-            pool.Address = "firopow.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Ergo SSL";
-            pool.Address = "autolykos.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Kawpow SSL";
-            pool.Address = "kp.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Etc SSL";
-            pool.Address = "etchash.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Ethash SSL";
-            pool.Address = "ethash.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 443;
-            pool.SSL = true;
-            pool.Name = "*UnMineable - Xmr (cpu) SSL";
-            pool.Address = "rx.unmineable.com";
-            pools.Add(pool);
-
-            // Non-SSL
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Nexa";
-            pool.Address = "nexapow.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Octopus";
-            pool.Address = "octopus.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Karlsen";
-            pool.Address = "karlsenhash.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - IronFish";
-            pool.Address = "ironfish.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Alephium";
-            pool.Address = "blake3.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Firo";
-            pool.Address = "firopow.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Ergo";
-            pool.Address = "autolykos.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Kawpow";
-            pool.Address = "kp.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Etc";
-            pool.Address = "etchash.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Ethash";
-            pool.Address = "ethash.unmineable.com";
-            pools.Add(pool);
-
-            pool = new Pool();
-            pool.Port = 3333;
-            pool.SSL = false;
-            pool.Name = "*UnMineable - Xmr (cpu)";
-            pool.Address = "rx.unmineable.com";
-            pools.Add(pool);
-
-            return pools;
-        }
 
 
         #region MinerConfigs
@@ -1431,49 +1282,67 @@ namespace Gui_Miner
         }
 
 
+
         #region Navigation Buttons
         // Navigation buttons
-        private void generalButton_Click(object sender, EventArgs e)
+        private async void generalButton_Click(object sender, EventArgs e)
         {
             SuspendLayout();
             HideAllPanels();
+            
+            await LoadSettings();
             CreateRotatingPanel();
+            
             successLabel.Text = "";
             generalPanel.Show();
             generalPanel.BringToFront();
+            
             ResumeLayout();
             Refresh();
         }
-        private void manageMinerConfigsButton_Click(object sender, EventArgs e)
+        private async void manageMinerConfigsButton_Click(object sender, EventArgs e)
         {
             SuspendLayout();
             HideAllPanels();
+            
+            await LoadSettings();
+
+            // Reload to get latest settings
+            minerSettingsListBox.SelectedIndex = minerSettingsListBox.SelectedIndex;
+            
             manageConfigPanel.Show();
             manageConfigPanel.BringToFront();
+            
             ResumeLayout();
             Refresh();
         }
-        private void manageWalletsButton_Click(object sender, EventArgs e)
+        private async void manageWalletsButton_Click(object sender, EventArgs e)
         {
             SuspendLayout();
             HideAllPanels();
+
+            await LoadSettings();
+            
             walletsPanel.Show();
             walletsPanel.BringToFront();
 
-            // Load saved wallets
             UpdateWalletsListBox();
 
             ResumeLayout();
             Refresh();
         }
-        private void managePoolsButton_Click(object sender, EventArgs e)
+        private async void managePoolsButton_Click(object sender, EventArgs e)
         {
             SuspendLayout();
             HideAllPanels();
+
+            await LoadSettings();
+
             poolsPanel.Show();
             poolsPanel.BringToFront();
 
             UpdatePoolsListBox();
+
             ResumeLayout();
             Refresh();
         }
@@ -2010,6 +1879,168 @@ namespace Gui_Miner
                     DisplayMinerSettings();
                 }
             }
+        }
+        private List<Pool> AddDefaultPools()
+        {
+            var pools = new List<Pool>();
+
+            // UnMineable SSL
+            Pool pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Nexa SSL";
+            pool.Address = "nexapow.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Octopus SSL";
+            pool.Address = "octopus.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Karlsen SSL";
+            pool.Address = "karlsenhash.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - IronFish SSL";
+            pool.Address = "ironfish.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Alephium SSL";
+            pool.Address = "blake3.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Firo SSL";
+            pool.Address = "firopow.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Ergo SSL";
+            pool.Address = "autolykos.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Kawpow SSL";
+            pool.Address = "kp.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Etc SSL";
+            pool.Address = "etchash.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Ethash SSL";
+            pool.Address = "ethash.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 443;
+            pool.SSL = true;
+            pool.Name = "*UnMineable - Xmr (cpu) SSL";
+            pool.Address = "rx.unmineable.com";
+            pools.Add(pool);
+
+            // Non-SSL
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Nexa";
+            pool.Address = "nexapow.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Octopus";
+            pool.Address = "octopus.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Karlsen";
+            pool.Address = "karlsenhash.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - IronFish";
+            pool.Address = "ironfish.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Alephium";
+            pool.Address = "blake3.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Firo";
+            pool.Address = "firopow.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Ergo";
+            pool.Address = "autolykos.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Kawpow";
+            pool.Address = "kp.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Etc";
+            pool.Address = "etchash.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Ethash";
+            pool.Address = "ethash.unmineable.com";
+            pools.Add(pool);
+
+            pool = new Pool();
+            pool.Port = 3333;
+            pool.SSL = false;
+            pool.Name = "*UnMineable - Xmr (cpu)";
+            pool.Address = "rx.unmineable.com";
+            pools.Add(pool);
+
+            return pools;
         }
 
         // Ping

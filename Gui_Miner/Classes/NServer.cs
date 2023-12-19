@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Configuration;
 using System.Web;
+using System.Diagnostics;
 
 namespace Gui_Miner.Classes
 {
@@ -40,56 +41,60 @@ namespace Gui_Miner.Classes
         #region Start/Stop
         public async void Start()
         {
-            try
+
+            Clients_to_serve = new ConcurrentQueue<TcpClient>();
+            _Server = IPAddress.TryParse(Ip, out IPAddress ipAddress)
+                ? new TcpListener(ipAddress, Port)
+                : null;
+
+            while (true)
             {
-                Clients_to_serve = new ConcurrentQueue<TcpClient>();
-                _Server = IPAddress.TryParse(Ip, out IPAddress ipAddress)
-                    ? new TcpListener(ipAddress, Port)
-                    : null;
+                try { _Server.Start(); break; }
+                catch (Exception ex) { CloseSocketIfAlreadyUsed(ex.Message); Thread.Sleep(1000); }
+            }
 
-                _Server?.Start();
+            while (true)
+            {
+                TcpClient client = null;
 
-                //ConsoleTextBox.AddTextThreadSafe($"N server started, listening for LAN commands on {Ip}:{Port}");
-
-                while (true)
+                try
                 {
-                    TcpClient client = _Server.Pending() ? await _Server.AcceptTcpClientAsync() : null;
+                    client = _Server.Pending() ? await _Server.AcceptTcpClientAsync() : null;
+                }
+                catch (Exception exc)
+                {
+                    CloseSocketIfAlreadyUsed(exc.Message) ;
+                }
 
-                    if (client == null)
+                if (client == null)
+                {
+                    await Task.Delay(1000);
+                    continue;
+                }
+
+                client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 0));
+
+                Clients_to_serve.Enqueue(client);
+
+                if (Clients_to_serve.TryDequeue(out client))
+                {
+                    //ConsoleTextBox.AddTextThreadSafe($"Client connected from {client.Client.RemoteEndPoint}");
+                    try
                     {
-                        await Task.Delay(1000);
-                        continue;
-                    }
-
-                    client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 0));
-
-                    Clients_to_serve.Enqueue(client);
-
-                    if (Clients_to_serve.TryDequeue(out client))
-                    {
-                        //ConsoleTextBox.AddTextThreadSafe($"Client connected from {client.Client.RemoteEndPoint}");
                         var task = Serve_Client(client);
                         //task.ContinueWith(_ => ConsoleTextBox.AddTextThreadSafe("Client has been served"), TaskContinuationOptions.OnlyOnRanToCompletion);
                     }
+                    catch (Exception ex)
+                    {
+                        string message = ex.Message;
+                    }
+
                 }
             }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("Only one usage of each socket address (protocol/network address/port) is normally permitted"))
-                {
-                    // TODO: figure this out 
-                }
-
-                string message = "";
-
-                if (ex.Message == "Not listening. You must call the Start() method before calling this method.")
-                    message = "N server stopped";
-                else
-                    message = ex.Message;
-                //ConsoleTextBox.AddTextThreadSafe(message);
-            }
-
         }
+
+
+        
         private Task Serve_Client(TcpClient client)
         {
             return Task.Run(() =>
@@ -107,8 +112,25 @@ namespace Gui_Miner.Classes
                         command = reader.ReadLine();
                         if (command != null & command == "command=closeConnection")
                             closeConnection = true;
-                        else if (command != null)
+                        else if (command != null && !String.IsNullOrWhiteSpace(command)
+                            && !command.StartsWith("Host: ")
+                            && !command.StartsWith("Connection: ")
+                            && !command.StartsWith("Pragma: ")
+                            && !command.StartsWith("Cache-Control: ")
+                            && !command.StartsWith("User-Agent: ")
+                            && !command.StartsWith("Accept: ")
+                            && !command.StartsWith("Referer: ")
+                            && !command.StartsWith("Upgrade-Insecure-Requests: ")
+                            && !command.StartsWith("Referer: ")
+                            && !command.StartsWith("Accept-Encoding: ")
+                            && !command.StartsWith("Accept-Language: ")
+                            && !command.StartsWith("DNT: ")
+                            && !command.StartsWith("X-Forwarded-For: ")
+                            // Add more headers here
+                            )
+                        {
                             Execute(command, writer);
+                        }
                         else
                             Thread.Sleep(1000);
                     }
@@ -120,7 +142,6 @@ namespace Gui_Miner.Classes
 
                 if (writer.BaseStream != null)
                 {
-                    //Console.WriteLine("The StreamWriter is in use.");
                     Thread.Sleep(2000);
                 }
 
@@ -131,7 +152,7 @@ namespace Gui_Miner.Classes
         }
         public void Stop()
         {
-            _Server?.Stop();
+            _Server.Stop();
         }
         #endregion
 
@@ -167,20 +188,29 @@ namespace Gui_Miner.Classes
             }
             else if (command.IndexOf("command=") > -1)
             {
-                // Split the command=actualCommandHere
-                string[] parts = command.Split(new[] { '=' }, 2);
-                command = parts[1].Split(' ')[0]; // Remove extra junk
+                // Remove command=
+                int startIndex = command.IndexOf('=') + 1;
+                command = command.Substring(startIndex);
 
+                string ogCommand = command;
 
-                if (parts.Length >= 2 && parts[1].Contains('='))
+                // Get actuall command
+                startIndex = command.IndexOf('=');
+                
+                if (startIndex >= 0)
                 {
-                    var extraParts = command.Split('=');
-                    if (extraParts.Length >= 2)
-                    {
-                        command = extraParts[0];
-                        extra = extraParts[1];
-                    }
+                    command = command.Substring(0, startIndex);
+
+                    // Get extras
+                    extra = ogCommand.Substring(startIndex + 1);
+
+                    // Remove trailing "HTTP/1.1"
+                    extra = extra.Substring(0, extra.LastIndexOf(" HTTP/1.1"));
                 }
+                else
+                    command = command.Substring(0, command.LastIndexOf(" HTTP/1.1")); // Remove trailing "HTTP/1.1"
+
+
             }
 
             HandleCommand(command, extra, writer);
@@ -279,7 +309,7 @@ namespace Gui_Miner.Classes
 
                 case "getSettings":
 
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
                     resp = JsonConvert.SerializeObject(settings);
                     httpResponse = CreateHttpResponse(resp);
                     writer.Write(httpResponse);
@@ -288,7 +318,7 @@ namespace Gui_Miner.Classes
 
                 case "getMinerSettings":
 
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
                     resp = JsonConvert.SerializeObject(settings.MinerSettings);
                     httpResponse = CreateHttpResponse(resp);
                     writer.Write(httpResponse);
@@ -303,11 +333,15 @@ namespace Gui_Miner.Classes
                     await Form1.ClickStopButton();
                     break;
 
+                case "startNewMinerId":
+                    Form1.StartInactiveMiner(extra);
+                    break;
+
                 case "startMinerId":
                     Form1.ClickStartButton(extra);
                     break;
 
-                case "stopMinerId":
+                case "stopMinerId":                    
                     Form1.ClickStopButton(extra);
                     break;
 
@@ -317,15 +351,39 @@ namespace Gui_Miner.Classes
                     {
                         string oldId = pieces[0];
                         string newId = pieces[1];
-                        Form1.SwitchActiveMinerSetting(oldId, newId);
+                        Task.Run(() => Form1.SwitchActiveMinerSetting(oldId, newId));
+                        resp = "true";
                     }
-                    break;
+                    else
+                        resp = "false";
 
-                case "getAllRunningMiners":                    
-                    var runningMiners = Form1.GetRunningMiners();
-                    resp = JsonConvert.SerializeObject(runningMiners);
+                    resp = JsonConvert.SerializeObject(resp);
                     httpResponse = CreateHttpResponse(resp);
                     writer.Write(httpResponse);
+                    break;
+
+                case "getAllRunningMiners":
+                    var allRunningMiners = new List<MinerConfig>();
+                    var runningMiners = Form1.GetRunningMiners();
+                    settings = await Form1.GetSettings();
+                    foreach(var runningMiner in runningMiners)
+                    {
+                        var match = settings.MinerSettings.Find(ms => ms.Id.Equals(int.Parse(runningMiner.Key)));
+                        allRunningMiners.Add(match);
+                    }
+                    resp = JsonConvert.SerializeObject(allRunningMiners);
+                    httpResponse = CreateHttpResponse(resp);
+                    writer.Write(httpResponse);
+                    break;
+
+                case "getMinerSetting":
+
+                    settings = await Form1.GetSettings();
+                    MinerConfig foundConfig = settings.MinerSettings.Find(ms => ms.Id.Equals(int.Parse(extra)));
+                    resp = JsonConvert.SerializeObject(foundConfig);
+                    httpResponse = CreateHttpResponse(resp);
+                    writer.Write(httpResponse);
+
                     break;
 
                 case "updateMinerSetting":
@@ -333,18 +391,20 @@ namespace Gui_Miner.Classes
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingMinerConfig = JsonConvert.DeserializeObject<MinerConfig>(decodedJson);
 
-                    settings = Form1.GetSettings();
-
-                    for (int x = 0; x < settings.MinerSettings.Count(); x++)
+                    if (incomingMinerConfig != null && incomingMinerConfig.Id > 0)
                     {
-                        if (settings.MinerSettings[x].Id == incomingMinerConfig.Id)
-                        {
-                            settings.MinerSettings[x] = incomingMinerConfig; // Overwrite old config
-                            Form1.SaveSettings(settings);
-                            break;
-                        }
-                    }                   
+                        settings = await Form1.GetSettings();
 
+                        for (int x = 0; x < settings.MinerSettings.Count(); x++)
+                        {
+                            if (settings.MinerSettings[x].Id == incomingMinerConfig.Id)
+                            {
+                                settings.MinerSettings[x] = incomingMinerConfig; // Overwrite old config
+                                await Form1.SaveSettings(settings);
+                                break;
+                            }
+                        }
+                    }
                     break;
 
                 case "addMinerSetting":
@@ -352,10 +412,13 @@ namespace Gui_Miner.Classes
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingMinerConfig = JsonConvert.DeserializeObject<MinerConfig>(decodedJson);
 
-                    settings = Form1.GetSettings();
-                    settings.MinerSettings.Add(incomingMinerConfig);
+                    if (incomingMinerConfig != null && incomingMinerConfig.Id > 0)
+                    {
+                        settings = await Form1.GetSettings();
+                        settings.MinerSettings.Add(incomingMinerConfig);
 
-                    Form1.SaveSettings(settings);
+                        await Form1.SaveSettings(settings);
+                    }
 
                     break;
 
@@ -364,22 +427,25 @@ namespace Gui_Miner.Classes
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingMinerConfig = JsonConvert.DeserializeObject<MinerConfig>(decodedJson);
 
-                    settings = Form1.GetSettings();
-
-                    for (int x = 0; x < settings.MinerSettings.Count(); x++)
+                    if (incomingMinerConfig != null && incomingMinerConfig.Id > 0)
                     {
-                        if (settings.MinerSettings[x].Id == incomingMinerConfig.Id)
+                        settings = await Form1.GetSettings();
+
+                        for (int x = 0; x < settings.MinerSettings.Count(); x++)
                         {
-                            settings.MinerSettings.Remove(settings.MinerSettings[x]);
-                            Form1.SaveSettings(settings);
-                            break;
+                            if (settings.MinerSettings[x].Id == incomingMinerConfig.Id)
+                            {
+                                settings.MinerSettings.Remove(settings.MinerSettings[x]);
+                                await Form1.SaveSettings(settings);
+                                break;
+                            }
                         }
-                    }                    
+                    }
 
                     break;
 
                 case "getWallets":
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
 
                     resp = JsonConvert.SerializeObject(settings.Wallets);
                     httpResponse = CreateHttpResponse(resp);
@@ -392,14 +458,14 @@ namespace Gui_Miner.Classes
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingWallet = JsonConvert.DeserializeObject<Wallet>(decodedJson);
 
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
 
                     for (int x = 0; x < settings.Wallets.Count(); x++)
                     {
                         if (settings.Wallets[x].Id == incomingWallet.Id)
                         {
                             settings.Wallets[x] = incomingWallet;
-                            Form1.SaveSettings(settings);
+                            await Form1.SaveSettings(settings);
                             break;
                         }
                     }                    
@@ -410,30 +476,30 @@ namespace Gui_Miner.Classes
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingWallet = JsonConvert.DeserializeObject<Wallet>(decodedJson);
 
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
                     settings.Wallets.Add(incomingWallet);
-                    Form1.SaveSettings(settings);
+                    await Form1.SaveSettings(settings);
                     break;
 
                 case "removeWallet":
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingWallet = JsonConvert.DeserializeObject<Wallet>(decodedJson);
 
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
 
                     for (int x = 0; x < settings.Wallets.Count(); x++)
                     {
                         if (settings.Wallets[x].Id == incomingWallet.Id)
                         {
                             settings.Wallets.Remove(settings.Wallets[x]);
-                            Form1.SaveSettings(settings);
+                            await Form1.SaveSettings(settings);
                             break;
                         }
                     }                    
                     break;
 
                 case "getPools":
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
 
                     resp = JsonConvert.SerializeObject(settings.Pools);
                     httpResponse = CreateHttpResponse(resp);
@@ -444,14 +510,14 @@ namespace Gui_Miner.Classes
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingPool = JsonConvert.DeserializeObject<Pool>(decodedJson);
 
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
 
                     for (int x = 0; x < settings.Pools.Count(); x++)
                     {
                         if (settings.Pools[x].Id == incomingPool.Id)
                         {
                             settings.Pools[x] = incomingPool;
-                            Form1.SaveSettings(settings);
+                            await Form1.SaveSettings(settings);
                             break;
                         }
                     }                    
@@ -461,23 +527,23 @@ namespace Gui_Miner.Classes
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingPool = JsonConvert.DeserializeObject<Pool>(decodedJson);
 
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
                     settings.Pools.Add(incomingPool);
-                    Form1.SaveSettings(settings);
+                    await Form1.SaveSettings(settings);
                     break;
 
                 case "removePool":
                     decodedJson = HttpUtility.UrlDecode(extra);
                     incomingPool = JsonConvert.DeserializeObject<Pool>(decodedJson);
 
-                    settings = Form1.GetSettings();
+                    settings = await Form1.GetSettings();
 
                     for (int x = 0; x < settings.Pools.Count(); x++)
                     {
                         if (settings.Pools[x].Id == incomingPool.Id)
                         {
                             settings.Pools.Remove(settings.Pools[x]);
-                            Form1.SaveSettings(settings);
+                            await Form1.SaveSettings(settings);
                             break;
                         }
                     }
@@ -494,7 +560,20 @@ namespace Gui_Miner.Classes
 
         #region Helpers
         // Helpers
+        private void CloseSocketIfAlreadyUsed(string errorMessage)
+        {
+            if (errorMessage.Contains("Not listening. You must call the Start() method before calling this method."))
+            {
+                // Release socket (app crashed?)
+                int processId = GetProcessIdByPort(Port);
 
+                if (processId != -1)
+                {
+                    // Terminate the process
+                    TerminateProcess(processId);
+                }
+            }
+        }
         string LoadHtmlFile(string filePath)
         {
             try
@@ -598,6 +677,33 @@ namespace Gui_Miner.Classes
             }
 
             return null; // No network interface with internet access found
+        }
+        static int GetProcessIdByPort(int port)
+        {
+            IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
+            IPEndPoint[] endPoints = ipGlobalProperties.GetActiveTcpListeners();
+
+            foreach (IPEndPoint endPoint in endPoints)
+            {
+                if (endPoint.Port == port)
+                {
+                    return endPoint.Port;
+                }
+            }
+
+            return -1; // Return -1 if no process found using the specified port
+        }
+        static void TerminateProcess(int processId)
+        {
+            try
+            {
+                Process process = Process.GetProcessById(processId);
+                process.Kill();
+            }
+            catch (ArgumentException)
+            {
+                Console.WriteLine($"Process with ID {processId} not found.");
+            }
         }
         #endregion
     }
