@@ -216,9 +216,10 @@ namespace Gui_Miner.Classes
 
         public bool ToggleAllTasks(bool startTasks)
         {
+            var tasks = runningTasks;
             if (startTasks)
             {
-                foreach (var task in runningTasks)
+                foreach (var task in tasks)
                 {
                     task.Value.Start();                    
                 }
@@ -226,7 +227,7 @@ namespace Gui_Miner.Classes
             }
             else
             {
-                foreach (var task in runningTasks)
+                foreach (var task in tasks)
                 {
 
                     KillProcess(task.Value);                    

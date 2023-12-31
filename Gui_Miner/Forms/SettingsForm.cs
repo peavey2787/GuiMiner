@@ -22,6 +22,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 using System.Windows.Forms;
 using static Gui_Miner.Form1;
 using static Gui_Miner.MinerConfig;
@@ -34,6 +35,7 @@ using Action = System.Action;
 using CheckBox = System.Windows.Forms.CheckBox;
 using ComboBox = System.Windows.Forms.ComboBox;
 using Label = System.Windows.Forms.Label;
+using Panel = System.Windows.Forms.Panel;
 using Task = System.Threading.Tasks.Task;
 using TextBox = System.Windows.Forms.TextBox;
 
@@ -56,6 +58,7 @@ namespace Gui_Miner
         const double AppVersion = 1.8;
         const double VersionIncrement = 0.1;
         double NextAppVersion = AppVersion + VersionIncrement;
+        bool progMakingChanges = false;
         public Settings Settings { get { return _settings; } }
 
         public SettingsForm()
@@ -69,8 +72,6 @@ namespace Gui_Miner
         private async void SettingsForm_Load(object sender, EventArgs e)
         {
             await LoadSettings();
-            if (_settings == null) 
-                _settings = new Settings();
 
             UpdateMinerSettingsListBox();
             UpdateGpusListBox();
@@ -224,12 +225,15 @@ namespace Gui_Miner
                 _settings.MinerSettings = new List<MinerConfig>();
 
             minerSettingsListBox.Items.Clear();
-            minerSettingsListBox.Items.Add("Add Miner Settings");
+            var newMinerSetting = new MinerConfig();
+            newMinerSetting.Name = "*Add Miner Settings";
+            minerSettingsListBox.Items.Add(newMinerSetting);
 
             foreach (MinerConfig minerSetting in _settings.MinerSettings)
             {
-                minerSettingsListBox.Items.Add(minerSetting.Name + " / " + minerSetting.Id);
+                minerSettingsListBox.Items.Add(minerSetting);
             }
+
             if (minerSettingsListBox.Items.Count == selectedIndex)
                 selectedIndex--;
             minerSettingsListBox.SelectedIndex = selectedIndex;
@@ -246,11 +250,11 @@ namespace Gui_Miner
             }
 
             gpuListBox.Items.Clear();
-            gpuListBox.Items.Add("Add GPU");
+            gpuListBox.Items.Add(new Gpu("*Add GPU"));
 
             foreach (Gpu gpu in _settings.Gpus)
             {
-                gpuListBox.Items.Add(gpu.Name + " / " + gpu.Id);
+                gpuListBox.Items.Add(gpu);
             }
             if (_settings.Gpus.Count > 0)
                 gpuListBox.SelectedIndex = selectedIndex;
@@ -261,11 +265,13 @@ namespace Gui_Miner
                 _settings.Wallets = new List<Wallet>();
 
             walletsListBox.Items.Clear();
-            walletsListBox.Items.Add("Add Wallet");
+            Wallet newWallet = new Wallet();
+            newWallet.Name = "*Add Wallet";
+            walletsListBox.Items.Add(newWallet);
 
             foreach (Wallet wallet in _settings.Wallets)
             {
-                walletsListBox.Items.Add(wallet.Name + " / " + wallet.Id);
+                walletsListBox.Items.Add(wallet);
             }
 
             if (_settings.Wallets.Count >= 1)
@@ -291,30 +297,41 @@ namespace Gui_Miner
             }
 
             poolsListBox.Items.Clear();
-            poolsListBox.Items.Add("Add Pool");
+            // Create and add new pool
+            Pool newPool = new Pool();
+            newPool.Name = "*Add Pool";
+            poolsListBox.Items.Add(newPool);
 
             foreach (Pool pool in _settings.Pools)
                 poolsListBox.Items.Add(pool);
 
-            var defaultPools = AddDefaultPools();
+            var defaultPools = GetDefaultPools();
             foreach (Pool defaultPool in defaultPools)
                 poolsListBox.Items.Add(defaultPool);
 
             if (_settings.Pools.Count >= 1)
             {
+                progMakingChanges = true;
+
                 // Select last item if out of bounds
                 if (selectedIndex >= poolsListBox.Items.Count)
                     poolsListBox.SelectedIndex = poolsListBox.Items.Count - 1;
                 else
                     poolsListBox.SelectedIndex = selectedIndex;
+
+                progMakingChanges = false;
             }
             else
             {
+                progMakingChanges = true;
+
                 poolNameTextBox.Text = string.Empty;
                 poolAddressTextBox.Text = string.Empty;                                
                 poolPortTextBox.Text = string.Empty;
                 poolLinkTextBox.Text = string.Empty;
                 poolSsslCheckBox.Checked = false;
+
+                progMakingChanges = false;
             }
 
         }
@@ -326,25 +343,10 @@ namespace Gui_Miner
         // Miner Settings
         private MinerConfig GetSelectedMinerSettings()
         {
-            if (InvokeRequired)
-            {
-                return (MinerConfig)Invoke(new Func<MinerConfig>(GetSelectedMinerSettings));
-            }
-
-            MinerConfig minerSetting = null;
-
             if (minerSettingsListBox.SelectedIndex <= 0) 
-                return minerSetting;
+                return null;
 
-            int id = int.Parse(minerSettingsListBox.SelectedItem.ToString().Split('/')[1].Trim());
-
-            foreach (MinerConfig savedMinerSetting in _settings.MinerSettings)
-            {
-                if (savedMinerSetting.Id == id)
-                    return savedMinerSetting;
-            }
-
-            return minerSetting;
+            return minerSettingsListBox.SelectedItem as MinerConfig;
         }
         private MinerConfig GetMinerSettingsFromUI()
         {
@@ -424,27 +426,24 @@ namespace Gui_Miner
                     }
                     else if (control is ComboBox comboBox)
                     {
-                        // Get Wallet/Pool
-                        if (comboBox.Text.Contains('/'))
+                        // Set Wallet/Pool
+                        if (comboBox.SelectedItem != null && !String.IsNullOrWhiteSpace(comboBox.SelectedItem.ToString()))
                         {
-                            int propertyValue = int.Parse(comboBox.Text.Split('/')[1].Trim());
-
-                            // Get wallet
-                            var wallet = _settings.Wallets.Find(w => w.Id.Equals(propertyValue));
-
-                            if (wallet == null)
+                            if (comboBox.SelectedItem is Wallet)
                             {
-                                // Get Pool
-                                var pool = _settings.Pools.Find(p => p.Id.Equals(propertyValue));
+                                var wallet = comboBox.SelectedItem as Wallet;
+                                property.SetValue(newMinerSetting, wallet.Address);
+                            }
+                            else if (comboBox.SelectedItem is Pool)
+                            {
+                                var pool = comboBox.SelectedItem as Pool;
                                 property.SetValue(newMinerSetting, pool.Address);
                             }
-                            else
-                                property.SetValue(newMinerSetting, wallet.Address);
-                        }
-                        else
-                        {
-                            // Get Algo
-                            property.SetValue(newMinerSetting, comboBox.Text);
+                            else if (propertyName.StartsWith("Algo"))
+                            {
+                                // Set Algo
+                                property.SetValue(newMinerSetting, comboBox.Text);
+                            }
                         }
                     }
                 }
@@ -455,6 +454,14 @@ namespace Gui_Miner
         }
         private void DisplayMinerSettings()
         {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => DisplayMinerSettings()));
+                return;
+            }
+
+            SuspendLayout();
+
             TableLayoutPanel tableLayoutPanel = new TableLayoutPanel();
             tableLayoutPanel.Name = MINERSETTINGSPANELNAME;
             tableLayoutPanel.Dock = DockStyle.Fill;
@@ -464,6 +471,7 @@ namespace Gui_Miner
             if (_settings.MinerSettings != null)
             {
                 MinerConfig minerSetting = GetSelectedMinerSettings();
+                if (minerSetting == null) return;
 
                 // Get miner config
                 PropertyInfo[] properties = minerSetting.GetType().GetProperties();
@@ -512,9 +520,6 @@ namespace Gui_Miner
                     nameLabel.Anchor = AnchorStyles.None;
                     nameLabel.TextAlign = ContentAlignment.MiddleCenter;
 
-                    // Hide these properties
-                    if (property.Name.StartsWith("SSL") || property.Name.StartsWith("Port"))
-                        nameLabel.Visible = false;
 
                     Control inputControl; // This will be either a TextBox/CheckBox/Label
 
@@ -547,7 +552,12 @@ namespace Gui_Miner
                         walletComboBox.BackColor = Color.FromArgb(12, 20, 52);
                         walletComboBox.ForeColor = Color.White;
                         walletComboBox.Name = property.Name;
-                        var propertyValue = (string)property.GetValue(minerSetting);
+
+                        var walAddress = "";
+                        if (property.GetValue(minerSetting) != null)
+                        {
+                            walAddress = property.GetValue(minerSetting).ToString();
+                        }
 
                         int i = 0;
                         int selectedIndex = -1;
@@ -555,8 +565,8 @@ namespace Gui_Miner
                         {
                             foreach (Wallet wallet in _settings.Wallets)
                             {
-                                walletComboBox.Items.Add(wallet.Name + " - " + wallet.Coin + " / " + wallet.Id);
-                                if (wallet.Address == propertyValue)
+                                walletComboBox.Items.Add(wallet);
+                                if (wallet.Address == walAddress)
                                     selectedIndex = i;
                                 i++;
                             }
@@ -583,10 +593,11 @@ namespace Gui_Miner
                         poolComboBox.BackColor = Color.FromArgb(12, 20, 52);
                         poolComboBox.ForeColor = Color.White;
                         poolComboBox.Name = property.Name;
-                        string propertyValue = "";
+
+                        var poolAddress = "";
                         if (property.GetValue(minerSetting) != null)
                         {
-                            propertyValue = property.GetValue(minerSetting).ToString();
+                            poolAddress = property.GetValue(minerSetting).ToString();
                         }
 
                         int i = 0;
@@ -595,8 +606,21 @@ namespace Gui_Miner
                         {
                             foreach (Pool pool in _settings.Pools)
                             {
-                                poolComboBox.Items.Add(pool.Name + " - SSL: " + pool.SSL + " / " + pool.Id);
-                                if (pool.Address == propertyValue)
+                                poolComboBox.Items.Add(pool);
+                                if (pool.Address == poolAddress)
+                                {
+                                    selectedIndex = i;
+                                    port = pool.Port;
+                                }
+                                i++;
+                            }
+
+                            // Add default pools
+                            var defaultPools = GetDefaultPools();
+                            foreach (Pool pool in defaultPools)
+                            {
+                                poolComboBox.Items.Add(pool);
+                                if (pool.Address == poolAddress)
                                 {
                                     selectedIndex = i;
                                     port = pool.Port;
@@ -610,25 +634,24 @@ namespace Gui_Miner
                         poolComboBox.SelectedIndexChanged += (sender, e) =>
                         {
                             var currentComboBox = (ComboBox)sender;
+
                             // Get the selected pool
                             if (!string.IsNullOrWhiteSpace(currentComboBox.Text))
                             {                                
-                                var parts = currentComboBox.Text.Split('/');
-                                int id = int.Parse(parts[1].Trim());
-                                Pool selectedPool = _settings.Pools.Find(p => p.Id.Equals(id));
+                                var pool = currentComboBox.SelectedItem as Pool;
 
-                                // Extract the single-digit number from end of name
+                                var layoutPanel = minerSettingsPanel.Controls[0] as TableLayoutPanel;
                                 int prevNumber = int.Parse(property.Name.Substring(property.Name.Length - 1));
 
                                 // Change Port
-                                Control matchingTextBox = minerSettingsPanel.Controls.Find($"Port{prevNumber}", true).First();
+                                Control matchingTextBox = layoutPanel.Controls.Find($"Port{prevNumber}", true).First();
                                 if (matchingTextBox != null && matchingTextBox is TextBox)
-                                    matchingTextBox.Text = selectedPool.Port.ToString();
+                                    matchingTextBox.Text = pool.Port.ToString();
 
                                 // Change SSL
-                                CheckBox matchingCheckBox = minerSettingsPanel.Controls.Find($"SSL{prevNumber}", true).OfType<CheckBox>().FirstOrDefault();
+                                CheckBox matchingCheckBox = layoutPanel.Controls.Find($"SSL{prevNumber}", true).OfType<CheckBox>().FirstOrDefault();
                                 if (matchingCheckBox != null)
-                                    matchingCheckBox.Checked = selectedPool.SSL;
+                                    matchingCheckBox.Checked = pool.SSL;
 
                                 SaveSettings();
                             }
@@ -773,8 +796,7 @@ namespace Gui_Miner
                     {
                         inputControl.Enabled = false;
                     }
-                    else if (property.Name.StartsWith("SSL") || property.Name.StartsWith("Port"))
-                        inputControl.Visible = false;
+
 
                     // Prevent mouse wheel from changing drop-down selections
                     if (inputControl is ComboBox updateComboBox)
@@ -814,9 +836,12 @@ namespace Gui_Miner
             // Remove existing panel if there is one
             TableLayoutPanel existingPanel = minerSettingsPanel.Controls.Find(MINERSETTINGSPANELNAME, true).FirstOrDefault() as TableLayoutPanel;
             if (existingPanel != null) { minerSettingsPanel.Controls.Remove(existingPanel); }
-
+            
             // Add panel
             minerSettingsPanel.Controls.Add(tableLayoutPanel);
+
+            ResumeLayout(true);
+            Refresh();
         }
 
         private void ComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -931,19 +956,9 @@ namespace Gui_Miner
         // Gpus
         private Gpu GetSelectedGpu()
         {
-            Gpu gpu = new Gpu();
+            if (gpuListBox.SelectedIndex <= 0) return null;
 
-            if (gpuListBox.SelectedIndex <= 0) return gpu;
-
-            int id = int.Parse(gpuListBox.SelectedItem.ToString().Split('/')[1].Trim());
-
-            foreach (Gpu savedGpu in _settings.Gpus)
-            {
-                if (savedGpu.Id == id)
-                    return savedGpu;
-            }
-
-            return gpu;
+            return gpuListBox.SelectedItem as Gpu;
         }
         private Gpu GetGpuSettingsFromUI()
         {
@@ -1307,13 +1322,12 @@ namespace Gui_Miner
             
             await LoadSettings();
 
-            // Reload to get latest settings
-            minerSettingsListBox.SelectedIndex = minerSettingsListBox.SelectedIndex;
+            await Task.Run(() => DisplayMinerSettings());
             
             manageConfigPanel.Show();
             manageConfigPanel.BringToFront();
             
-            ResumeLayout();
+            ResumeLayout(true);
             Refresh();
         }
         private async void manageWalletsButton_Click(object sender, EventArgs e)
@@ -1519,7 +1533,7 @@ namespace Gui_Miner
 
             bgImagePanel.Controls.Add(rotatingPanel);
 
-            rotatingPanel.Start();
+            //rotatingPanel.Start();
         }
         private void RemoveRotatingPanel()
         {
@@ -1602,22 +1616,25 @@ namespace Gui_Miner
 
         #region Wallets
         // Manage Wallets
-        bool unsavedWalletChanges = false;
         int lastSelectedWalletIndex = -1;
         private void walletsListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (walletsListBox.SelectedIndex == -1) return;
+            if (walletsListBox.SelectedIndex == -1 || progMakingChanges) return;
 
-            if(unsavedWalletChanges)
-                SaveWallets(lastSelectedWalletIndex);
+            if(unsavedChanges)
+                SaveWallet();
 
             // Adding new item
             if (walletsListBox.SelectedIndex == 0)
             {
-                // Create and add new miner setting
+                // Prevent duplicates
+                foreach (var item in walletsListBox.Items)                
+                    if (item.ToString().StartsWith("*Add"))
+                        return;
+
+                // Create and add new setting
                 Wallet newWallet = new Wallet();
-                newWallet.Name = "New Wallet";
-                walletsListBox.Tag = newWallet.Id;
+                newWallet.Name = "*Add Wallet";
 
                 if (_settings.Wallets == null)
                     _settings.Wallets = new List<Wallet> { newWallet };
@@ -1631,12 +1648,12 @@ namespace Gui_Miner
 
             lastSelectedWalletIndex = walletsListBox.SelectedIndex;
         }
-        private void DisplayWalletSettings(int lastSelectedWalletIndex = -1)
+        private void DisplayWalletSettings()
         {
             // Show panel
             walletPanel.Visible = true;
 
-            Wallet selectedWallet = GetSelectedWallet(lastSelectedWalletIndex);
+            Wallet selectedWallet = GetSelectedWallet();
             if (selectedWallet == null) return;
 
             walletNameTextBox.Text = selectedWallet.Name;
@@ -1652,82 +1669,99 @@ namespace Gui_Miner
 
             return wallet;
         }
-        private Wallet GetSelectedWallet(int lastSelectedWalletIndex = -1)
+        private Wallet GetSelectedWallet()
         {
             if (walletsListBox.SelectedIndex == -1) return null;
 
-            int id = -1;
-
-            if (lastSelectedWalletIndex > -1)
-                id = int.Parse(walletsListBox.Items[lastSelectedWalletIndex].ToString().Split('/')[1]);            
-            else if (walletsListBox.Tag != null && walletsListBox.Tag.ToString() != "-1")
-                id = (int)walletsListBox.Tag;
-            else
-                id = int.Parse(walletsListBox.Text.Split('/')[1]);
-
-            return _settings.Wallets.Find(w => w.Id.Equals(id));
+            return walletsListBox.SelectedItem as Wallet;
         }
-        private async void SaveWallets(int lastSelectedWalletIndex = -1)
+        private void SaveWallet()
         {
-            var updatedWallet = GetWalletFromUI();
-            var savedWallet = GetSelectedWallet(lastSelectedWalletIndex);
-            if (savedWallet != null)
+            progMakingChanges = true;
+
+            if (walletsListBox.SelectedIndex >= 0)
             {
-                savedWallet.Name = updatedWallet.Name;
-                savedWallet.Address = updatedWallet.Address;
-                savedWallet.Coin = updatedWallet.Coin;
+                // Remove the old *Add Wallet
+                walletsListBox.Items.RemoveAt(walletsListBox.SelectedIndex);
             }
 
-            await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
-            
-            unsavedWalletChanges = false;
-            walletsListBox.Tag = -1;
+            var wallet = GetWalletFromUI(); // Get the new pool
+            walletsListBox.Items.Add(wallet); // Add it to UI
+            walletsListBox.SelectedItem = wallet; // and select it
 
-            UpdateWalletsListBox(walletsListBox.SelectedIndex);
-            DisplayMinerSettings();
-        }        
+            SaveWallets();
+
+            unsavedChanges = false;
+            progMakingChanges = false;
+        }
+        private async void SaveWallets()
+        {
+            var wallets = new List<Wallet>();
+
+            foreach (var item in walletsListBox.Items)
+            {
+                var wallet = item as Wallet;
+                if (!wallet.Name.StartsWith("*"))
+                    wallets.Add(wallet);
+            }
+
+            _settings.Wallets = wallets;
+
+            await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
+
+            walletsListBox.Refresh();
+
+            unsavedChanges = false;
+        }
         private void walletNameTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                SaveWallets();
+                SaveWallet();
             }
-            unsavedWalletChanges = true;
+            unsavedChanges = true;
         }
         private void walletAddressTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                SaveWallets();
+                SaveWallet();
             }
-            unsavedWalletChanges = true;
+            unsavedChanges = true;
         }
         private void walletCoinTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                SaveWallets();
+                SaveWallet();
             }
-            unsavedWalletChanges = true;
+            unsavedChanges = true;
         }
-        private async void walletsListBox_KeyDown(object sender, KeyEventArgs e)
+        private void walletsListBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Delete)
             {
                 var selectedWallet = GetSelectedWallet();
 
-                string selectedWalletName = !string.IsNullOrWhiteSpace(selectedWallet.Name) ? selectedWallet.Name : "";
                 // Display a confirmation dialog
-                DialogResult result = MessageBox.Show($"Are you sure you want to delete this wallet {selectedWalletName}?", "Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                DialogResult result = MessageBox.Show($"Are you sure you want to delete this wallet {selectedWallet}?", "Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
                 if (result == DialogResult.Yes)
                 {
                     // User clicked "Yes"
-                    _settings.Wallets.Remove(selectedWallet);
-                    await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
+                    int indexToRemove = _settings.Wallets.FindIndex(w => w.Id.Equals(selectedWallet.Id));
 
-                    UpdateWalletsListBox(walletsListBox.Items.Count);
-                    DisplayMinerSettings();
+                    // Check if a matching wallet was found
+                    if (indexToRemove != -1)
+                    {
+                        // Remove the wallet from the list
+                        _settings.Wallets.RemoveAt(indexToRemove);
+                        walletsListBox.Items.RemoveAt(walletsListBox.SelectedIndex);
+
+                        SaveWallets();
+
+                        UpdateWalletsListBox(walletsListBox.Items.Count);
+                    }
                 }
             }
         }
@@ -1737,35 +1771,45 @@ namespace Gui_Miner
         #region Pools
         // Manage Pools
         int lastSelectedPoolIndex = -1;
-        bool unsavedPoolChanges = false;
+        bool unsavedChanges = false;
         private void poolsListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (poolsListBox.SelectedIndex == -1) return;
+            if (poolsListBox.SelectedIndex == -1 || progMakingChanges) 
+                return;
                         
-            if (unsavedPoolChanges) SavePools(lastSelectedPoolIndex);
+            if (unsavedChanges) 
+                SavePool();
+
+            var selectedPool = GetSelectedPool();
 
             // Adding new item
             if (poolsListBox.SelectedIndex == 0)
             {
-                // Create and add new miner setting
+                // Prevent duplicates
+                foreach (var item in poolsListBox.Items)
+                    if (item.ToString().StartsWith("*Add"))
+                        return;
+
+                // Create and add new pool
                 Pool pool = new Pool();
-                pool.Name = "New Pool";
-                poolsListBox.Tag = pool.Id;
+                pool.Name = "*Add Pool";
 
                 if (_settings.Pools == null)
                     _settings.Pools = new List<Pool> { pool };
                 else
                     _settings.Pools.Add(pool);
-
-                UpdatePoolsListBox(_settings.Pools.Count);
+                
+                UpdatePoolsListBox(1);
             }
 
             DisplayPoolSettings();
 
             lastSelectedPoolIndex = poolsListBox.SelectedIndex;
         }
-        private void DisplayPoolSettings(int lastSelectedPoolIndex = -1)
+        private void DisplayPoolSettings()
         {
+            progMakingChanges = true;
+
             // Show panel
             poolPanel.Visible = true;
 
@@ -1780,6 +1824,8 @@ namespace Gui_Miner
 
             // Reset ping
             pingLabel.Text = "";
+
+            progMakingChanges = false;
         }
         private Pool GetPoolFromUI()
         {
@@ -1801,86 +1847,111 @@ namespace Gui_Miner
 
             return selectedPool;
         }
-        private async void SavePools(int lastSelectedPoolIndex = -1)
+        private void SavePool()
         {
-            var updatedPool = GetPoolFromUI();
-            var savedPool = GetSelectedPool();
-            if (savedPool != null && !savedPool.Name.StartsWith("*"))
+            progMakingChanges = true;
+
+            if (poolsListBox.SelectedIndex >= 0)
             {
-                savedPool.Name = updatedPool.Name;
-                savedPool.Address = updatedPool.Address;
-                savedPool.Port = updatedPool.Port;
-                savedPool.SSL = updatedPool.SSL;
-                savedPool.Link = updatedPool.Link;
-                await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
-                
-                poolsListBox.Tag = -1;
-
-                poolsListBox.Items[poolsListBox.SelectedIndex] = updatedPool;
-                poolsListBox.Refresh();
+                // Remove the old *Add Pool
+                poolsListBox.Items.RemoveAt(poolsListBox.SelectedIndex);
             }
+            
+            var pool = GetPoolFromUI(); // Get the new pool
+            poolsListBox.Items.Add(pool); // Add it to UI
+            poolsListBox.SelectedItem = pool; // and select it
 
-            unsavedPoolChanges = false;
+            SavePools();
+
+            unsavedChanges = false;
+            progMakingChanges = false;
         }
+        private async void SavePools()
+        {
+            var pools = new List<Pool>();
+
+            foreach(var item in poolsListBox.Items)
+            {
+                var pool = item as Pool;
+                if (!pool.Name.StartsWith("*"))
+                    pools.Add(pool);
+            }
+            
+            _settings.Pools = pools;
+
+            await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
+                
+            poolsListBox.Refresh();
+
+            unsavedChanges = false;
+        }
+
         private void poolNameTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                SavePools();
+                SavePool();
             }
-            unsavedPoolChanges = true;
+            unsavedChanges = true;
         }
         private void poolAddressTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                SavePools();
+                SavePool();
             }
-            unsavedPoolChanges = true;
+            unsavedChanges = true;
         }
         private void poolPortTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                SavePools();
+                SavePool();
             }
-            unsavedPoolChanges = true;
+            unsavedChanges = true;
         }
         private void poolLinkTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                SavePools();
+                SavePool();
             }
-            unsavedPoolChanges = true;
+            unsavedChanges = true;
         }
         private void poolSsslCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            SavePools();
+            if (!progMakingChanges)
+                SavePool();
         }
-        private async void poolsListBox_KeyDown(object sender, KeyEventArgs e)
+        private void poolsListBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Delete)
             {
                 var selectedPool = GetSelectedPool();
 
-                string selectedPoolName = string.IsNullOrWhiteSpace(selectedPool.Name) ? selectedPool.Name : "";
-
                 // Display a confirmation dialog
-                DialogResult result = MessageBox.Show($"Are you sure you want to delete the pool named {selectedPoolName}?", "Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                DialogResult result = MessageBox.Show($"Are you sure you want to delete the pool named {selectedPool}?", "Confirmation", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
                 if (result == DialogResult.Yes)
                 {
                     // User clicked "Yes"
-                    _settings.Pools.Remove(selectedPool);
-                    await AppSettings.SaveAsync<Settings>(SETTINGSNAME, _settings);
+                    int indexToRemove = _settings.Pools.FindIndex(pool => pool.Id.Equals(selectedPool.Id));
 
-                    UpdatePoolsListBox(poolsListBox.Items.Count);
-                    DisplayMinerSettings();
-                }
+                    // Check if a matching pool was found
+                    if (indexToRemove != -1)
+                    {
+                        // Remove the pool from the list
+                        _settings.Pools.RemoveAt(indexToRemove);
+                        poolsListBox.Items.RemoveAt(poolsListBox.SelectedIndex);
+
+                        SavePools();
+
+                        UpdatePoolsListBox(1);
+                    }
+                }                
             }
         }
-        private List<Pool> AddDefaultPools()
+        public List<Pool> GetDefaultPools()
         {
             var pools = new List<Pool>();
 
@@ -2332,6 +2403,7 @@ namespace Gui_Miner
             Miner_File_Path = Directory.GetCurrentDirectory() + "\\miner.exe";
             Active = true;
             Use_Shortcut_Keys = true;
+            Redirect_Console_Output = true;
             Run_As_Admin = false;
             Bat_File_Arguments = "";
             Current_Miner_Config_Type = MinerConfigType.Unknown;

@@ -407,6 +407,10 @@ namespace Gui_Miner
                 }
             }
         }
+        public List<Pool> GetDefaultPools()
+        {
+            return settingsForm.GetDefaultPools();
+        }
         
         #endregion
 
@@ -504,7 +508,7 @@ namespace Gui_Miner
                     rotatingPanel.Image = GetBgImage("Kas - Globe");
 
                 homeTabPage.Controls.Add(arotatingPanel);
-                arotatingPanel.Start();
+                //arotatingPanel.Start();                    
 
                 homeTabPage.Controls.Add(arotatingPanel);
                 tabControl.TabPages.Add(homeTabPage);
@@ -518,7 +522,7 @@ namespace Gui_Miner
             foreach (MinerConfig minerConfig in minerConfigs)
             {
                 // If this config is active and we aren't using shortcut keys or we are using shortcut keys and this config also uses shortcut keys
-                if (minerConfig.Active && !shortcutOnly || shortcutOnly && minerConfig.Use_Shortcut_Keys)
+                if (minerConfig.Active && !shortcutOnly || shortcutOnly && minerConfig.Use_Shortcut_Keys && minerConfig.Active)
                 {
                     TabPage tabPage = tabControl.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Text.Equals(minerConfig.Name));
 
@@ -684,6 +688,8 @@ namespace Gui_Miner
         }
         private LinkLabel CreatePoolLinkLabel(Pool pool)
         {
+            if (pool == null) return null; 
+
             LinkLabel linkLabel = new LinkLabel();
 
             var parts = pool.Link.Split('.');
@@ -917,7 +923,7 @@ namespace Gui_Miner
 
             outputPanel.Controls.Add(rotatingPanel);
 
-            rotatingPanel.Start();
+            //rotatingPanel.Start();
         }
         private void RemoveRotatingPanel()
         {

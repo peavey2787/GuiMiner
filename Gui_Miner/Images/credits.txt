@@ -15,3 +15,5 @@ pinging = <a href="https://www.flaticon.com/free-icons/internet" title="internet
 panic = <a href="https://www.flaticon.com/free-icons/panic" title="panic icons">Panic icons created by Flat Icons - Flaticon</a>
 remove = <a href="https://www.flaticon.com/free-icons/delete" title="delete icons">Delete icons created by Pixel perfect - Flaticon</a>
 check = <a href="https://www.flaticon.com/free-icons/correct" title="correct icons">Correct icons created by Pixel perfect - Flaticon</a>
+home = <a href="https://www.flaticon.com/free-icons/home" title="home icons">Home icons created by Rizki Ahmad Fauzi - Flaticon</a>
+save = <a href="https://www.flaticon.com/free-icons/save" title="save icons">Save icons created by Freepik - Flaticon</a>

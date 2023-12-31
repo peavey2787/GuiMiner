@@ -181,6 +181,10 @@ namespace Gui_Miner.Classes
             {
                 command = "styles";
             }
+            else if (command == "GET /main.js HTTP/1.1")
+            {
+                command = "scripts";
+            }
             else if (imgName != null && !imgName.StartsWith("command="))
             {
                 command = "images";
@@ -234,7 +238,7 @@ namespace Gui_Miner.Classes
                     string name = Environment.MachineName;
                     resp = "pong:" + name;
                     httpResponse = CreateHttpResponse(resp);
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
                     break;
 
                 case "index":
@@ -247,7 +251,7 @@ namespace Gui_Miner.Classes
                         indexHtml = "<h1>Uh Oh! The index file is missing!</h1>";
 
                     httpResponse = CreateHttpResponse(indexHtml, "text/html");
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
                     break;
 
                 case "controls":
@@ -258,7 +262,7 @@ namespace Gui_Miner.Classes
                         controlsHtml = LoadHtmlFile(controlsFile);
 
                     httpResponse = CreateHttpResponse(controlsHtml, "text/html");
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
                     break;
 
                 case "settings":
@@ -269,7 +273,7 @@ namespace Gui_Miner.Classes
                         settingsHtml = LoadHtmlFile(settingsFile);
 
                     httpResponse = CreateHttpResponse(settingsHtml, "text/html");
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
                     break;
 
                 case "styles":
@@ -280,7 +284,18 @@ namespace Gui_Miner.Classes
                         css = LoadHtmlFile(stylesFile);
 
                     httpResponse = CreateHttpResponse(css, "text/css");
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
+                    break;
+
+                case "scripts":
+                    var scriptsFile = Directory.GetCurrentDirectory() + "\\web\\main.js";
+                    string js = "";
+
+                    if (File.Exists(scriptsFile))
+                        js = LoadHtmlFile(scriptsFile);
+
+                    httpResponse = CreateHttpResponse(js, "application/javascript");
+                    try { writer.Write(httpResponse); } catch { }
                     break;
 
                 case "images":
@@ -312,7 +327,7 @@ namespace Gui_Miner.Classes
                     settings = await Form1.GetSettings();
                     resp = JsonConvert.SerializeObject(settings);
                     httpResponse = CreateHttpResponse(resp);
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
 
                     break;
 
@@ -321,7 +336,7 @@ namespace Gui_Miner.Classes
                     settings = await Form1.GetSettings();
                     resp = JsonConvert.SerializeObject(settings.MinerSettings);
                     httpResponse = CreateHttpResponse(resp);
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
 
                     break;
 
@@ -359,7 +374,7 @@ namespace Gui_Miner.Classes
 
                     resp = JsonConvert.SerializeObject(resp);
                     httpResponse = CreateHttpResponse(resp);
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
                     break;
 
                 case "getAllRunningMiners":
@@ -373,7 +388,7 @@ namespace Gui_Miner.Classes
                     }
                     resp = JsonConvert.SerializeObject(allRunningMiners);
                     httpResponse = CreateHttpResponse(resp);
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
                     break;
 
                 case "getMinerSetting":
@@ -382,7 +397,7 @@ namespace Gui_Miner.Classes
                     MinerConfig foundConfig = settings.MinerSettings.Find(ms => ms.Id.Equals(int.Parse(extra)));
                     resp = JsonConvert.SerializeObject(foundConfig);
                     httpResponse = CreateHttpResponse(resp);
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
 
                     break;
 
@@ -449,7 +464,7 @@ namespace Gui_Miner.Classes
 
                     resp = JsonConvert.SerializeObject(settings.Wallets);
                     httpResponse = CreateHttpResponse(resp);
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
 
                     break;
 
@@ -500,10 +515,11 @@ namespace Gui_Miner.Classes
 
                 case "getPools":
                     settings = await Form1.GetSettings();
-
+                    var defaultPools = Form1.GetDefaultPools();
+                    settings.Pools.AddRange(defaultPools);
                     resp = JsonConvert.SerializeObject(settings.Pools);
                     httpResponse = CreateHttpResponse(resp);
-                    writer.Write(httpResponse);
+                    try { writer.Write(httpResponse); } catch { }
                     break;
 
                 case "updatePool":
