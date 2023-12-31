@@ -41,6 +41,18 @@ Make sure to click Generate .bat file after making any changes and stop then sta
 
 If you use MSI Afterburner you can set short-cut keys to change profiles. Create a profile for mining and another for gaming. Use the same short-cut keys in this app to switch profiles when stopping/starting. For example, if MSI Afterburner's short-cut keys for mining are Ctrl+Alt+1 and and for gaming Ctrl+Alt+2. Then in this app set the start short-cut keys to Ctrl+Alt+1 and the stop short-cut keys to Ctrl+Alt+2.
 
+# Web Control
+
+Navigate to the LAN IP for the PC running the app. (Note: you must be on the same LAN network) 
+Click the link and change the IP: [http://192.168.1.5:46543](http://192.168.1.5:46543/)
+All PC's running this app, and also on the same LAN network, will show up on this page I've dubbed the Dashboard page. Click on one and it will take you to the Controls page where you can control the app.
+
+The name in the dashboard next to the IP is the PC's name. In order to change this name it must be done on the computer in the Windows settings.
+
+Clicking The Checkmart will make the miner setting active or inactive depending on the color, i.e. red is inactive and green is active. Clicking this will not stop or start an active miner setting.
+![screenshot](https://github.com/peavey2787/GuiMiner/assets/11081113/c7ca52cb-cfe5-43c1-9149-e89ff220e77f)
+
+
 # FAQ
 
 ## Why is the miner not starting?
