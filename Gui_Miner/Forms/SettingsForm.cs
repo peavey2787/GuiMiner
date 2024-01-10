@@ -1010,6 +1010,7 @@ namespace Gui_Miner
             if (_settings.Gpus != null)
             {
                 Gpu gpu = GetSelectedGpu();
+                if (gpu == null) return;
                 PropertyInfo[] properties = typeof(Gpu).GetProperties();
 
                 foreach (PropertyInfo property in properties)
