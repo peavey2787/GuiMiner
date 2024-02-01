@@ -19,8 +19,8 @@ namespace Gui_Miner.Classes
             
             if (richTextBox.InvokeRequired)
             {
-                try { richTextBox.Invoke(new Action(() => richTextBox.AppendText(text))); }
-                catch { }
+                //try { richTextBox.Invoke(new Action(() => richTextBox.AppendText(text))); }
+                //catch { }
             }
             else
             {
@@ -61,8 +61,8 @@ namespace Gui_Miner.Classes
         {
             if (richTextBox.InvokeRequired)
             {
-                try { richTextBox.Invoke(new Action(() => richTextBox.ForeColor = color)); }
-                catch { }
+                //try { richTextBox.Invoke(new Action(() => richTextBox.ForeColor = color)); }
+                //catch { }
             }
             else
             {
@@ -121,23 +121,38 @@ namespace Gui_Miner.Classes
                 throw new ArgumentNullException(nameof(richTextBox));
             }
 
-            int i = 0;
+
+
+            if (richTextBox.IsDisposed || richTextBox.Disposing || !richTextBox.IsHandleCreated)
+            {
+                // If the control is disposed or in the process of being disposed, return 0
+                return 0;
+            }
 
             if (richTextBox.InvokeRequired)
             {
                 // If called from a different thread, invoke the method on the UI thread
-                try { i = (int)richTextBox.Invoke(new Func<int>(() => richTextBox.TextLength)); }
+                try
+                {
+                    return 0;
+                }
                 catch { }
-                return i;
             }
             else
             {
                 // If called from the UI thread, access the TextLength property directly
-                try { i = richTextBox.TextLength; }
+                try
+                {
+                    return richTextBox.TextLength;
+                }
                 catch { }
-                return i;
             }
+
+
+            // If the operation fails after maxAttempts, return 0
+            return 0;
         }
+
         public static void SelectionColorThreadSafe(this RichTextBox richTextBox, Color color)
         {
             if (richTextBox.InvokeRequired)

@@ -466,9 +466,9 @@ namespace Gui_Miner
             bool started = true;
 
             if (minerConfig.Redirect_Console_Output && textBox != null)
-                started = await Task.Run(() => taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString(), textBox));
+                started = await Task.Run(() => taskManager.StartTask(minerConfig, settingsForm.Settings.GlobalWorkerName, textBox));
             else
-                started = await Task.Run(() => taskManager.StartTask(minerConfig.Miner_File_Path, minerConfig.Bat_File_Arguments, minerConfig.Run_As_Admin, minerConfig.Id.ToString()));
+                started = await Task.Run(() => taskManager.StartTask(minerConfig, settingsForm.Settings.GlobalWorkerName));
 
             return started;
         }
@@ -683,7 +683,11 @@ namespace Gui_Miner
             // TODO only add it if this specific one isn't added yet
             if (!outputPanel.Controls.OfType<TabControl>().Any())
             {
-                outputPanel.AddControlThreadSafe(tabControl);
+                try
+                {
+                    outputPanel.AddControlThreadSafe(tabControl);
+                }
+                catch { }
             }            
         }
         private LinkLabel CreatePoolLinkLabel(Pool pool)
@@ -933,6 +937,11 @@ namespace Gui_Miner
                 outputPanel.Controls.Remove(rotatingPanel); // Remove it from the outputPanel
                 rotatingPanel = null; // Set the reference to null
             }
+        }
+
+        internal int GetTextLength()
+        {
+            throw new NotImplementedException();
         }
         #endregion
 

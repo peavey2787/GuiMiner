@@ -16,6 +16,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime;
 using System.Runtime.CompilerServices;
 using System.Security.Principal;
 using System.Text;
@@ -55,7 +56,8 @@ namespace Gui_Miner
         public const string STOPSHORTKEYS = "StopShortKeys";
         public const string STARTSHORTKEYS = "StartShortKeys";
         public const string BGIMAGE = "BackgroundImage";
-        const double AppVersion = 1.8;
+        public const string GLOBALWORKERNAME = "GlobalWorkerName";
+        const double AppVersion = 1.9;
         const double VersionIncrement = 0.1;
         double NextAppVersion = AppVersion + VersionIncrement;
         bool progMakingChanges = false;
@@ -114,7 +116,8 @@ namespace Gui_Miner
         }
         public async void ShowForm()
         {
-            await LoadSettings();
+            LoadGeneralSettings();
+            await LoadSettings();            
 
             manageMinerConfigsButton.PerformClick();
 
@@ -169,6 +172,9 @@ namespace Gui_Miner
         bool settingSettings = true; // Change auto start checkbox w/o deleting scheduled task
         private async void LoadGeneralSettings()
         {
+            if (!string.IsNullOrWhiteSpace(_settings.GlobalWorkerName))
+                GlobalWorkerNameTextBox.Text = _settings.GlobalWorkerName;
+
             var stringLoaded = await AppSettings.LoadAsync<string>(AUTOSTARTMINING);
             if (stringLoaded.Success)
                 autoStartMiningCheckBox.Checked = bool.TryParse(stringLoaded.Result, out bool result) ? result : false;
@@ -452,6 +458,7 @@ namespace Gui_Miner
 
             return newMinerSetting;
         }
+
         private void DisplayMinerSettings()
         {
             if (InvokeRequired)
@@ -478,7 +485,10 @@ namespace Gui_Miner
 
                 // CUSTOM SETTINGS
                 // Set .bat file textbox
-                batLineTextBox.Text = minerSetting.Bat_File_Arguments;
+                // Check if "WORKERNAME" is located in args string exactly with case sensitivity
+                string args = minerSetting.Bat_File_Arguments;
+
+                batLineTextBox.Text = args;
 
                 // Choose Miner Label
                 Label minerLabel = new Label();
@@ -512,7 +522,8 @@ namespace Gui_Miner
                     if (property.Name.StartsWith("Default")
                         || property.Name.Equals("Id")
                         || property.Name.Equals("Current_Miner_Config_Type")
-                        || property.Name.Equals("Bat_File_Arguments")) continue;                    
+                        || property.Name.Equals("Bat_File_Arguments")) continue;  
+                    
 
                     Label nameLabel = new Label();
                     nameLabel.Text = property.Name;
@@ -723,72 +734,81 @@ namespace Gui_Miner
                         textbox.BackColor = Color.FromArgb(12, 20, 52);
                         textbox.ForeColor = Color.White;
 
-                        // Extract value
-                        string value = "";
-                        object propertyValue = property.GetValue(minerSetting);
-
-                        if (propertyValue is List<int>)
+                        // Use specific worker name if given or Global worker name if not
+                        if (property.Name.StartsWith("Worker_Name"))
                         {
-                            // Property is a List<int>
-                            List<int> intValue = (List<int>)propertyValue;
-                            value = minerSetting.ConvertListToStr(intValue);
-                        }
-                        else if (propertyValue is List<float>)
-                        {
-                            // Property is a List<float>
-                            List<float> floatValue = (List<float>)propertyValue;
-                            value = minerSetting.ConvertListToStr(floatValue);
+                            textbox.Text = minerSetting.GetWorkerName(_settings.GlobalWorkerName);
+                            inputControl = textbox;
                         }
                         else
-                        {
-                            value = property.GetValue(minerSetting)?.ToString();
-                        }
+                        {    
+                            // Extract value
+                            string value = "";
+                            object propertyValue = property.GetValue(minerSetting);
 
-                        // Show "" instead of -1
-                        if (value == null || value.Trim() == "-1")
-                            textbox.Text = "";
-                        else
-                            textbox.Text = value;
-
-                        if (property.Name == "Miner_File_Path")
-                        {
-                            textbox.ReadOnly = true;
-
-                            textbox.Click += (sender, e) =>
+                            if (propertyValue is List<int>)
                             {
-                                // Have user select miner.exe file
-                                OpenFileDialog openFileDialog = new OpenFileDialog();
-                                openFileDialog.Filter = "Executable Files (*.exe)|*.exe";
-
-                                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                                {
-                                    textbox.Text = openFileDialog.FileName;
-
-                                    UpdateStatusLabel("Remove the .exe from the .bat File");
-                                    SaveSettings();
-                                }
-
-                            };
-                        }
-                        else
-                        {
-                            textbox.KeyUp += (sender, e) =>
+                                // Property is a List<int>
+                                List<int> intValue = (List<int>)propertyValue;
+                                value = minerSetting.ConvertListToStr(intValue);
+                            }
+                            else if (propertyValue is List<float>)
                             {
-                                if (e.KeyCode == Keys.Enter)
+                                // Property is a List<float>
+                                List<float> floatValue = (List<float>)propertyValue;
+                                value = minerSetting.ConvertListToStr(floatValue);
+                            }
+                            else
+                            {
+                                value = property.GetValue(minerSetting)?.ToString();
+                            }
+
+                            // Show "" instead of -1
+                            if (value == null || value.Trim() == "-1")
+                                textbox.Text = "";
+                            else
+                                textbox.Text = value;
+
+                            if (property.Name == "Miner_File_Path")
+                            {
+                                textbox.ReadOnly = true;
+
+                                textbox.Click += (sender, e) =>
                                 {
-                                    SaveSettings();
-                                    UpdateMinerSettingsListBox(minerSettingsListBox.SelectedIndex);
-                                }
-                            };
-                        }
+                                    // Have user select miner.exe file
+                                    OpenFileDialog openFileDialog = new OpenFileDialog();
+                                    openFileDialog.Filter = "Executable Files (*.exe)|*.exe";
 
-                        if (property.Name == "Extra_Args")
-                        {
-                            textbox.Multiline = true;
-                            textbox.Height = 100;
-                        }
+                                    if (openFileDialog.ShowDialog() == DialogResult.OK)
+                                    {
+                                        textbox.Text = openFileDialog.FileName;
 
-                        inputControl = textbox;
+                                        UpdateStatusLabel("Remove the .exe from the .bat File");
+                                        SaveSettings();
+                                    }
+
+                                };
+                            }
+                            else
+                            {
+                                textbox.KeyUp += (sender, e) =>
+                                {
+                                    if (e.KeyCode == Keys.Enter)
+                                    {
+                                        SaveSettings();
+                                        UpdateMinerSettingsListBox(minerSettingsListBox.SelectedIndex);
+                                    }
+                                };
+                            }
+
+                            if (property.Name == "Extra_Args")
+                            {
+                                textbox.Multiline = true;
+                                textbox.Height = 100;
+                            }
+
+                            inputControl = textbox;
+                        }
                     }
 
                     // Hide Id's
@@ -1472,6 +1492,15 @@ namespace Gui_Miner
         {
             keysPressed = new List<Keys>();
         }
+        private void GlobalWorkerNameTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter && !string.IsNullOrWhiteSpace(GlobalWorkerNameTextBox.Text))
+            {
+                _settings.GlobalWorkerName = GlobalWorkerNameTextBox.Text;
+                SaveSettings();
+            }
+        }
+
 
         // Change rotating image
         private async void bgComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -2302,6 +2331,8 @@ namespace Gui_Miner
                 MessageBox.Show("Error updating to version " + NextAppVersion + " -> " + ex.Message);
             }
         }
+
+
         #endregion
 
 
@@ -2310,6 +2341,7 @@ namespace Gui_Miner
     #region Class Structure
     public class Settings
     {
+        public string GlobalWorkerName { get; set; }
         public List<MinerConfig> MinerSettings { get; set; }
         public List<Gpu> Gpus { get; set; }
         public List<Wallet> Wallets { get; set; }
@@ -2401,7 +2433,7 @@ namespace Gui_Miner
             Command_Separator = ' ';
             List_Devices_Command = "--list_devices";
             Name = "New Miner Config";
-            Miner_File_Path = Directory.GetCurrentDirectory() + "\\miner.exe";
+            Miner_File_Path = "";
             Active = true;
             Use_Shortcut_Keys = true;
             Redirect_Console_Output = true;
@@ -2878,6 +2910,16 @@ namespace Gui_Miner
 
             return text.Trim();
         }
+
+        public string GetWorkerName(string globalWorkerName)
+        {
+            if (string.IsNullOrWhiteSpace(Worker_Name) && !string.IsNullOrWhiteSpace(globalWorkerName))
+            {
+                return globalWorkerName;
+            }
+            return Worker_Name;
+
+        }
     }
 
 
@@ -3097,6 +3139,7 @@ namespace Gui_Miner
                 return new Dictionary<string, string>();
             }
         }
+
     }
 
 

@@ -46,12 +46,16 @@ namespace Gui_Miner.Classes
         public delegate void OutputDataReceivedEventHandler(object sender, OutputDataReceivedEventArgs e);
         public event OutputDataReceivedEventHandler OutputDataReceivedEvent;
 
-
-        public bool StartTask(string filePath, string arguments = "", bool runAsAdmin = false, string taskId = null, RichTextBox richTextBox = null)
+        public bool StartTask(MinerConfig minerConfig, string globalWorkerName, RichTextBox richTextBox = null)
         {
+            string filePath = minerConfig.Miner_File_Path;
+            string arguments = minerConfig.Bat_File_Arguments;
+            bool runAsAdmin = false;
+            string taskId = minerConfig.Id.ToString();
+
             if (form1.InvokeRequired)
             {
-                form1.BeginInvoke(new Action(() => StartTask(filePath, arguments, runAsAdmin, taskId, richTextBox)));
+                form1.BeginInvoke(new Action(() => StartTask(minerConfig, globalWorkerName, richTextBox)));
             }
             else
             {
@@ -96,123 +100,132 @@ namespace Gui_Miner.Classes
                     }
                     return false;
                 }
+            }
+
+            // Replace WORKERNAME if needed
+            if (arguments.Contains("WORKERNAME"))
+            {
+                string workerName = minerConfig.GetWorkerName(globalWorkerName);
+
+                // Replace "WORKERNAME" with the given workerName
+                arguments = arguments.Replace("WORKERNAME", workerName);
+            }
 
 
-                bool redirectOutput = false;
-                Process process;
+            bool redirectOutput = false;
+            Process process;
+            if (richTextBox != null)
+            {
+                redirectOutput = true;
+                process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        Arguments = arguments,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+            }
+            else
+            {
+                redirectOutput = false;
+                process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        Arguments = arguments,
+                        RedirectStandardOutput = false,
+                        RedirectStandardError = false,
+                        UseShellExecute = false,
+                        CreateNoWindow = false
+                    }
+                };
+            }
+
+            if (runAsAdmin)
+            {
+                // Start the process as an administrator
+                process.StartInfo.Verb = "runas";
+            }
+
+            process.OutputDataReceived += (sender, e) =>
+            {
+                OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
                 if (richTextBox != null)
                 {
-                    redirectOutput = true;
-                    process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = filePath,
-                            Arguments = arguments,
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        }
-                    };
+                    try { UpdateOutputConsole(e.Data, richTextBox); }
+                    catch { }
                 }
-                else
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
+                if (richTextBox != null)
                 {
-                    redirectOutput = false;
-                    process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = filePath,
-                            Arguments = arguments,
-                            RedirectStandardOutput = false,
-                            RedirectStandardError = false,
-                            UseShellExecute = false,
-                            CreateNoWindow = false
-                        }
-                    };
+                    try { UpdateOutputConsole(e.Data, richTextBox); }
+                    catch { }
                 }
+            };
 
+            if (redirectOutput)
+            {
+                richTextBox.AppendTextThreadSafe("\nSTARTING MINER...");
+                richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
 
-                if (runAsAdmin)
+                try
                 {
-                    // Start the process as an administrator
-                    process.StartInfo.Verb = "runas";
+                    process.Start();
+
+                    runningTasks[taskId] = process;
+
+                    Task.Run(() =>
+                    {
+                        // Begin asynchronously reading the output
+                        process.BeginOutputReadLine();
+                        process.BeginErrorReadLine();
+
+                        // Wait for the process to exit
+                        process.WaitForExit();
+
+                        // Close the standard output stream
+                        process.Close();
+                        process.Dispose();
+                    });
                 }
-
-                process.OutputDataReceived += (sender, e) =>
+                catch (Exception ex)
                 {
-                    OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
-                    if (richTextBox != null)
-                    {
-                        try { UpdateOutputConsole(e.Data, richTextBox); }
-                        catch { }
-                    }
-                };
-
-                process.ErrorDataReceived += (sender, e) =>
-                {
-                    OutputDataReceivedEvent?.Invoke(sender, new OutputDataReceivedEventArgs(e.Data));
-                    if (richTextBox != null)
-                    {
-                        try { UpdateOutputConsole(e.Data, richTextBox); }
-                        catch { }
-                    }
-                };
-
-                if (redirectOutput)
-                {
-                    richTextBox.AppendTextThreadSafe("\nSTARTING MINER...");
-                    richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
-
-                    try
-                    {
-                        process.Start();
-
-                        runningTasks[taskId] = process;
-
-                        Task.Run(() =>
-                        {
-                            // Begin asynchronously reading the output
-                            process.BeginOutputReadLine();
-                            process.BeginErrorReadLine();
-
-                            // Wait for the process to exit
-                            process.WaitForExit();
-
-                            // Close the standard output stream
-                            process.Close();
-                            process.Dispose();
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
-                        return false;
-                    }
-                }
-                else
-                {
-                    try
-                    {
-                        process.Start();
-                        runningTasks[taskId] = process;
-                        Task.Run(() =>
-                        {
-                            // Wait for the process to exit
-                            process.WaitForExit();
-
-                            // Close the standard output stream
-                            process.Close();
-                            process.Dispose();
-                        });
-                    }
-                    catch
-                    {
-                        return false;
-                    }
+                    richTextBox.AppendTextThreadSafe(Environment.NewLine + "Error starting miner " + ex.Message);
+                    return false;
                 }
             }
+            else
+            {
+                try
+                {
+                    process.Start();
+                    runningTasks[taskId] = process;
+                    Task.Run(() =>
+                    {
+                        // Wait for the process to exit
+                        process.WaitForExit();
+
+                        // Close the standard output stream
+                        process.Close();
+                        process.Dispose();
+                    });
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        
             return true;
         }
 

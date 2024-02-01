@@ -51,6 +51,8 @@
             this.manageMinerConfigsButton = new System.Windows.Forms.Button();
             this.generalButton = new System.Windows.Forms.Button();
             this.generalPanel = new System.Windows.Forms.Panel();
+            this.label16 = new System.Windows.Forms.Label();
+            this.GlobalWorkerNameTextBox = new System.Windows.Forms.TextBox();
             this.checkUpdatesButton = new System.Windows.Forms.Button();
             this.bgImagePanel = new System.Windows.Forms.Panel();
             this.label15 = new System.Windows.Forms.Label();
@@ -340,6 +342,8 @@
             // 
             // generalPanel
             // 
+            this.generalPanel.Controls.Add(this.label16);
+            this.generalPanel.Controls.Add(this.GlobalWorkerNameTextBox);
             this.generalPanel.Controls.Add(this.checkUpdatesButton);
             this.generalPanel.Controls.Add(this.bgImagePanel);
             this.generalPanel.Controls.Add(this.label15);
@@ -355,6 +359,26 @@
             this.generalPanel.Name = "generalPanel";
             this.generalPanel.Size = new System.Drawing.Size(720, 665);
             this.generalPanel.TabIndex = 16;
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(263, 18);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(106, 13);
+            this.label16.TabIndex = 12;
+            this.label16.Text = "Global Worker Name";
+            // 
+            // GlobalWorkerNameTextBox
+            // 
+            this.GlobalWorkerNameTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(12)))), ((int)(((byte)(20)))), ((int)(((byte)(52)))));
+            this.GlobalWorkerNameTextBox.ForeColor = System.Drawing.SystemColors.Control;
+            this.GlobalWorkerNameTextBox.Location = new System.Drawing.Point(229, 34);
+            this.GlobalWorkerNameTextBox.Name = "GlobalWorkerNameTextBox";
+            this.GlobalWorkerNameTextBox.Size = new System.Drawing.Size(169, 20);
+            this.GlobalWorkerNameTextBox.TabIndex = 11;
+            this.GlobalWorkerNameTextBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.GlobalWorkerNameTextBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.GlobalWorkerNameTextBox_KeyDown);
             // 
             // checkUpdatesButton
             // 
@@ -894,5 +918,7 @@
         private System.Windows.Forms.PictureBox pingPictureBox;
         private System.Windows.Forms.Label pingLabel;
         private System.Windows.Forms.Label versionLabel;
+        private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.TextBox GlobalWorkerNameTextBox;
     }
 }
