@@ -3010,8 +3010,7 @@ namespace Gui_Miner
                     return true;
                 }
 
-                // Wait for a short delay before retrying
-                //await Task.Delay(500);
+                await Task.Delay(500);
             }
 
             return false;
@@ -3027,8 +3026,7 @@ namespace Gui_Miner
                     return result;
                 }
 
-                // Wait for a short delay before retrying
-                //await Task.Delay(500);
+                await Task.Delay(500);
             }
 
             return (false, default);
