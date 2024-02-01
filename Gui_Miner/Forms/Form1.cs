@@ -688,7 +688,8 @@ namespace Gui_Miner
                     outputPanel.AddControlThreadSafe(tabControl);
                 }
                 catch { }
-            }            
+            }   
+            
         }
         private LinkLabel CreatePoolLinkLabel(Pool pool)
         {
