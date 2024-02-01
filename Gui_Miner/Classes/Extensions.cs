@@ -101,7 +101,6 @@ namespace Gui_Miner.Classes
                 catch { }
             }
         }
-
         public static void SelectionLengthThreadSafe(this RichTextBox richTextBox, int length)
         {
             if (richTextBox.InvokeRequired)
@@ -139,7 +138,6 @@ namespace Gui_Miner.Classes
                 return i;
             }
         }
-
         public static void SelectionColorThreadSafe(this RichTextBox richTextBox, Color color)
         {
             if (richTextBox.InvokeRequired)

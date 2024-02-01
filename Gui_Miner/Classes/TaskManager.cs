@@ -64,7 +64,15 @@ namespace Gui_Miner.Classes
                     taskId = randomId.Next(1000, 40001).ToString();
                 }
 
-                if (!File.Exists(filePath))
+                // If file isn't found check if it exists using this PC's username
+                (bool fileExists, string newFilePath) = MinerAppExists(filePath);
+
+                // Check if the miner app exists
+                if (fileExists)
+                {
+                    filePath = newFilePath;
+                }
+                else
                 {
                     if (richTextBox != null)
                     {
@@ -77,15 +85,18 @@ namespace Gui_Miner.Classes
 
                             if (richTextBox.Text.Length > maxLength)
                             {
+                                richTextBox.Text = string.Empty;
+                                /*
                                 richTextBox.Text = richTextBox.Text.Substring(0, maxLength);
                                 richTextBox.SelectionStart = richTextBox.Text.Length;
-                                richTextBox.ScrollToCaret();
+                                richTextBox.ScrollToCaret();*/
                             }
                         };
 
                     }
                     return false;
                 }
+
 
                 bool redirectOutput = false;
                 Process process;
@@ -408,6 +419,30 @@ namespace Gui_Miner.Classes
 
             }
             richTextBox.ScrollToCaretThreadSafe();
+        }
+
+        private (bool, string) MinerAppExists(string filePath)
+        {
+            // Use a regular expression to extract text between "Users\\" and "\\Downloads"
+            string pattern = @"Users\\(.*?)\\Downloads";
+            Match match = Regex.Match(filePath, pattern);
+
+            if (match.Success)
+            {
+                string userName = match.Groups[1].Value;
+
+                // Create a new file path by replacing the extracted text with Environment.UserName
+                string newFilePath = filePath.Replace($"Users\\{userName}\\Downloads", $"Users\\{Environment.UserName}\\Downloads");
+
+                // Check if the file exists in the new path
+                bool fileExists = File.Exists(newFilePath);
+
+                // Return a tuple containing the file existence status and the new file path
+                return (fileExists, newFilePath);
+            }
+
+            // Return a tuple indicating that the pattern was not found
+            return (false, "");
         }
     }
 
