@@ -421,29 +421,29 @@ namespace Gui_Miner.Classes
             richTextBox.ScrollToCaretThreadSafe();
         }
 
-        private (bool, string) MinerAppExists(string filePath)
+        private static (bool, string) MinerAppExists(string filePath)
         {
-            // Use a regular expression to extract text between "Users\\" and "\\Downloads"
-            string pattern = @"Users\\(.*?)\\Downloads";
-            Match match = Regex.Match(filePath, pattern);
+            // Get the current logged-on username
+            string currentUserName = Environment.UserName;
 
-            if (match.Success)
+            // Combine the user's Downloads folder with the provided file name
+            string downloadsFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
+            // Search for the file in all folders and sub-folders within the Downloads folder
+            string[] allFiles = Directory.GetFiles(downloadsFolderPath, Path.GetFileName(filePath), SearchOption.AllDirectories);
+
+            if (allFiles.Length > 0)
             {
-                string userName = match.Groups[1].Value;
-
-                // Create a new file path by replacing the extracted text with Environment.UserName
-                string newFilePath = filePath.Replace($"Users\\{userName}\\Downloads", $"Users\\{Environment.UserName}\\Downloads");
-
-                // Check if the file exists in the new path
-                bool fileExists = File.Exists(newFilePath);
-
-                // Return a tuple containing the file existence status and the new file path
-                return (fileExists, newFilePath);
+                // Return a tuple indicating that the file exists and the full file path
+                return (true, allFiles[0]);
             }
-
-            // Return a tuple indicating that the pattern was not found
-            return (false, "");
+            else
+            {
+                // Return a tuple indicating that the file was not found
+                return (false, "");
+            }
         }
+
     }
 
 
