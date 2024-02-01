@@ -141,8 +141,12 @@ namespace Gui_Miner
             if (stringLoaded.Success)
                 autoStart = bool.TryParse(stringLoaded.Result, out bool result) ? result : false;
 
-            if (autoStart) 
+            if (autoStart)
+            {
+                await Task.Delay(1000);
                 ClickStartButton();
+            }
+
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -416,7 +420,7 @@ namespace Gui_Miner
 
 
         // Individual miner actions
-        private async void toggleMinerButton_Click(object sender, EventArgs e)
+        private void toggleMinerButton_Click(object sender, EventArgs e)
         {
             if (InvokeRequired)
             {
@@ -454,15 +458,17 @@ namespace Gui_Miner
             }
             else if ((string)stopButton.Tag == "Start")
             {
-                if(await StartAMiner(selectedConfig, textBox))
-                {
-                    stopButton.Tag = "Stop";
-                    stopButton.BackgroundImage = Properties.Resources.stop_button;
-                }   
+                 StartAMiner(selectedConfig, textBox);  
             }
         }
-        private async Task<bool> StartAMiner(MinerConfig minerConfig, RichTextBox textBox = null)
+        private async void StartAMiner(MinerConfig minerConfig, RichTextBox textBox = null)
         {
+            if (textBox != null && textBox.InvokeRequired)
+            {
+                textBox.BeginInvoke(new Action(() => StartAMiner(minerConfig, textBox)));
+                return;
+            }
+
             bool started = true;
 
             if (minerConfig.Redirect_Console_Output && textBox != null)
@@ -470,14 +476,36 @@ namespace Gui_Miner
             else
                 started = await Task.Run(() => taskManager.StartTask(minerConfig, settingsForm.Settings.GlobalWorkerName));
 
-            return started;
+            // Change stop button back to play button if it didn't start
+            TabControl tabControl = outputPanel.Controls.Find("outputTabControl", true).FirstOrDefault() as TabControl;            
+            TabPage tabPage = tabControl.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Text.Equals(minerConfig.Name));
+            PictureBox stopButton = tabPage?.Controls.OfType<PictureBox>().FirstOrDefault(c => c.Name == "toggleButton");
+
+
+            // Change GUI
+            if (!started)
+            {
+                if (stopButton != null)
+                {
+                    stopButton.Tag = "Start";
+                    stopButton.BackgroundImage = Properties.Resources.play_button;
+                }
+            }
+            else
+            {
+                if (stopButton != null)
+                {
+                    stopButton.Tag = "Stop";
+                    stopButton.BackgroundImage = Properties.Resources.stop_button;
+                }
+            }
         }
 
 
         // Start Active Miners
         private async void CreateTabControlAndStartMiners(bool shortcutOnly = false)
         {
-            if (InvokeRequired)
+            if (outputPanel.InvokeRequired)
             {
                 BeginInvoke(new Action(() => CreateTabControlAndStartMiners(shortcutOnly)));
                 return;
@@ -487,7 +515,7 @@ namespace Gui_Miner
             TabControl tabControl = outputPanel.Controls.Find("outputTabControl", true).FirstOrDefault() as TabControl;
 
             if (tabControl == null) // Or create a new tab control
-            {                
+            {
                 tabControl = new TabControl();
                 tabControl.Name = "outputTabControl";
                 tabControl.Dock = DockStyle.Fill;
@@ -502,7 +530,7 @@ namespace Gui_Miner
 
                 // Add image
                 var stringLoaded = await AppSettings.LoadAsync<string>(SettingsForm.BGIMAGE);
-                if(stringLoaded.Success)
+                if (stringLoaded.Success)
                     arotatingPanel.Image = GetBgImage(stringLoaded.Result);
                 else
                     rotatingPanel.Image = GetBgImage("Kas - Globe");
@@ -518,7 +546,7 @@ namespace Gui_Miner
             var settings = await GetSettings();
             var minerConfigs = settings.MinerSettings;
             if (minerConfigs == null) return;
-                        
+
             foreach (MinerConfig minerConfig in minerConfigs)
             {
                 // If this config is active and we aren't using shortcut keys or we are using shortcut keys and this config also uses shortcut keys
@@ -666,30 +694,23 @@ namespace Gui_Miner
                     }
                     else
                         continue;
-                    
+
 
                     // Start the miner 
-                   if(!await StartAMiner(minerConfig, tabPageRichTextBox))
-                    {
-                        // Change stop button back to play button if it didn't start
-                        PictureBox stopButton = tabPage?.Controls.OfType<PictureBox>().FirstOrDefault(c => c.Name == "toggleButton");
-                        stopButton.Tag = "Start";
-                        stopButton.BackgroundImage = Properties.Resources.play_button;
-                    }
+                    StartAMiner(minerConfig, tabPageRichTextBox);
                 }
             }
+
 
             // Add the TabControl if there isn't one yet
             // TODO only add it if this specific one isn't added yet
             if (!outputPanel.Controls.OfType<TabControl>().Any())
             {
-                try
+                outputPanel.Invoke((MethodInvoker)delegate
                 {
-                    outputPanel.AddControlThreadSafe(tabControl);
-                }
-                catch { }
-            }   
-            
+                    outputPanel.Controls.Add(tabControl);
+                });
+            }
         }
         private LinkLabel CreatePoolLinkLabel(Pool pool)
         {
@@ -926,7 +947,7 @@ namespace Gui_Miner
             else
                 rotatingPanel.Image = GetBgImage("Kas - Globe");
 
-            outputPanel.Controls.Add(rotatingPanel);
+            outputPanel.AddControlThreadSafe(rotatingPanel);
 
             //rotatingPanel.Start();
         }
@@ -938,11 +959,6 @@ namespace Gui_Miner
                 outputPanel.Controls.Remove(rotatingPanel); // Remove it from the outputPanel
                 rotatingPanel = null; // Set the reference to null
             }
-        }
-
-        internal int GetTextLength()
-        {
-            throw new NotImplementedException();
         }
         #endregion
 

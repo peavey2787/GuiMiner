@@ -48,18 +48,23 @@ namespace Gui_Miner.Classes
 
         public bool StartTask(MinerConfig minerConfig, string globalWorkerName, RichTextBox richTextBox = null)
         {
+            /*if (form1.InvokeRequired)
+            {
+                form1.BeginInvoke(new Action(() => StartTask(minerConfig, globalWorkerName, richTextBox)));
+            }*/
+
+            if (richTextBox != null && richTextBox.InvokeRequired)
+            {
+                // Use Invoke to execute on the UI thread
+                return (bool)richTextBox.Invoke(new Func<bool>(() => StartTask(minerConfig, globalWorkerName, richTextBox)));
+            }
+
             string filePath = minerConfig.Miner_File_Path;
             string arguments = minerConfig.Bat_File_Arguments;
             bool runAsAdmin = false;
             string taskId = minerConfig.Id.ToString();
 
-            if (form1.InvokeRequired)
-            {
-                form1.BeginInvoke(new Action(() => StartTask(minerConfig, globalWorkerName, richTextBox)));
-            }
-            else
-            {
-                if (!string.IsNullOrEmpty(taskId) && runningTasks.ContainsKey(taskId) && !runningTasks[taskId].HasExited)
+            if (!string.IsNullOrEmpty(taskId) && runningTasks.ContainsKey(taskId) && !runningTasks[taskId].HasExited)
                 {
                     return true; // Task is already running
                 }
@@ -71,36 +76,36 @@ namespace Gui_Miner.Classes
                 // If file isn't found check if it exists using this PC's username
                 (bool fileExists, string newFilePath) = MinerAppExists(filePath);
 
-                // Check if the miner app exists
-                if (fileExists)
-                {
-                    filePath = newFilePath;
-                }
-                else
-                {
-                    if (richTextBox != null)
-                    {
-                        richTextBox.AppendTextThreadSafe($"\nUnable to locate miner at {filePath}");
-                        richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
-
-                        richTextBox.TextChanged += (sender, e) =>
-                        {
-                            int maxLength = 34560;
-
-                            if (richTextBox.Text.Length > maxLength)
-                            {
-                                richTextBox.Text = string.Empty;
-                                /*
-                                richTextBox.Text = richTextBox.Text.Substring(0, maxLength);
-                                richTextBox.SelectionStart = richTextBox.Text.Length;
-                                richTextBox.ScrollToCaret();*/
-                            }
-                        };
-
-                    }
-                    return false;
-                }
+            // Check if the miner app exists
+            if (fileExists)
+            {
+                filePath = newFilePath;
             }
+            else
+            {
+                if (richTextBox != null)
+                {
+                    richTextBox.AppendTextThreadSafe($"\nUnable to locate miner at {filePath}");
+                    richTextBox.ForeColorSetThreadSafe(Color.FromArgb((int)(0.53 * 255), 58, 221, 190));
+
+                    richTextBox.TextChanged += (sender, e) =>
+                    {
+                        int maxLength = 34560;
+
+                        if (richTextBox.Text.Length > maxLength)
+                        {
+                            richTextBox.Text = string.Empty;
+                            /*
+                            richTextBox.Text = richTextBox.Text.Substring(0, maxLength);
+                            richTextBox.SelectionStart = richTextBox.Text.Length;
+                            richTextBox.ScrollToCaret();*/
+                        }
+                    };
+
+                }
+                return false;
+            }
+            
 
             // Replace WORKERNAME if needed
             if (arguments.Contains("WORKERNAME"))
@@ -365,7 +370,14 @@ namespace Gui_Miner.Classes
 
         private async void UpdateOutputConsole(string output, RichTextBox richTextBox)
         {
-            if (output == null) return;
+            if (output == null || richTextBox.IsDisposed)
+                return;
+
+            if (richTextBox.InvokeRequired)
+            {
+                richTextBox.Invoke(new Action(() => UpdateOutputConsole(output, richTextBox)));
+                return;
+            }
 
             if (output.ToLower().Contains("failed") || output.ToLower().Contains("error") || output.ToLower().Contains("miner terminated"))
             {

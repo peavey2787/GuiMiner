@@ -19,8 +19,8 @@ namespace Gui_Miner.Classes
             
             if (richTextBox.InvokeRequired)
             {
-                //try { richTextBox.Invoke(new Action(() => richTextBox.AppendText(text))); }
-                //catch { }
+                try { richTextBox.Invoke(new Action(() => richTextBox.AppendText(text))); }
+                catch { }
             }
             else
             {
@@ -61,8 +61,8 @@ namespace Gui_Miner.Classes
         {
             if (richTextBox.InvokeRequired)
             {
-                //try { richTextBox.Invoke(new Action(() => richTextBox.ForeColor = color)); }
-                //catch { }
+                try { richTextBox.Invoke(new Action(() => richTextBox.ForeColor = color)); }
+                catch { }
             }
             else
             {
