@@ -458,7 +458,9 @@ namespace Gui_Miner
             }
             else if ((string)stopButton.Tag == "Start")
             {
-                 StartAMiner(selectedConfig, textBox);  
+                stopButton.Tag = "Stop";
+                stopButton.BackgroundImage = Properties.Resources.stop_button;
+                StartAMiner(selectedConfig, textBox);  
             }
         }
         private async void StartAMiner(MinerConfig minerConfig, RichTextBox textBox = null)
@@ -472,15 +474,14 @@ namespace Gui_Miner
             bool started = true;
 
             if (minerConfig.Redirect_Console_Output && textBox != null)
-                started = await Task.Run(() => taskManager.StartTask(minerConfig, settingsForm.Settings.GlobalWorkerName, textBox));
+                started = await Task.Run(() => { return taskManager.StartTask(minerConfig, settingsForm.Settings.GlobalWorkerName, textBox); });
             else
-                started = await Task.Run(() => taskManager.StartTask(minerConfig, settingsForm.Settings.GlobalWorkerName));
+                started = await Task.Run(() => { return taskManager.StartTask(minerConfig, settingsForm.Settings.GlobalWorkerName); });
 
             // Change stop button back to play button if it didn't start
             TabControl tabControl = outputPanel.Controls.Find("outputTabControl", true).FirstOrDefault() as TabControl;            
             TabPage tabPage = tabControl.TabPages.Cast<TabPage>().FirstOrDefault(tp => tp.Text.Equals(minerConfig.Name));
             PictureBox stopButton = tabPage?.Controls.OfType<PictureBox>().FirstOrDefault(c => c.Name == "toggleButton");
-
 
             // Change GUI
             if (!started)
